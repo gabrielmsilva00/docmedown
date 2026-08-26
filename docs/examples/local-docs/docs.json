@@ -1,0 +1,28 @@
+{
+  "name": "Orbit Notes",
+  "tagline": "A local documentation site nested inside DocMeDown",
+  "description": "A complete local documentation example with isolated configuration and components.",
+  "version": "1.0.0",
+  "rootDoc": "README.md",
+  "theme": {
+    "preset": "emerald",
+    "defaultMode": "auto"
+  },
+  "nav": [
+    { "label": "Overview", "href": "#/README" },
+    { "label": "Install", "href": "#/getting-started" },
+    { "label": "Component demo", "href": "#/guides/custom-components" }
+  ],
+  "socials": [
+    { "type": "github", "url": "https://github.com" }
+  ],
+  "autoIndex": {
+    "enabled": true,
+    "sort": "natural",
+    "defaultCollapsed": false
+  },
+  "search": {
+    "enabled": true,
+    "placeholder": "Search Orbit Notes..."
+  }
+}

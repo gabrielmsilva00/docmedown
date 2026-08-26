@@ -275,3 +275,15 @@ The standard build embeds `.dmd/components.js` in `docs/.dist/index.html`, so th
 ## 📄 License
 
 MIT © DocMeDown Contributors
+
+---
+
+## 🚀 Maintainer release command
+
+Maintainers publish a prepared version with one command:
+
+```bash
+npm run deploy
+```
+
+It validates the release, pushes `main` and `v<version>` to GitHub, publishes to npm, and verifies the npm registry. Run `npm run deploy:dry-run` to validate without changing GitHub or npm.

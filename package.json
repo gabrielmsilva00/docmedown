@@ -44,6 +44,8 @@
     "config:docs": "node ./bin/docmedown.js config ./docs/docs.json",
     "test": "npx tsx --test tests/parser.test.ts tests/scanner.test.ts tests/runtime-integration.test.ts tests/package-smoke.test.ts",
     "test:release": "npm run typecheck && npm run test && npm run build && npm run build:docs && npm pack --dry-run",
+    "deploy": "node ./scripts/deploy.mjs",
+    "deploy:dry-run": "npm run deploy -- --dry-run",
     "prepublishOnly": "npm run test:release"
   },
   "keywords": [

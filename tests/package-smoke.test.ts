@@ -16,4 +16,7 @@ test('package metadata exposes stable CommonJS, ESM, type, and browser entry poi
   assert.equal(packageJson.exports['.'].import, './dist/docmedown.mjs');
   assert.equal(packageJson.exports['./iife'], './dist/docmedown.iife.js');
   assert.equal(packageJson.repository.url, 'git+https://github.com/gabrielmsilva00/docmedown.git');
+  assert.equal(packageJson.scripts.deploy, 'node ./scripts/deploy.mjs');
+  assert.equal(packageJson.scripts['deploy:dry-run'], 'npm run deploy -- --dry-run');
+  assert.ok(fs.existsSync(path.join(packageRoot, 'scripts', 'deploy.mjs')));
 });

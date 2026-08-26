@@ -22,3 +22,19 @@ A directory containing `docs.json` is an independent documentation root. Parent 
 - Add or update tests for behavior changes.
 - Keep `docs.json`, templates, and the root README aligned with the CLI.
 - Run `npm run test:release` before requesting review for a release.
+
+## Deploying a release
+
+1. Bump the version in `package.json` and `package-lock.json` with `npm version <version> --no-git-tag-version`.
+2. Commit the release changes on `main` and ensure the working tree is clean.
+3. Run `npm run deploy`.
+
+The deploy pipeline runs the full release gate, pushes `main` and `v<version>` to GitHub, publishes the same version to npm, and verifies the registry result. Use `npm run deploy:dry-run` to validate the pipeline without pushing or publishing.
+
+If npm write 2FA is enabled, provide the one-time password without recording it in shell history:
+
+```powershell
+$env:NPM_OTP = Read-Host 'npm one-time password'
+npm run deploy
+Remove-Item Env:NPM_OTP
+```

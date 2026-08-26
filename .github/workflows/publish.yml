@@ -1,4 +1,4 @@
-name: Publish package
+name: Verify release tag
 
 on:
   push:
@@ -6,10 +6,9 @@ on:
 
 permissions:
   contents: read
-  id-token: write
 
 jobs:
-  publish:
+  verify:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -20,4 +19,3 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run test:release
-      - run: npm publish --provenance --access public

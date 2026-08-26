@@ -68,14 +68,19 @@ function ensureRemoteIsNotAhead() {
   }
 }
 
-function tagPointsAtHead() {
+function localTagTarget() {
   const tag = run('git', ['rev-parse', '--verify', `${tagName}^{}`], { capture: true });
-  if (tag.status !== 0) return false;
-  return tag.stdout.trim() === output('git', ['rev-parse', 'HEAD']);
+  return tag.status === 0 ? tag.stdout.trim() : null;
 }
 
-function tagExists() {
-  return run('git', ['rev-parse', '--verify', tagName], { capture: true }).status === 0;
+function remoteTagTarget() {
+  const result = run('git', ['ls-remote', '--tags', 'origin', `refs/tags/${tagName}^{}`], { capture: true });
+  if (result.status !== 0) {
+    throw new Error(`Could not inspect ${tagName} on origin:\n${result.stderr || result.stdout}`);
+  }
+
+  const target = result.stdout.trim().split(/\s+/)[0];
+  return target || null;
 }
 
 function packageVersionExists() {
@@ -95,16 +100,18 @@ console.log(`\n🚀 DocMeDown deployment: ${packageName}@${version}${isDryRun ? 
 
 ensureCleanWorkingTree();
 ensureMainBranch();
-run('git', ['fetch', 'origin', '--tags']);
+run('git', ['fetch', 'origin', 'main']);
 ensureRemoteIsNotAhead();
 run('npm', ['whoami']);
 run('npm', ['run', 'test:release']);
 
 const versionAlreadyPublished = packageVersionExists();
-const existingTagMatchesHead = tagPointsAtHead();
-const existingTag = tagExists();
+const head = output('git', ['rev-parse', 'HEAD']);
+const localTag = localTagTarget();
+const remoteTag = remoteTagTarget();
+const existingTagMatchesHead = localTag === head || remoteTag === head;
 
-if (existingTag && !existingTagMatchesHead) {
+if ((localTag && localTag !== head) || (remoteTag && remoteTag !== head)) {
   throw new Error(`${tagName} already exists but does not point at HEAD. Bump the package version or resolve the tag before deployment.`);
 }
 
@@ -125,7 +132,11 @@ if (!existingTagMatchesHead) {
   run('git', ['tag', '-a', tagName, '-m', `${packageName} ${version}`]);
   run('git', ['push', 'origin', tagName]);
 } else {
-  console.log(`\n✓ ${tagName} already points at HEAD; continuing a previously interrupted deployment.`);
+  if (!remoteTag) {
+    run('git', ['push', 'origin', tagName]);
+  } else {
+    console.log(`\n✓ ${tagName} already points at HEAD; continuing a previously interrupted deployment.`);
+  }
 }
 
 run('npm', publishArgs());

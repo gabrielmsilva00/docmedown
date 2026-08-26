@@ -1,0 +1,28 @@
+{
+  "name": "React Repository Reader",
+  "tagline": "An isolated nested site sourced from GitHub",
+  "description": "A remote-source example with its own configuration and component directory.",
+  "version": "Example",
+  "rootDoc": "README.md",
+  "source": {
+    "type": "github",
+    "repo": "facebook/react",
+    "branch": "main",
+    "docsDir": ""
+  },
+  "theme": {
+    "preset": "violet",
+    "defaultMode": "auto"
+  },
+  "nav": [
+    { "label": "Overview", "href": "#/README" },
+    { "label": "GitHub Repo", "href": "https://github.com/facebook/react", "external": true }
+  ],
+  "socials": [
+    { "type": "github", "url": "https://github.com/facebook/react" }
+  ],
+  "search": {
+    "enabled": true,
+    "placeholder": "Search the remote repository..."
+  }
+}

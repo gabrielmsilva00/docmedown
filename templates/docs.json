@@ -1,0 +1,25 @@
+{
+  "name": "My Project Docs",
+  "tagline": "The simplest Markdown documentation yet",
+  "description": "Fast, modern documentation created with DocMeDown",
+  "version": "1.0.0",
+  "rootDoc": "README.md",
+  "theme": {
+    "preset": "indigo",
+    "defaultMode": "auto"
+  },
+  "nav": [
+    { "label": "Overview", "href": "#/README" },
+    { "label": "Quickstart", "href": "#/getting-started" },
+    { "label": "Guides", "href": "#/guides/custom-components" }
+  ],
+  "autoIndex": {
+    "enabled": true,
+    "sort": "natural",
+    "defaultCollapsed": false
+  },
+  "search": {
+    "enabled": true,
+    "placeholder": "Search documentation..."
+  }
+}

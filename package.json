@@ -1,0 +1,110 @@
+{
+  "name": "docmedown",
+  "version": "0.1.0",
+  "description": "The simplest MarkDown documenter yet. CLI & Web Script React SPA documentation engine.",
+  "main": "./dist/docmedown.cjs",
+  "module": "./dist/docmedown.mjs",
+  "types": "./dist/types/runtime/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/types/runtime/index.d.ts",
+      "import": "./dist/docmedown.mjs",
+      "require": "./dist/docmedown.cjs"
+    },
+    "./iife": "./dist/docmedown.iife.js"
+  },
+  "unpkg": "./dist/docmedown.iife.js",
+  "jsdelivr": "./dist/docmedown.iife.js",
+  "bin": {
+    "docmedown": "./bin/docmedown.js",
+    "dmd": "./bin/docmedown.js"
+  },
+  "files": [
+    "dist",
+    "bin",
+    "templates",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "dev:runtime": "vite build --watch",
+    "build:runtime": "vite build",
+    "build:cli": "tsup",
+    "typecheck": "tsc --noEmit",
+    "build:types": "tsc -p tsconfig.runtime.json",
+    "build": "npm run build:runtime && npm run build:cli && npm run build:types",
+    "docmedown": "node ./bin/docmedown.js",
+    "dmd": "node ./bin/docmedown.js",
+    "init:docs": "node ./bin/docmedown.js init",
+    "serve": "node ./bin/docmedown.js serve ./docs",
+    "dev": "node ./bin/docmedown.js serve ./docs",
+    "build:docs": "node ./bin/docmedown.js build ./docs",
+    "build:docs:watch": "node ./bin/docmedown.js build ./docs --watch",
+    "build:offline": "node ./bin/docmedown.js build ./docs",
+    "config:docs": "node ./bin/docmedown.js config ./docs/docs.json",
+    "test": "npx tsx --test tests/parser.test.ts tests/scanner.test.ts tests/runtime-integration.test.ts tests/package-smoke.test.ts",
+    "test:release": "npm run typecheck && npm run test && npm run build && npm run build:docs && npm pack --dry-run",
+    "prepublishOnly": "npm run test:release"
+  },
+  "keywords": [
+    "markdown",
+    "documentation",
+    "docs",
+    "docusaurus",
+    "docsify",
+    "react",
+    "spa",
+    "cli",
+    "offline-docs",
+    "github-docs"
+  ],
+  "author": "Gabriel M. Silva",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gabrielmsilva00/docmedown.git"
+  },
+  "bugs": {
+    "url": "https://github.com/gabrielmsilva00/docmedown/issues"
+  },
+  "homepage": "https://github.com/gabrielmsilva00/docmedown#readme",
+  "packageManager": "npm@11.16.0",
+  "overrides": {
+    "tsup": {
+      "esbuild": "0.28.2"
+    }
+  },
+  "dependencies": {
+    "chalk": "^4.1.2",
+    "chokidar": "^3.6.0",
+    "commander": "^12.1.0",
+    "gray-matter": "^4.0.3",
+    "mime-types": "^2.1.35",
+    "open": "^10.1.0",
+    "prompts": "^2.4.2",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.5.0",
+    "@types/prismjs": "^1.26.6",
+    "@types/prompts": "^2.4.9",
+    "@types/react": "^18.3.5",
+    "@types/react-dom": "^18.3.0",
+    "@types/ws": "^8.5.12",
+    "@vitejs/plugin-react": "^6.1.0",
+    "katex": "^0.16.11",
+    "marked": "^14.1.1",
+    "minisearch": "^7.1.0",
+    "prismjs": "^1.29.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "tsup": "^8.2.4",
+    "tsx": "^4.19.0",
+    "typescript": "^5.5.4",
+    "vite": "^8.2.2",
+    "vite-plugin-css-injected-by-js": "^5.0.2"
+  }
+}

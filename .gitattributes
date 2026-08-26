@@ -1,0 +1,4 @@
+* text=auto eol=lf
+
+# Preserve executable intent for the Node CLI on Unix-like systems.
+bin/docmedown.js text eol=lf

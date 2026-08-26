@@ -1,0 +1,57 @@
+{
+  "name": "DocMeDown",
+  "tagline": "The simplest MarkDown documenter yet",
+  "description": "Next-generation zero-friction documentation engine for developers",
+  "version": "1.0.0",
+  "rootDoc": "README.md",
+  "theme": {
+    "preset": "indigo",
+    "defaultMode": "auto"
+  },
+  "nav": [
+    {
+      "label": "Overview",
+      "href": "#/README"
+    },
+    {
+      "label": "Getting Started",
+      "href": "#/getting-started"
+    },
+    {
+      "label": "CLI Reference",
+      "href": "#/guides/cli-reference"
+    },
+    {
+      "label": "Config Reference",
+      "href": "#/configuration"
+    },
+    {
+      "label": "GitHub",
+      "href": "https://github.com/gabrielmsilva00/docmedown",
+      "external": true
+    },
+    {
+      "label": "Examples",
+      "href": "#/examples"
+    }
+  ],
+  "socials": [
+    {
+      "type": "github",
+      "url": "https://github.com/gabrielmsilva00/docmedown"
+    }
+  ],
+  "autoIndex": {
+    "enabled": true,
+    "sort": "natural",
+    "defaultCollapsed": false
+  },
+  "search": {
+    "enabled": true,
+    "placeholder": "Search DocMeDown documentation (⌘K)..."
+  },
+  "footer": {
+    "copyright": "© 2026 DocMeDown Team. Released under the MIT License.",
+    "showBuiltWith": true
+  }
+}

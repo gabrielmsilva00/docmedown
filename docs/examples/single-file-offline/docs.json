@@ -1,0 +1,19 @@
+{
+  "name": "Field Manual",
+  "tagline": "A portable documentation site built for file:// viewing",
+  "description": "An offline-first nested DocMeDown example.",
+  "version": "Example",
+  "rootDoc": "README.md",
+  "theme": {
+    "preset": "sunset",
+    "defaultMode": "light"
+  },
+  "nav": [
+    { "label": "Manual", "href": "#/README" },
+    { "label": "Pack it", "href": "#/packing" }
+  ],
+  "search": {
+    "enabled": true,
+    "placeholder": "Search this field manual..."
+  }
+}

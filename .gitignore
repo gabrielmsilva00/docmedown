@@ -1,0 +1,25 @@
+# Dependencies and package archives
+node_modules/
+*.tgz
+
+# Build outputs
+dist/
+docs/**/.dist/
+docs/**/_manifest.json
+docs/**/_docs.js
+docs/**/docmedown.iife.js
+
+# Local configuration and credentials
+.env
+.env.*
+!.env.example
+.npmrc
+
+# Logs and coverage
+*.log
+coverage/
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+.vscode/

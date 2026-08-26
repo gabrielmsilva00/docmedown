@@ -1,4 +1,4 @@
-declare module 'mime-types' {
+declare module "mime-types" {
   const mime: {
     lookup(path: string): string | false;
   };
@@ -6,7 +6,7 @@ declare module 'mime-types' {
   export default mime;
 }
 
-declare module 'prismjs' {
+declare module "prismjs" {
   interface PrismGrammar {
     [key: string]: unknown;
   }
@@ -20,4 +20,4 @@ declare module 'prismjs' {
   export default Prism;
 }
 
-declare module 'prismjs/components/*';
+declare module "prismjs/components/*";

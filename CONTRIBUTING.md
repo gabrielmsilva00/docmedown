@@ -6,6 +6,7 @@ Use Node.js 20.19 or later and npm 11.
 
 ```bash
 npm ci
+npm run lint
 npm run typecheck
 npm test
 npm run build
@@ -15,6 +16,12 @@ npm run build:docs
 ## Documentation roots
 
 A directory containing `docs.json` is an independent documentation root. Parent manifests must not scan its Markdown, configuration, or `.dmd/components.js` module. Run `npm run build:docs` after documentation changes to validate parent and nested outputs.
+
+## Configuration contract
+
+`src/runtime/config-schema.ts` is the executable source of truth for configuration validation. It provides the Zod schema used by browser and CLI code; `schemas/docs.schema.json` is the matching portable schema shipped for editor support. Update both schemas, `templates/docs.json`, `docs/configuration.md`, and configuration tests together when adding or changing a configuration field.
+
+Use `npm run lint:fix` to apply Biome formatting and safe lint/import fixes. Do not broadly disable linter rules: existing narrow exceptions protect the deliberate dynamic Markdown/custom-component runtime boundaries.
 
 ## Pull requests
 

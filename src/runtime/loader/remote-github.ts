@@ -1,20 +1,20 @@
-import { RemoteSourceConfig, DocFileItem, SidebarTreeNode } from '../types';
+import type { GithubSourceConfig } from "../types";
 
 export class RemoteGithubLoader {
-  private config: RemoteSourceConfig;
+  private config: GithubSourceConfig;
   private cache: Map<string, string> = new Map();
   private treeCache: { files: string[]; timestamp: number } | null = null;
 
-  constructor(config: RemoteSourceConfig) {
+  constructor(config: GithubSourceConfig) {
     this.config = config;
   }
 
   private getHeaders(): HeadersInit {
     const headers: HeadersInit = {
-      Accept: 'application/vnd.github.v3+json, text/plain',
+      Accept: "application/vnd.github.v3+json, text/plain",
     };
     if (this.config.token) {
-      headers['Authorization'] = `token ${this.config.token}`;
+      headers.Authorization = `token ${this.config.token}`;
     }
     return headers;
   }
@@ -27,21 +27,21 @@ export class RemoteGithubLoader {
       return this.treeCache.files;
     }
 
-    const branch = this.config.branch || 'main';
-    const docsDir = (this.config.docsDir || '').replace(/^\/+|\/+$/g, '');
+    const branch = this.config.branch || "main";
+    const docsDir = (this.config.docsDir || "").replace(/^\/+|\/+$/g, "");
 
     try {
       // 1. Try GitHub Tree API
       const apiUrl = `https://api.github.com/repos/${this.config.repo}/git/trees/${branch}?recursive=1`;
       const res = await fetch(apiUrl, { headers: this.getHeaders() });
-      
+
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data.tree)) {
           const files: string[] = [];
           for (const item of data.tree) {
-            if (item.type === 'blob' && /\.(md|mdx)$/i.test(item.path)) {
-              if (!docsDir || item.path.startsWith(docsDir + '/')) {
+            if (item.type === "blob" && /\.(md|mdx)$/i.test(item.path)) {
+              if (!docsDir || item.path.startsWith(`${docsDir}/`)) {
                 const relPath = docsDir ? item.path.substring(docsDir.length + 1) : item.path;
                 files.push(relPath);
               }
@@ -52,29 +52,29 @@ export class RemoteGithubLoader {
         }
       }
     } catch (err) {
-      console.warn('[DocMeDown] Failed to fetch GitHub tree API, using fallback files:', err);
+      console.warn("[DocMeDown] Failed to fetch GitHub tree API, using fallback files:", err);
     }
 
     // Fallback: standard candidate files
-    const fallbackFiles = ['README.md', 'index.md', 'getting-started.md'];
+    const fallbackFiles = ["README.md", "index.md", "getting-started.md"];
     return fallbackFiles;
   }
 
   public async fetchDocContent(slug: string): Promise<string | null> {
-    const normalized = slug.replace(/^\.?\//, '').replace(/\.(md|mdx|html)$/i, '');
+    const normalized = slug.replace(/^\.?\//, "").replace(/\.(md|mdx|html)$/i, "");
     if (this.cache.has(normalized)) {
       return this.cache.get(normalized)!;
     }
 
-    const branch = this.config.branch || 'main';
-    const docsDir = (this.config.docsDir || '').replace(/^\/+|\/+$/g, '');
+    const branch = this.config.branch || "main";
+    const docsDir = (this.config.docsDir || "").replace(/^\/+|\/+$/g, "");
 
     const candidates = [
       `${normalized}.md`,
       `${normalized}.mdx`,
       `${normalized}/README.md`,
       `${normalized}/index.md`,
-      normalized === 'README' ? 'README.md' : null,
+      normalized === "README" ? "README.md" : null,
     ].filter(Boolean) as string[];
 
     for (const file of candidates) {
@@ -88,7 +88,7 @@ export class RemoteGithubLoader {
           this.cache.set(normalized, content);
           return content;
         }
-      } catch (err) {
+      } catch (_err) {
         // try next candidate
       }
     }

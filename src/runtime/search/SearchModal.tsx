@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { DocSearchIndex } from './search-index';
-import { SearchResultItem } from '../types';
+import type React from "react";
+import { useEffect, useRef, useState } from "react";
+import type { SearchResultItem } from "../types";
+import type { DocSearchIndex } from "./search-index";
 
 interface SearchModalProps {
   isOpen: boolean;
@@ -15,9 +16,9 @@ export const SearchModal: React.FC<SearchModalProps> = ({
   onClose,
   searchIndex,
   onSelect,
-  placeholder = 'Search docs...',
+  placeholder = "Search docs...",
 }) => {
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResultItem[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -27,7 +28,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
       setTimeout(() => inputRef.current?.focus(), 50);
       setSelectedIndex(0);
     } else {
-      setQuery('');
+      setQuery("");
       setResults([]);
     }
   }, [isOpen]);
@@ -43,15 +44,15 @@ export const SearchModal: React.FC<SearchModalProps> = ({
   }, [query, searchIndex]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Escape') {
+    if (e.key === "Escape") {
       onClose();
-    } else if (e.key === 'ArrowDown') {
+    } else if (e.key === "ArrowDown") {
       e.preventDefault();
       setSelectedIndex((prev) => (results.length > 0 ? (prev + 1) % results.length : 0));
-    } else if (e.key === 'ArrowUp') {
+    } else if (e.key === "ArrowUp") {
       e.preventDefault();
       setSelectedIndex((prev) => (results.length > 0 ? (prev - 1 + results.length) % results.length : 0));
-    } else if (e.key === 'Enter') {
+    } else if (e.key === "Enter") {
       e.preventDefault();
       if (results[selectedIndex]) {
         onSelect(results[selectedIndex].slug);
@@ -63,8 +64,17 @@ export const SearchModal: React.FC<SearchModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="dmd-modal-backdrop" onClick={onClose}>
-      <div className="dmd-search-modal" onClick={(e) => e.stopPropagation()} onKeyDown={handleKeyDown}>
+    <div
+      className="dmd-modal-backdrop"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Documentation search"
+      onClick={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+      onKeyDown={handleKeyDown}
+    >
+      <div className="dmd-search-modal">
         <div className="dmd-search-input-wrapper">
           <svg
             className="dmd-search-icon"
@@ -97,9 +107,10 @@ export const SearchModal: React.FC<SearchModalProps> = ({
           )}
 
           {results.map((res, idx) => (
-            <div
+            <button
+              type="button"
               key={res.id}
-              className={`dmd-search-item ${idx === selectedIndex ? 'selected' : ''}`}
+              className={`dmd-search-item ${idx === selectedIndex ? "selected" : ""}`}
               onClick={() => {
                 onSelect(res.slug);
                 onClose();
@@ -111,7 +122,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
                 {res.category && <span className="dmd-search-item-cat">{res.category}</span>}
               </div>
               {res.snippet && <p className="dmd-search-item-snippet">{res.snippet}</p>}
-            </div>
+            </button>
           ))}
         </div>
 

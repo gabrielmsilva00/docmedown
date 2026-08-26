@@ -11,10 +11,30 @@ While DocMeDown works zero-config out of the box, `docs.json` allows you to cust
 
 ---
 
+## Validation and editor support
+
+DocMeDown validates every configuration source (`docs.json`, `dmd.json`, inline configuration, and embedded manifests) with its Zod schema before use. Invalid configuration reports the exact field path and is never silently merged into the runtime configuration.
+
+For JSON-aware editors, add this as the first property of `docs.json` to enable completion and validation:
+
+```json
+{
+  "$schema": "https://raw.githubusercontent.com/gabrielmsilva00/docmedown/main/schemas/docs.schema.json",
+  "name": "My documentation"
+}
+```
+
+The portable JSON Schema is included in the npm package at `schemas/docs.schema.json`. Runtime consumers can also import the executable Zod schema from `docmedown` as `docConfigSchema` or parse unknown configuration with `parseDocConfig`.
+
+Unknown properties are rejected. GitHub and GitLab sources require a `repo` in `owner/repository` form; raw sources require an absolute `baseUrl`. When loading in the browser, an invalid higher-precedence source is reported and skipped so DocMeDown can use the next valid source: global config, inline config, `docs.json`, `dmd.json`, `_manifest.json`, then defaults.
+
+---
+
 ## 📄 Full `docs.json` Example
 
 ```json title="docs.json"
 {
+  "$schema": "https://raw.githubusercontent.com/gabrielmsilva00/docmedown/main/schemas/docs.schema.json",
   "name": "DocMeDown",
   "tagline": "The simplest MarkDown documenter yet",
   "description": "Next-generation documentation toolkit",

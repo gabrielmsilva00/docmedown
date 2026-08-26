@@ -1,0 +1,157 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/gabrielmsilva00/docmedown/main/schemas/docs.schema.json",
+  "title": "DocMeDown documentation configuration",
+  "description": "Configuration for a DocMeDown documentation root. A directory containing docs.json is an independent documentation site.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string", "format": "uri" },
+    "name": { "type": "string", "minLength": 1 },
+    "tagline": { "type": "string" },
+    "description": { "type": "string" },
+    "version": { "type": "string" },
+    "rootDoc": { "type": "string", "minLength": 1 },
+    "source": { "$ref": "#/$defs/source" },
+    "theme": { "$ref": "#/$defs/theme" },
+    "nav": { "type": "array", "items": { "$ref": "#/$defs/navLink" } },
+    "socials": { "type": "array", "items": { "$ref": "#/$defs/socialLink" } },
+    "sidebar": { "type": "array", "items": { "$ref": "#/$defs/sidebarItem" } },
+    "autoIndex": { "$ref": "#/$defs/autoIndex" },
+    "search": { "$ref": "#/$defs/search" },
+    "footer": { "$ref": "#/$defs/footer" },
+    "componentsUrl": { "type": "string" },
+    "editUrl": { "type": "string" }
+  },
+  "$defs": {
+    "navLink": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["label", "href"],
+      "properties": {
+        "label": { "type": "string", "minLength": 1 },
+        "href": { "type": "string", "minLength": 1 },
+        "external": { "type": "boolean" },
+        "icon": { "type": "string" }
+      }
+    },
+    "socialLink": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "url"],
+      "properties": {
+        "type": { "enum": ["github", "gitlab", "twitter", "x", "discord", "custom"] },
+        "url": { "type": "string", "format": "uri" },
+        "label": { "type": "string" },
+        "icon": { "type": "string" }
+      }
+    },
+    "source": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "repo"],
+          "properties": {
+            "type": { "const": "github" },
+            "repo": { "type": "string", "pattern": "^[^/\\s]+/[^/\\s]+$" },
+            "branch": { "type": "string", "minLength": 1 },
+            "docsDir": { "type": "string" },
+            "token": { "type": "string" },
+            "baseUrl": { "type": "string", "format": "uri" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "repo"],
+          "properties": {
+            "type": { "const": "gitlab" },
+            "repo": { "type": "string", "pattern": "^[^/\\s]+/[^/\\s]+$" },
+            "branch": { "type": "string", "minLength": 1 },
+            "docsDir": { "type": "string" },
+            "token": { "type": "string" },
+            "baseUrl": { "type": "string", "format": "uri" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "baseUrl"],
+          "properties": {
+            "type": { "const": "raw" },
+            "baseUrl": { "type": "string", "format": "uri" },
+            "branch": { "type": "string", "minLength": 1 },
+            "docsDir": { "type": "string" },
+            "token": { "type": "string" }
+          }
+        }
+      ]
+    },
+    "theme": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "preset": { "enum": ["indigo", "emerald", "sunset", "violet", "rose", "slate", "cyberpunk"] },
+        "defaultMode": { "enum": ["light", "dark", "auto"] },
+        "accentColor": { "type": "string" },
+        "accentColorDark": { "type": "string" },
+        "fontFamily": { "type": "string" },
+        "codeTheme": { "enum": ["github", "dracula", "one-dark", "synthwave"] },
+        "favicon": { "type": "string" },
+        "logo": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "light": { "type": "string" },
+            "dark": { "type": "string" },
+            "alt": { "type": "string" },
+            "text": { "type": "string" }
+          }
+        }
+      }
+    },
+    "autoIndex": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "exclude": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "sort": { "enum": ["alphabetical", "frontmatter", "natural"] },
+        "defaultCollapsed": { "type": "boolean" }
+      }
+    },
+    "search": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "placeholder": { "type": "string" },
+        "maxResults": { "type": "integer", "minimum": 1, "maximum": 100 }
+      }
+    },
+    "footer": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "copyright": { "type": "string" },
+        "links": { "type": "array", "items": { "$ref": "#/$defs/navLink" } },
+        "showBuiltWith": { "type": "boolean" }
+      }
+    },
+    "sidebarItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "title": { "type": "string" },
+        "path": { "type": "string" },
+        "slug": { "type": "string" },
+        "icon": { "type": "string" },
+        "badge": { "type": "string" },
+        "badgeType": { "enum": ["info", "success", "warning", "new"] },
+        "collapsed": { "type": "boolean" },
+        "children": { "type": "array", "items": { "$ref": "#/$defs/sidebarItem" } }
+      }
+    }
+  }
+}

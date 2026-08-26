@@ -1,11 +1,11 @@
-import http from 'http';
-import fs from 'fs';
-import path from 'path';
-import mime from 'mime-types';
-import { WebSocketServer, WebSocket } from 'ws';
-import chokidar from 'chokidar';
-import chalk from 'chalk';
-import { shouldWatchDocumentationSource } from '../commands/build';
+import fs from "node:fs";
+import http from "node:http";
+import path from "node:path";
+import chalk from "chalk";
+import chokidar from "chokidar";
+import mime from "mime-types";
+import { WebSocket, WebSocketServer } from "ws";
+import { shouldWatchDocumentationSource } from "../commands/build";
 
 export interface DevServerOptions {
   port?: number;
@@ -19,8 +19,10 @@ export function shouldRebuildDocumentation(rootDir: string, changedPath: string)
   return shouldWatchDocumentationSource(rootDir, changedPath);
 }
 
-export function startDevServer(options: DevServerOptions): Promise<{ server: http.Server; port: number; close: () => void }> {
-  const { rootDir, host = 'localhost', port: initialPort = 3000, onSourceChange } = options;
+export function startDevServer(
+  options: DevServerOptions,
+): Promise<{ server: http.Server; port: number; close: () => void }> {
+  const { rootDir, host = "localhost", port: initialPort = 3000, onSourceChange } = options;
 
   return new Promise((resolve, reject) => {
     let port = initialPort;
@@ -49,30 +51,30 @@ export function startDevServer(options: DevServerOptions): Promise<{ server: htt
 
     const server = http.createServer((req, res) => {
       // Enable CORS for local development
-      res.setHeader('Access-Control-Allow-Origin', '*');
-      res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+      res.setHeader("Access-Control-Allow-Origin", "*");
+      res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
 
-      if (req.method === 'OPTIONS') {
+      if (req.method === "OPTIONS") {
         res.writeHead(204);
         res.end();
         return;
       }
 
-      let reqPath = decodeURIComponent(req.url?.split('?')[0] || '/');
-      if (reqPath === '/' || reqPath === '') {
-        reqPath = '/index.html';
+      let reqPath = decodeURIComponent(req.url?.split("?")[0] || "/");
+      if (reqPath === "/" || reqPath === "") {
+        reqPath = "/index.html";
       }
 
       let filePath = path.join(rootDir, reqPath);
 
       // Check if file exists in rootDir
       if (!fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
-        const potentialIndex = path.join(rootDir, 'index.html');
+        const potentialIndex = path.join(rootDir, "index.html");
         if (fs.existsSync(potentialIndex)) {
           filePath = potentialIndex;
         } else {
           // Serve fallback runtime template
-          res.writeHead(200, { 'Content-Type': 'text/html' });
+          res.writeHead(200, { "Content-Type": "text/html" });
           res.end(`
 <!DOCTYPE html>
 <html>
@@ -89,11 +91,11 @@ export function startDevServer(options: DevServerOptions): Promise<{ server: htt
       }
 
       // Check if requesting bundled runtime docmedown.iife.js
-      if (reqPath === '/docmedown.iife.js' && !fs.existsSync(filePath)) {
+      if (reqPath === "/docmedown.iife.js" && !fs.existsSync(filePath)) {
         const bundleCandidates = [
-          path.resolve(__dirname, 'docmedown.iife.js'),
-          path.resolve(__dirname, '../dist/docmedown.iife.js'),
-          path.resolve(__dirname, '../docmedown.iife.js'),
+          path.resolve(__dirname, "docmedown.iife.js"),
+          path.resolve(__dirname, "../dist/docmedown.iife.js"),
+          path.resolve(__dirname, "../docmedown.iife.js"),
         ];
         const distFile = bundleCandidates.find((p) => fs.existsSync(p));
         if (distFile) {
@@ -104,16 +106,16 @@ export function startDevServer(options: DevServerOptions): Promise<{ server: htt
       try {
         const stat = fs.statSync(filePath);
         if (stat.isDirectory()) {
-          filePath = path.join(filePath, 'index.html');
+          filePath = path.join(filePath, "index.html");
         }
 
-        const mimeType = mime.lookup(filePath) || 'application/octet-stream';
-        res.setHeader('Content-Type', mimeType);
+        const mimeType = mime.lookup(filePath) || "application/octet-stream";
+        res.setHeader("Content-Type", mimeType);
 
-        if (mimeType.includes('html')) {
-          let content = fs.readFileSync(filePath, 'utf-8');
-          if (!content.includes('/__dmd_reload')) {
-            content = content.replace('</body>', `${liveReloadScript}</body>`);
+        if (mimeType.includes("html")) {
+          let content = fs.readFileSync(filePath, "utf-8");
+          if (!content.includes("/__dmd_reload")) {
+            content = content.replace("</body>", `${liveReloadScript}</body>`);
           }
           res.writeHead(200);
           res.end(content);
@@ -122,20 +124,20 @@ export function startDevServer(options: DevServerOptions): Promise<{ server: htt
           res.writeHead(200);
           stream.pipe(res);
         }
-      } catch (err) {
-        res.writeHead(404, { 'Content-Type': 'text/plain' });
-        res.end('404 Not Found');
+      } catch (_err) {
+        res.writeHead(404, { "Content-Type": "text/plain" });
+        res.end("404 Not Found");
       }
     });
 
     const wss = new WebSocketServer({ noServer: true });
     const clients = new Set<WebSocket>();
 
-    server.on('upgrade', (request, socket, head) => {
-      if (request.url === '/__dmd_reload') {
+    server.on("upgrade", (request, socket, head) => {
+      if (request.url === "/__dmd_reload") {
         wss.handleUpgrade(request, socket, head, (ws) => {
           clients.add(ws);
-          ws.on('close', () => clients.delete(ws));
+          ws.on("close", () => clients.delete(ws));
         });
       } else {
         socket.destroy();
@@ -145,19 +147,19 @@ export function startDevServer(options: DevServerOptions): Promise<{ server: htt
     // File watcher for hot reload
     const watcher = chokidar.watch(rootDir, {
       ignored: [
-        '**/node_modules/**',
-        '**/.git/**',
-        '**/dist/**',
-        '**/.dist/**',
-        '**/_manifest.json',
-        '**/_docs.js',
-        '**/docmedown.iife.js',
+        "**/node_modules/**",
+        "**/.git/**",
+        "**/dist/**",
+        "**/.dist/**",
+        "**/_manifest.json",
+        "**/_docs.js",
+        "**/docmedown.iife.js",
       ],
       ignoreInitial: true,
     });
 
     let reloadTimeout: NodeJS.Timeout | null = null;
-    watcher.on('all', (event, changedPath) => {
+    watcher.on("all", (event, changedPath) => {
       if (!shouldRebuildDocumentation(rootDir, changedPath)) return;
 
       if (reloadTimeout) clearTimeout(reloadTimeout);
@@ -176,7 +178,7 @@ export function startDevServer(options: DevServerOptions): Promise<{ server: htt
 
         clients.forEach((ws) => {
           if (ws.readyState === WebSocket.OPEN) {
-            ws.send('reload');
+            ws.send("reload");
           }
         });
       }, 100);
@@ -195,8 +197,8 @@ export function startDevServer(options: DevServerOptions): Promise<{ server: htt
         });
       });
 
-      server.on('error', (err: any) => {
-        if (err.code === 'EADDRINUSE') {
+      server.on("error", (err: any) => {
+        if (err.code === "EADDRINUSE") {
           port++;
           tryListen();
         } else {

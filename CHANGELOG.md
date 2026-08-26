@@ -2,6 +2,20 @@
 
 All notable changes to DocMeDown are documented here.
 
+## 0.1.1 - 2026-08-26
+
+### Added
+
+- Strict Zod validation for browser, CLI, inline, manifest, and JSON-file configuration sources.
+- Public configuration schemas and types, plus a shipped JSON Schema at `schemas/docs.schema.json` for editor validation.
+- Biome formatting and linting commands integrated into the release gate.
+- Regression coverage for configuration precedence, fallback behavior, manifest validation, and the shipped JSON Schema.
+
+### Changed
+
+- CLI configuration reads now fail with source-prefixed validation errors instead of silently using malformed configuration.
+- Documentation, templates, and contributor guidance now describe the shared configuration contract and quality checks.
+
 ## 0.1.0 - 2026-08-26
 
 ### Added

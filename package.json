@@ -1,6 +1,6 @@
 {
   "name": "docmedown",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "The simplest MarkDown documenter yet. CLI & Web Script React SPA documentation engine.",
   "main": "./dist/docmedown.cjs",
   "module": "./dist/docmedown.mjs",
@@ -23,6 +23,7 @@
     "dist",
     "bin",
     "templates",
+    "schemas",
     "README.md",
     "LICENSE"
   ],
@@ -31,6 +32,9 @@
     "build:runtime": "vite build",
     "build:cli": "tsup",
     "typecheck": "tsc --noEmit",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "format": "biome format --write .",
     "build:types": "tsc -p tsconfig.runtime.json",
     "build": "npm run build:runtime && npm run build:cli && npm run build:types",
     "docmedown": "node ./bin/docmedown.js",
@@ -43,7 +47,7 @@
     "build:offline": "node ./bin/docmedown.js build ./docs",
     "config:docs": "node ./bin/docmedown.js config ./docs/docs.json",
     "test": "npx tsx --test tests/parser.test.ts tests/scanner.test.ts tests/runtime-integration.test.ts tests/package-smoke.test.ts",
-    "test:release": "npm run typecheck && npm run test && npm run build && npm run build:docs && npm pack --dry-run",
+    "test:release": "npm run typecheck && npm run lint && npm run test && npm run build && npm run build:docs && npm pack --dry-run",
     "deploy": "node ./scripts/deploy.mjs",
     "deploy:dry-run": "npm run deploy -- --dry-run",
     "prepublishOnly": "npm run test:release"
@@ -87,9 +91,11 @@
     "mime-types": "^2.1.35",
     "open": "^10.1.0",
     "prompts": "^2.4.2",
-    "ws": "^8.18.0"
+    "ws": "^8.18.0",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.5.10",
     "@types/node": "^22.5.0",
     "@types/prismjs": "^1.26.6",
     "@types/prompts": "^2.4.9",

@@ -216,8 +216,11 @@ The standard build embeds `.dmd/components.js` in `docs/.dist/index.html`, so th
 
 ## ⚙️ Configuration Reference (`docs.json`)
 
+DocMeDown validates configuration from `docs.json`, `dmd.json`, inline `#dmd-config` JSON, and embedded manifests before applying defaults. Add the published JSON Schema reference for editor completion and immediate feedback:
+
 ```json
 {
+  "$schema": "https://raw.githubusercontent.com/gabrielmsilva00/docmedown/main/schemas/docs.schema.json",
   "name": "My Documentation",
   "tagline": "The simplest Markdown documenter yet",
   "version": "1.0.0",
@@ -244,6 +247,8 @@ The standard build embeds `.dmd/components.js` in `docs/.dist/index.html`, so th
   }
 }
 ```
+
+Unknown keys are rejected. The npm package also ships the portable schema at `schemas/docs.schema.json`; TypeScript consumers can import `docConfigSchema` and `parseDocConfig` from `docmedown`. See the full [configuration reference](./docs/configuration.md) for every field and validation rule.
 
 ### Color Presets Available
 
@@ -287,3 +292,17 @@ npm run deploy
 ```
 
 It validates the release, pushes `main` and `v<version>` to GitHub, publishes to npm, and verifies the npm registry. Run `npm run deploy:dry-run` to validate without changing GitHub or npm.
+
+## 🧹 Quality checks
+
+DocMeDown uses [Biome](https://biomejs.dev/) for formatting, import organization, and linting, and Zod for runtime configuration validation.
+
+```bash
+npm run lint       # check formatting, imports, and lint rules
+npm run lint:fix   # apply Biome fixes
+npm run format     # format maintained source files
+npm run typecheck
+npm test
+```
+
+`npm run test:release` runs all of these checks plus production, documentation, and package smoke builds.

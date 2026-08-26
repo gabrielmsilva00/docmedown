@@ -1,23 +1,23 @@
-import fs from 'fs';
-import path from 'path';
-import matter from 'gray-matter';
-import { DocFileItem, DocManifest, SidebarTreeNode, DocConfig, DocHeading } from '../../runtime/types';
-import { buildSidebarTree, formatTitleFromFilename } from '../../runtime/loader/auto-indexer';
+import fs from "node:fs";
+import path from "node:path";
+import matter from "gray-matter";
+import { buildSidebarTree, formatTitleFromFilename } from "../../runtime/loader/auto-indexer";
+import type { DocConfig, DocFileItem, DocHeading, DocManifest } from "../../runtime/types";
 
 export function extractHeadings(content: string): DocHeading[] {
   const headings: DocHeading[] = [];
-  const lines = content.split('\n');
+  const lines = content.split("\n");
 
   for (const line of lines) {
     const match = line.match(/^(#{1,4})\s+(.+)$/);
     if (match) {
       const level = match[1].length;
-      const text = match[2].trim().replace(/[#*`_]/g, '');
+      const text = match[2].trim().replace(/[#*`_]/g, "");
       const id = text
         .toLowerCase()
-        .replace(/[^\w\s-]/g, '')
+        .replace(/[^\w\s-]/g, "")
         .trim()
-        .replace(/[\s_-]+/g, '-');
+        .replace(/[\s_-]+/g, "-");
 
       headings.push({ level, text, id });
     }
@@ -29,8 +29,8 @@ export function extractHeadings(content: string): DocHeading[] {
 export function scanDirectory(
   dir: string,
   baseDir: string = dir,
-  excludeList: string[] = ['node_modules', '.git', '.dmd', 'dist', 'bin'],
-  stopAtNestedDocsRoots: boolean = true
+  excludeList: string[] = ["node_modules", ".git", ".dmd", "dist", "bin"],
+  stopAtNestedDocsRoots: boolean = true,
 ): string[] {
   const results: string[] = [];
   if (!fs.existsSync(dir)) return results;
@@ -38,17 +38,16 @@ export function scanDirectory(
   const entries = fs.readdirSync(dir, { withFileTypes: true });
 
   for (const entry of entries) {
-    if (excludeList.includes(entry.name) || entry.name.startsWith('.')) {
+    if (excludeList.includes(entry.name) || entry.name.startsWith(".")) {
       continue;
     }
 
     const fullPath = path.join(dir, entry.name);
-    const relPath = path.relative(baseDir, fullPath).replace(/\\/g, '/');
+    const relPath = path.relative(baseDir, fullPath).replace(/\\/g, "/");
 
     if (entry.isDirectory()) {
-      const isNestedDocsRoot = stopAtNestedDocsRoots &&
-        fullPath !== baseDir &&
-        fs.existsSync(path.join(fullPath, 'docs.json'));
+      const isNestedDocsRoot =
+        stopAtNestedDocsRoots && fullPath !== baseDir && fs.existsSync(path.join(fullPath, "docs.json"));
 
       if (!isNestedDocsRoot) {
         results.push(...scanDirectory(fullPath, baseDir, excludeList, stopAtNestedDocsRoots));
@@ -68,12 +67,12 @@ export function generateManifest(docDir: string, config: DocConfig): DocManifest
 
   for (const relFile of files) {
     const fullPath = path.join(docDir, relFile);
-    const raw = fs.readFileSync(fullPath, 'utf-8');
+    const raw = fs.readFileSync(fullPath, "utf-8");
     const { data: fm, content } = matter(raw);
 
-    const cleanSlug = relFile.replace(/\.(md|mdx)$/i, '');
-    const isOverview = cleanSlug.toLowerCase() === 'readme' || cleanSlug.toLowerCase() === 'index';
-    const slug = isOverview ? 'README' : cleanSlug;
+    const cleanSlug = relFile.replace(/\.(md|mdx)$/i, "");
+    const isOverview = cleanSlug.toLowerCase() === "readme" || cleanSlug.toLowerCase() === "index";
+    const slug = isOverview ? "README" : cleanSlug;
     const title = fm.title || fm.sidebar_label || formatTitleFromFilename(path.basename(relFile));
 
     frontmatters[relFile] = fm;
@@ -86,7 +85,7 @@ export function generateManifest(docDir: string, config: DocConfig): DocManifest
       slug,
       path: relFile,
       title,
-      category: relFile.includes('/') ? relFile.substring(0, relFile.lastIndexOf('/')) : undefined,
+      category: relFile.includes("/") ? relFile.substring(0, relFile.lastIndexOf("/")) : undefined,
       frontmatter: fm,
       headings,
       content,
@@ -98,7 +97,7 @@ export function generateManifest(docDir: string, config: DocConfig): DocManifest
   const tree = buildSidebarTree(files, frontmatters, config.sidebar);
 
   return {
-    version: '1.0.0',
+    version: "1.0.0",
     generatedAt: new Date().toISOString(),
     config,
     docs: docItems,

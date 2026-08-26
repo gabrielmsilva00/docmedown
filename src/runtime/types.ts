@@ -1,130 +1,37 @@
-/**
- * DocMeDown Configuration and Runtime Type Definitions
- */
+/** DocMeDown runtime type definitions. Configuration types are derived from Zod schemas. */
 
-export type ThemePreset =
-  | 'indigo'
-  | 'emerald'
-  | 'sunset'
-  | 'violet'
-  | 'rose'
-  | 'slate'
-  | 'cyberpunk';
+import type { z } from "zod";
+import type {
+  colorModeSchema,
+  docConfigSchema,
+  docSearchConfigSchema,
+  docThemeConfigSchema,
+  navLinkSchema,
+  normalizedDocConfigSchema,
+  remoteSourceSchema,
+  SidebarItemConfigShape,
+  socialLinkSchema,
+  themePresetSchema,
+} from "./config-schema";
 
-export type ColorMode = 'light' | 'dark' | 'auto';
-
-export interface NavLink {
-  label: string;
-  href: string;
-  external?: boolean;
-  icon?: string;
-}
-
-export interface SocialLink {
-  type: 'github' | 'gitlab' | 'twitter' | 'x' | 'discord' | 'custom';
-  url: string;
-  label?: string;
-  icon?: string;
-}
-
-export interface RemoteSourceConfig {
-  type: 'github' | 'gitlab' | 'raw';
-  /** e.g. "facebook/react" or "owner/repo" */
-  repo?: string;
-  /** e.g. "main" or "master" */
-  branch?: string;
-  /** Subdirectory where markdown files live, e.g. "docs" or "" */
-  docsDir?: string;
-  /** Optional personal access token or auth for private repos */
-  token?: string;
-  /** Raw base URL override */
-  baseUrl?: string;
-}
-
-export interface SidebarItemConfig {
-  title?: string;
-  path?: string;
-  slug?: string;
-  icon?: string;
-  badge?: string;
-  badgeType?: 'info' | 'success' | 'warning' | 'new';
-  collapsed?: boolean;
-  children?: SidebarItemConfig[];
-}
-
-export interface DocThemeConfig {
-  preset?: ThemePreset;
-  defaultMode?: ColorMode;
-  accentColor?: string;
-  accentColorDark?: string;
-  fontFamily?: string;
-  codeTheme?: 'github' | 'dracula' | 'one-dark' | 'synthwave';
-  logo?: {
-    light?: string;
-    dark?: string;
-    alt?: string;
-    text?: string;
-  };
-  favicon?: string;
-}
-
-export interface DocSearchConfig {
-  enabled?: boolean;
-  placeholder?: string;
-  maxResults?: number;
-}
-
-export interface DocConfig {
-  name: string;
-  tagline?: string;
-  description?: string;
-  version?: string;
-  rootDoc?: string; // Default doc, e.g. "README.md" or "index.md"
-  
-  /** Source configuration: local filesystem or remote GitHub/GitLab */
-  source?: RemoteSourceConfig;
-
-  /** Visual and theme configurations */
-  theme?: DocThemeConfig;
-
-  /** Navigation bar links */
-  nav?: NavLink[];
-
-  /** Social and repository links */
-  socials?: SocialLink[];
-
-  /** Manual sidebar configuration (optional; auto-indexed if omitted) */
-  sidebar?: SidebarItemConfig[];
-
-  /** Auto-indexing options */
-  autoIndex?: {
-    enabled?: boolean;
-    exclude?: string[]; // Glob patterns or file names
-    sort?: 'alphabetical' | 'frontmatter' | 'natural';
-    defaultCollapsed?: boolean;
-  };
-
-  /** Search options */
-  search?: DocSearchConfig;
-
-  /** Footer config */
-  footer?: {
-    copyright?: string;
-    links?: NavLink[];
-    showBuiltWith?: boolean;
-  };
-
-  /** Custom component directory or URL */
-  componentsUrl?: string;
-
-  /** Edit page link (e.g. "https://github.com/owner/repo/edit/main/docs/") */
-  editUrl?: string;
-}
+export type ThemePreset = z.infer<typeof themePresetSchema>;
+export type ColorMode = z.infer<typeof colorModeSchema>;
+export type NavLink = z.infer<typeof navLinkSchema>;
+export type SocialLink = z.infer<typeof socialLinkSchema>;
+export type RemoteSourceConfig = z.infer<typeof remoteSourceSchema>;
+export type GithubSourceConfig = Extract<RemoteSourceConfig, { type: "github" }>;
+export type GitlabSourceConfig = Extract<RemoteSourceConfig, { type: "gitlab" }>;
+export type RawSourceConfig = Extract<RemoteSourceConfig, { type: "raw" }>;
+export type SidebarItemConfig = SidebarItemConfigShape;
+export type DocThemeConfig = z.infer<typeof docThemeConfigSchema>;
+export type DocSearchConfig = z.infer<typeof docSearchConfigSchema>;
+export type PartialDocConfig = z.input<typeof docConfigSchema>;
+export type DocConfig = z.output<typeof normalizedDocConfigSchema>;
 
 /** Options accepted by the browser integration entry point. */
 export interface DocMeDownInitOptions {
   el?: string | HTMLElement;
-  config?: Partial<DocConfig>;
+  config?: PartialDocConfig;
   basePath?: string;
 }
 
@@ -148,7 +55,7 @@ export interface DocFrontmatter {
   description?: string;
   icon?: string;
   badge?: string;
-  badge_type?: 'info' | 'success' | 'warning' | 'new';
+  badge_type?: "info" | "success" | "warning" | "new";
   tags?: string[];
   hidden?: boolean;
   [key: string]: any;
@@ -181,7 +88,7 @@ export interface SidebarTreeNode {
   path?: string;
   icon?: string;
   badge?: string;
-  badgeType?: 'info' | 'success' | 'warning' | 'new';
+  badgeType?: "info" | "success" | "warning" | "new";
   order: number;
   isCategory: boolean;
   collapsed?: boolean;

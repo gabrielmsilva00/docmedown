@@ -1,4 +1,4 @@
-import katex from 'katex';
+import katex from "katex";
 
 export function renderMath(content: string): string {
   // 1. Block math: $$ ... $$
@@ -14,7 +14,7 @@ export function renderMath(content: string): string {
   });
 
   // 2. Inline math: $ ... $ (avoid matching \$ or pure dollar amounts)
-  result = result.replace(/(^|[^\\])\$([^\$\n]+?)\$/g, (_, prefix, math) => {
+  result = result.replace(/(^|[^\\])\$([^$\n]+?)\$/g, (_, prefix, math) => {
     try {
       const rendered = katex.renderToString(math.trim(), {
         displayMode: false,

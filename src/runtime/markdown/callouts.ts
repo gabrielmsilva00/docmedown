@@ -1,5 +1,5 @@
 export interface CalloutInfo {
-  type: 'note' | 'tip' | 'important' | 'warning' | 'caution';
+  type: "note" | "tip" | "important" | "warning" | "caution";
   title: string;
   content: string;
 }
@@ -17,10 +17,10 @@ export const CALLOUT_ICONS = {
  * e.g. > [!NOTE] or > [!WARNING] Title
  */
 export function processAlerts(markdown: string): string {
-  const alertRegex = /^>\s*\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\](?:\s+(.*))?$/gim;
+  const _alertRegex = /^>\s*\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\](?:\s+(.*))?$/gim;
 
   return markdown.replace(/^((?:>[^\n]*\n?)+)/gm, (block) => {
-    const lines = block.split('\n');
+    const lines = block.split("\n");
     const firstLine = lines[0];
     const match = /^>\s*\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\](?:\s+(.*))?$/i.exec(firstLine.trim());
 
@@ -31,8 +31,8 @@ export function processAlerts(markdown: string): string {
     const title = customTitle || type.toUpperCase();
 
     // Strip leading > from rest of the lines
-    const contentLines = lines.slice(1).map((l) => l.replace(/^>\s?/, ''));
-    const content = contentLines.join('\n').trim();
+    const contentLines = lines.slice(1).map((l) => l.replace(/^>\s?/, ""));
+    const content = contentLines.join("\n").trim();
 
     return `\n<div class="dmd-callout dmd-callout-${type}">
   <div class="dmd-callout-header">

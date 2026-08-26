@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { useDoc } from '../provider/DocProvider';
-import { SidebarTreeNode } from '../types';
+import type React from "react";
+import { useState } from "react";
+import { useDoc } from "../provider/DocProvider";
+import type { SidebarTreeNode } from "../types";
 
 export const Sidebar: React.FC = () => {
   const { tree, currentSlug, navigate, isLoading, isMobileSidebarOpen, setIsMobileSidebarOpen } = useDoc();
@@ -9,10 +10,18 @@ export const Sidebar: React.FC = () => {
     <>
       {/* Mobile Backdrop */}
       {isMobileSidebarOpen && (
-        <div className="dmd-sidebar-backdrop" onClick={() => setIsMobileSidebarOpen(false)} />
+        <button
+          type="button"
+          className="dmd-sidebar-backdrop"
+          aria-label="Close documentation navigation"
+          onClick={() => setIsMobileSidebarOpen(false)}
+        />
       )}
 
-      <aside className={`dmd-sidebar ${isMobileSidebarOpen ? 'mobile-open' : ''}`} aria-label="Documentation navigation">
+      <aside
+        className={`dmd-sidebar ${isMobileSidebarOpen ? "mobile-open" : ""}`}
+        aria-label="Documentation navigation"
+      >
         <div className="dmd-sidebar-label">Documentation</div>
         <nav className="dmd-sidebar-nav">
           <ul className="dmd-sidebar-list">
@@ -47,7 +56,7 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({ node, currentSlug, onNavigate
         >
           <span className="dmd-category-title">{node.title}</span>
           <svg
-            className={`dmd-category-arrow ${collapsed ? 'collapsed' : ''}`}
+            className={`dmd-category-arrow ${collapsed ? "collapsed" : ""}`}
             width="14"
             height="14"
             viewBox="0 0 24 24"
@@ -71,13 +80,13 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({ node, currentSlug, onNavigate
     );
   }
 
-  const isActive = currentSlug === node.slug || (currentSlug === 'README' && node.slug === 'README');
+  const isActive = currentSlug === node.slug || (currentSlug === "README" && node.slug === "README");
 
   return (
     <li className="dmd-sidebar-item">
       <a
         href={`#/${node.slug}`}
-        className={`dmd-sidebar-link ${isActive ? 'active' : ''}`}
+        className={`dmd-sidebar-link ${isActive ? "active" : ""}`}
         onClick={(e) => {
           e.preventDefault();
           if (node.slug) onNavigate(node.slug);
@@ -85,7 +94,7 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({ node, currentSlug, onNavigate
       >
         {node.icon && <span className="dmd-item-icon">{node.icon}</span>}
         <span className="dmd-item-title">{node.title}</span>
-        {node.badge && <span className={`dmd-badge dmd-badge-${node.badgeType || 'info'}`}>{node.badge}</span>}
+        {node.badge && <span className={`dmd-badge dmd-badge-${node.badgeType || "info"}`}>{node.badge}</span>}
       </a>
     </li>
   );

@@ -1,10 +1,10 @@
-import React from 'react';
-import { useDoc } from '../provider/DocProvider';
-import { Navbar } from './Navbar';
-import { Sidebar } from './Sidebar';
-import { Content } from './Content';
-import { TableOfContents } from './TableOfContents';
-import { SearchModal } from '../search/SearchModal';
+import type React from "react";
+import { useDoc } from "../provider/DocProvider";
+import { SearchModal } from "../search/SearchModal";
+import { Content } from "./Content";
+import { Navbar } from "./Navbar";
+import { Sidebar } from "./Sidebar";
+import { TableOfContents } from "./TableOfContents";
 
 export const Layout: React.FC = () => {
   const { currentDoc, currentSlug, searchIndex, isSearchOpen, setIsSearchOpen, navigate, config } = useDoc();

@@ -1,12 +1,13 @@
-import React, { createContext, useContext, useEffect, useState, useMemo } from 'react';
-import { DocConfig, SidebarTreeNode, DocFrontmatter, DocHeading, DocFileItem } from '../types';
-import { HashRouter, RouteInfo } from '../router';
-import { LocalDocLoader } from '../loader/local-loader';
-import { RemoteGithubLoader } from '../loader/remote-github';
-import { RemoteGitlabLoader } from '../loader/remote-gitlab';
-import { buildSidebarTree } from '../loader/auto-indexer';
-import { parseMarkdown, ParsedMarkdown } from '../markdown/parser';
-import { DocSearchIndex } from '../search/search-index';
+import type React from "react";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { buildSidebarTree } from "../loader/auto-indexer";
+import { LocalDocLoader } from "../loader/local-loader";
+import { RemoteGithubLoader } from "../loader/remote-github";
+import { RemoteGitlabLoader } from "../loader/remote-gitlab";
+import { type ParsedMarkdown, parseMarkdown } from "../markdown/parser";
+import { HashRouter, type RouteInfo } from "../router";
+import { DocSearchIndex } from "../search/search-index";
+import type { DocConfig, SidebarTreeNode } from "../types";
 
 export interface ActiveDocData extends ParsedMarkdown {
   slug: string;
@@ -40,7 +41,7 @@ const DocContext = createContext<DocContextType | null>(null);
 
 export const useDoc = () => {
   const ctx = useContext(DocContext);
-  if (!ctx) throw new Error('useDoc must be used within DocProvider');
+  if (!ctx) throw new Error("useDoc must be used within DocProvider");
   return ctx;
 };
 
@@ -50,9 +51,9 @@ interface DocProviderProps {
   children: React.ReactNode;
 }
 
-export const DocProvider: React.FC<DocProviderProps> = ({ initialConfig, basePath = '', children }) => {
+export const DocProvider: React.FC<DocProviderProps> = ({ initialConfig, basePath = "", children }) => {
   const [config, setConfig] = useState<DocConfig>(initialConfig);
-  const [currentSlug, setCurrentSlug] = useState<string>('');
+  const [currentSlug, setCurrentSlug] = useState<string>("");
   const [currentDoc, setCurrentDoc] = useState<ActiveDocData | null>(null);
   const [tree, setTree] = useState<SidebarTreeNode[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -60,16 +61,16 @@ export const DocProvider: React.FC<DocProviderProps> = ({ initialConfig, basePat
   const [isSearchOpen, setIsSearchOpen] = useState<boolean>(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState<boolean>(false);
 
-  const router = useMemo(() => new HashRouter(config.rootDoc || 'README.md'), [config.rootDoc]);
+  const router = useMemo(() => new HashRouter(config.rootDoc || "README.md"), [config.rootDoc]);
   const searchIndex = useMemo(() => new DocSearchIndex(), []);
   const localLoader = useMemo(() => new LocalDocLoader(), []);
   const remoteGithub = useMemo(
-    () => (config.source?.type === 'github' ? new RemoteGithubLoader(config.source) : null),
-    [config.source]
+    () => (config.source?.type === "github" ? new RemoteGithubLoader(config.source) : null),
+    [config.source],
   );
   const remoteGitlab = useMemo(
-    () => (config.source?.type === 'gitlab' ? new RemoteGitlabLoader(config.source) : null),
-    [config.source]
+    () => (config.source?.type === "gitlab" ? new RemoteGitlabLoader(config.source) : null),
+    [config.source],
   );
 
   // Handle route changes
@@ -122,9 +123,9 @@ export const DocProvider: React.FC<DocProviderProps> = ({ initialConfig, basePat
         }
 
         // 4. Default fallback tree for local zero-config mode
-        setTree(buildSidebarTree(['README.md'], {}, config.sidebar));
+        setTree(buildSidebarTree(["README.md"], {}, config.sidebar));
       } catch {
-        if (!isCancelled) setTree(buildSidebarTree(['README.md'], {}, config.sidebar));
+        if (!isCancelled) setTree(buildSidebarTree(["README.md"], {}, config.sidebar));
       }
     }
 
@@ -133,7 +134,7 @@ export const DocProvider: React.FC<DocProviderProps> = ({ initialConfig, basePat
     return () => {
       isCancelled = true;
     };
-  }, [config.source, config.sidebar, basePath, localLoader, remoteGithub, remoteGitlab, searchIndex]);
+  }, [config.sidebar, basePath, localLoader, remoteGithub, remoteGitlab, searchIndex]);
 
   // Load document content whenever currentSlug changes
   useEffect(() => {
@@ -160,38 +161,38 @@ export const DocProvider: React.FC<DocProviderProps> = ({ initialConfig, basePat
           const parsed = parseMarkdown(rawContent, currentSlug);
           const title = parsed.frontmatter.title || parsed.headings[0]?.text || currentSlug;
 
-        const docData: ActiveDocData = {
-          ...parsed,
-          slug: currentSlug,
-          title,
-        };
+          const docData: ActiveDocData = {
+            ...parsed,
+            slug: currentSlug,
+            title,
+          };
 
           setCurrentDoc(docData);
           searchIndex.addDoc({
-          slug: currentSlug,
-          path: `${currentSlug}.md`,
-          title,
-          frontmatter: parsed.frontmatter,
-          headings: parsed.headings,
-          content: rawContent,
-        });
+            slug: currentSlug,
+            path: `${currentSlug}.md`,
+            title,
+            frontmatter: parsed.frontmatter,
+            headings: parsed.headings,
+            content: rawContent,
+          });
           setIsLoading(false);
 
-        // Scroll to top or anchor
+          // Scroll to top or anchor
           const route = router.getCurrentRoute();
           if (route.anchor) {
             setTimeout(() => router.scrollToAnchor(route.anchor), 100);
           } else {
-            window.scrollTo({ top: 0, behavior: 'instant' as any });
+            window.scrollTo({ top: 0, behavior: "instant" as any });
           }
         } else {
-          const sourceName = remoteGithub ? 'GitHub' : remoteGitlab ? 'GitLab' : 'this documentation site';
+          const sourceName = remoteGithub ? "GitHub" : remoteGitlab ? "GitLab" : "this documentation site";
           setError(`Could not load “${currentSlug}” from ${sourceName}.`);
           setIsLoading(false);
         }
       } catch {
         if (!isCancelled) {
-          setError('The document source did not respond. Check the connection or try again.');
+          setError("The document source did not respond. Check the connection or try again.");
           setIsLoading(false);
         }
       }
@@ -207,13 +208,13 @@ export const DocProvider: React.FC<DocProviderProps> = ({ initialConfig, basePat
   // Keyboard shortcut for search (Cmd+K / Ctrl+K)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
         setIsSearchOpen((prev) => !prev);
       }
     };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
   // Compute linear list of docs for previous/next navigation
@@ -242,7 +243,7 @@ export const DocProvider: React.FC<DocProviderProps> = ({ initialConfig, basePat
     };
   }, [flatDocs, currentSlug]);
 
-  const navigate = (slug: string, anchor: string = '') => {
+  const navigate = (slug: string, anchor: string = "") => {
     router.navigate(slug, anchor);
   };
 

@@ -1,25 +1,25 @@
-import { RemoteSourceConfig } from '../types';
+import type { GitlabSourceConfig } from "../types";
 
 export class RemoteGitlabLoader {
-  private config: RemoteSourceConfig;
+  private config: GitlabSourceConfig;
   private cache: Map<string, string> = new Map();
 
-  constructor(config: RemoteSourceConfig) {
+  constructor(config: GitlabSourceConfig) {
     this.config = config;
   }
 
   private getHeaders(): HeadersInit {
     const headers: HeadersInit = {};
     if (this.config.token) {
-      headers['PRIVATE-TOKEN'] = this.config.token;
+      headers["PRIVATE-TOKEN"] = this.config.token;
     }
     return headers;
   }
 
   public async discoverFiles(): Promise<string[]> {
     if (!this.config.repo) return [];
-    const branch = this.config.branch || 'main';
-    const docsDir = (this.config.docsDir || '').replace(/^\/+|\/+$/g, '');
+    const branch = this.config.branch || "main";
+    const docsDir = (this.config.docsDir || "").replace(/^\/+|\/+$/g, "");
     const encodedRepo = encodeURIComponent(this.config.repo);
 
     try {
@@ -30,8 +30,8 @@ export class RemoteGitlabLoader {
         if (Array.isArray(data)) {
           const files: string[] = [];
           for (const item of data) {
-            if (item.type === 'blob' && /\.(md|mdx)$/i.test(item.path)) {
-              if (!docsDir || item.path.startsWith(docsDir + '/')) {
+            if (item.type === "blob" && /\.(md|mdx)$/i.test(item.path)) {
+              if (!docsDir || item.path.startsWith(`${docsDir}/`)) {
                 const relPath = docsDir ? item.path.substring(docsDir.length + 1) : item.path;
                 files.push(relPath);
               }
@@ -41,34 +41,34 @@ export class RemoteGitlabLoader {
         }
       }
     } catch (err) {
-      console.warn('[DocMeDown] Failed to fetch GitLab repository tree:', err);
+      console.warn("[DocMeDown] Failed to fetch GitLab repository tree:", err);
     }
 
-    return ['README.md', 'index.md'];
+    return ["README.md", "index.md"];
   }
 
   public async fetchDocContent(slug: string): Promise<string | null> {
-    const normalized = slug.replace(/^\.?\//, '').replace(/\.(md|mdx|html)$/i, '');
+    const normalized = slug.replace(/^\.?\//, "").replace(/\.(md|mdx|html)$/i, "");
     if (this.cache.has(normalized)) {
       return this.cache.get(normalized)!;
     }
 
-    const branch = this.config.branch || 'main';
-    const docsDir = (this.config.docsDir || '').replace(/^\/+|\/+$/g, '');
-    const encodedRepo = encodeURIComponent(this.config.repo || '');
+    const branch = this.config.branch || "main";
+    const docsDir = (this.config.docsDir || "").replace(/^\/+|\/+$/g, "");
+    const encodedRepo = encodeURIComponent(this.config.repo || "");
 
     const candidates = [
       `${normalized}.md`,
       `${normalized}.mdx`,
       `${normalized}/README.md`,
       `${normalized}/index.md`,
-      normalized === 'README' ? 'README.md' : null,
+      normalized === "README" ? "README.md" : null,
     ].filter(Boolean) as string[];
 
     for (const file of candidates) {
       const fullPath = docsDir ? `${docsDir}/${file}` : file;
       const rawUrl = `https://gitlab.com/api/v4/projects/${encodedRepo}/repository/files/${encodeURIComponent(
-        fullPath
+        fullPath,
       )}/raw?ref=${branch}`;
 
       try {

@@ -1,5 +1,5 @@
-import React from 'react';
-import * as Builtins from './Builtins';
+import type React from "react";
+import * as Builtins from "./Builtins";
 
 export type ComponentMap = Record<string, React.ComponentType<any>>;
 
@@ -27,10 +27,10 @@ export class ComponentRegistry {
   }
 
   private checkGlobalComponents() {
-    if (typeof window !== 'undefined') {
+    if (typeof window !== "undefined") {
       // Check window.__DMD_COMPONENTS__
       const globals = (window as any).__DMD_COMPONENTS__;
-      if (globals && typeof globals === 'object') {
+      if (globals && typeof globals === "object") {
         this.registerMultiple(globals);
       }
     }
@@ -58,12 +58,14 @@ export class ComponentRegistry {
   /**
    * Dynamically loads custom components from .dmd/components.js if available
    */
-  public async loadDmdDirectory(basePath: string = '') {
-    if (typeof window === 'undefined') return;
+  public async loadDmdDirectory(basePath: string = "") {
+    if (typeof window === "undefined") return;
 
     const runtimeWindow = window as any;
     if (!runtimeWindow.__DOCMEDOWN_COMPONENTS_READY__ && runtimeWindow.__DOCMEDOWN_DATA__?.componentsSource) {
-      const componentModule = new Blob([runtimeWindow.__DOCMEDOWN_DATA__.componentsSource], { type: 'text/javascript' });
+      const componentModule = new Blob([runtimeWindow.__DOCMEDOWN_DATA__.componentsSource], {
+        type: "text/javascript",
+      });
       const componentModuleUrl = URL.createObjectURL(componentModule);
       runtimeWindow.__DOCMEDOWN_COMPONENTS_READY__ = import(/* @vite-ignore */ componentModuleUrl)
         .then((module) => module.default || module)
@@ -71,21 +73,21 @@ export class ComponentRegistry {
     }
 
     const embeddedComponents = runtimeWindow.__DOCMEDOWN_COMPONENTS_READY__;
-    if (embeddedComponents && typeof embeddedComponents.then === 'function') {
+    if (embeddedComponents && typeof embeddedComponents.then === "function") {
       try {
         const components = await embeddedComponents;
-        if (components && typeof components === 'object') {
+        if (components && typeof components === "object") {
           this.registerMultiple(components);
           return;
         }
       } catch (error) {
-        console.warn('[DocMeDown] Failed to load embedded custom components:', error);
+        console.warn("[DocMeDown] Failed to load embedded custom components:", error);
       }
     }
 
     const urls = [
-      basePath ? `${basePath.replace(/\/$/, '')}/.dmd/components.js` : '.dmd/components.js',
-      basePath ? `${basePath.replace(/\/$/, '')}/.dmd/index.js` : '.dmd/index.js',
+      basePath ? `${basePath.replace(/\/$/, "")}/.dmd/components.js` : ".dmd/components.js",
+      basePath ? `${basePath.replace(/\/$/, "")}/.dmd/index.js` : ".dmd/index.js",
     ];
 
     for (const url of urls) {
@@ -93,9 +95,9 @@ export class ComponentRegistry {
         const mod = await import(/* @vite-ignore */ url);
         if (mod) {
           const comps = mod.default || mod;
-          if (typeof comps === 'object') {
+          if (typeof comps === "object") {
             this.registerMultiple(comps);
-            console.log('[DocMeDown] Loaded custom .dmd components:', Object.keys(comps));
+            console.log("[DocMeDown] Loaded custom .dmd components:", Object.keys(comps));
             return;
           }
         }

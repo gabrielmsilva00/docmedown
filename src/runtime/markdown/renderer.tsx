@@ -1,7 +1,8 @@
-import React, { useEffect, useRef } from 'react';
-import ReactDOM from 'react-dom/client';
-import { renderMermaidDiagrams } from './mermaid';
-import { ComponentRegistry } from '../components/DmdRegistry';
+import type React from "react";
+import { useEffect, useRef } from "react";
+import ReactDOM from "react-dom/client";
+import { ComponentRegistry } from "../components/DmdRegistry";
+import { renderMermaidDiagrams } from "./mermaid";
 
 interface MarkdownRendererProps {
   html: string;
@@ -14,30 +15,30 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ html, onNavi
 
   // Setup global copy code handler
   useEffect(() => {
-    if (typeof window !== 'undefined') {
+    if (typeof window !== "undefined") {
       (window as any).__dmdCopyCode = (btn: HTMLElement) => {
-        const targetSelector = btn.getAttribute('data-clipboard-target');
+        const targetSelector = btn.getAttribute("data-clipboard-target");
         if (!targetSelector) return;
         const codeEl = document.querySelector(targetSelector);
         if (!codeEl) return;
 
-        const text = codeEl.textContent || '';
+        const text = codeEl.textContent || "";
         navigator.clipboard.writeText(text).then(() => {
-          const copyIcon = btn.querySelector('.copy-icon') as HTMLElement;
-          const checkIcon = btn.querySelector('.check-icon') as HTMLElement;
-          const label = btn.querySelector('span');
+          const copyIcon = btn.querySelector(".copy-icon") as HTMLElement;
+          const checkIcon = btn.querySelector(".check-icon") as HTMLElement;
+          const label = btn.querySelector("span");
 
           if (copyIcon && checkIcon) {
-            copyIcon.style.display = 'none';
-            checkIcon.style.display = 'inline-block';
-            if (label) label.textContent = 'Copied!';
-            btn.classList.add('copied');
+            copyIcon.style.display = "none";
+            checkIcon.style.display = "inline-block";
+            if (label) label.textContent = "Copied!";
+            btn.classList.add("copied");
 
             setTimeout(() => {
-              copyIcon.style.display = 'inline-block';
-              checkIcon.style.display = 'none';
-              if (label) label.textContent = 'Copy';
-              btn.classList.remove('copied');
+              copyIcon.style.display = "inline-block";
+              checkIcon.style.display = "none";
+              if (label) label.textContent = "Copy";
+              btn.classList.remove("copied");
             }, 2000);
           }
         });
@@ -78,18 +79,22 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ html, onNavi
         for (let i = 0; i < el.attributes.length; i++) {
           const attr = el.attributes[i];
           let val: any = attr.value;
-          if (val === 'true') val = true;
-          else if (val === 'false') val = false;
-          else if (!isNaN(Number(val)) && val !== '') val = Number(val);
+          if (val === "true") val = true;
+          else if (val === "false") val = false;
+          else if (!Number.isNaN(Number(val)) && val !== "") val = Number(val);
           props[attr.name] = val;
         }
 
-        const mountPoint = document.createElement('div');
-        mountPoint.className = 'dmd-custom-component-wrapper';
+        const mountPoint = document.createElement("div");
+        mountPoint.className = "dmd-custom-component-wrapper";
         el.replaceWith(mountPoint);
 
         const root = ReactDOM.createRoot(mountPoint);
-        root.render(<Comp {...props}>{el.innerHTML ? <span dangerouslySetInnerHTML={{ __html: el.innerHTML }} /> : undefined}</Comp>);
+        root.render(
+          <Comp {...props}>
+            {el.innerHTML ? <span dangerouslySetInnerHTML={{ __html: el.innerHTML }} /> : undefined}
+          </Comp>,
+        );
         rootsRef.current.push(root);
       });
     }
@@ -107,28 +112,28 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ html, onNavi
       });
       rootsRef.current = [];
     };
-  }, [html]);
+  }, []);
 
   // Handle internal markdown link clicks smoothly
   const handleContainerClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    const target = (e.target as HTMLElement).closest('a');
+    const target = (e.target as HTMLElement).closest("a");
     if (!target) return;
 
-    const href = target.getAttribute('href');
+    const href = target.getAttribute("href");
     if (!href) return;
 
     // External link or protocol
-    if (href.startsWith('http://') || href.startsWith('https://') || href.startsWith('mailto:')) {
+    if (href.startsWith("http://") || href.startsWith("https://") || href.startsWith("mailto:")) {
       return;
     }
 
     // Handle hash route
-    if (href.startsWith('#/')) {
+    if (href.startsWith("#/")) {
       e.preventDefault();
       const raw = href.substring(2);
-      const hashIdx = raw.indexOf('#');
+      const hashIdx = raw.indexOf("#");
       const slug = hashIdx !== -1 ? raw.substring(0, hashIdx) : raw;
-      const anchor = hashIdx !== -1 ? raw.substring(hashIdx + 1) : '';
+      const anchor = hashIdx !== -1 ? raw.substring(hashIdx + 1) : "";
 
       if (onNavigate) {
         onNavigate(slug, anchor);

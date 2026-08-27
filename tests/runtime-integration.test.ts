@@ -21,7 +21,8 @@ test("normalizeConfig preserves nested defaults while applying integration overr
   });
 
   assert.equal(config.name, "Embedded docs");
-  assert.equal(config.theme?.preset, "emerald");
+  assert.equal(config.theme?.family, "atlas");
+  assert.equal((config.theme as Record<string, unknown>).preset, undefined);
   assert.equal(config.theme?.defaultMode, "auto");
   assert.equal(config.search?.enabled, false);
   assert.equal(config.search?.maxResults, 10);
@@ -122,7 +123,8 @@ test("loadDocConfig validates configuration embedded in a manifest", async () =>
 
   const config = await loadDocConfig("/docs");
   assert.equal(config.name, "Manifest docs");
-  assert.equal(config.theme?.preset, "violet");
+  assert.equal(config.theme?.family, "atlas");
+  assert.equal((config.theme as Record<string, unknown>).preset, undefined);
   assert.equal(config.theme?.defaultMode, "auto");
 });
 

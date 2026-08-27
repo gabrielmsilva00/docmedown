@@ -1,5 +1,15 @@
 import { normalizedDocConfigSchema, parseDocConfig } from "./config-schema";
-import type { DocConfig, PartialDocConfig } from "./types";
+import type { DocConfig, PartialDocConfig, ThemeFamily, ThemePreset } from "./types";
+
+const LEGACY_PRESET_FAMILIES: Record<ThemePreset, ThemeFamily> = {
+  indigo: "atlas",
+  emerald: "atlas",
+  sunset: "editorial",
+  violet: "atlas",
+  rose: "editorial",
+  slate: "blueprint",
+  cyberpunk: "terminal",
+};
 
 export const DEFAULT_CONFIG: DocConfig = {
   name: "DocMeDown",
@@ -8,7 +18,8 @@ export const DEFAULT_CONFIG: DocConfig = {
   version: "1.0.0",
   rootDoc: "README.md",
   theme: {
-    preset: "indigo",
+    family: "atlas",
+    density: "comfortable",
     defaultMode: "auto",
     codeTheme: "github",
   },
@@ -36,12 +47,20 @@ export const DEFAULT_CONFIG: DocConfig = {
  */
 export function normalizeConfig(userConfig: unknown = {}): DocConfig {
   const parsedConfig = parseDocConfig(userConfig);
+  const legacyPreset = parsedConfig.theme?.preset;
+  const family =
+    parsedConfig.theme?.family || (legacyPreset ? LEGACY_PRESET_FAMILIES[legacyPreset] : DEFAULT_CONFIG.theme?.family);
+  // Strip the deprecated accent-only preset once resolved so downstream
+  // consumers never observe two competing sources of truth.
+  const { preset: _legacyPreset, ...resolvedTheme } = parsedConfig.theme ?? {};
+  void _legacyPreset;
   const mergedConfig = {
     ...DEFAULT_CONFIG,
     ...parsedConfig,
     theme: {
       ...DEFAULT_CONFIG.theme,
-      ...parsedConfig.theme,
+      ...resolvedTheme,
+      family,
       logo: {
         ...DEFAULT_CONFIG.theme?.logo,
         ...parsedConfig.theme?.logo,

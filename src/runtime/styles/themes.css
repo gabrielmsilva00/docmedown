@@ -1,8 +1,17 @@
+/* ==========================================================================
+   BASE PRIMITIVES
+   Shared across every DocMeDown theme family. Family files override these
+   deliberately; consumers never read raw primitives directly, they read the
+   semantic tokens re-exported below.
+   ========================================================================== */
+
 :root {
   /* Local-only stacks keep serveable and file:/// output metrically identical. */
   --dmd-font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --dmd-font-display: Iowan Old Style, Palatino Linotype, Book Antiqua, Palatino, Georgia, serif;
   --dmd-font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  /* Display falls back to the sans stack; serif/mono families override it. */
+  --dmd-font-display: var(--dmd-font-sans);
+
   --dmd-radius-sm: 6px;
   --dmd-radius-md: 10px;
   --dmd-radius-lg: 16px;
@@ -10,108 +19,336 @@
   --dmd-transition: 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* ==========================================================================
-   LIGHT MODE DEFAULTS
-   ========================================================================== */
-:root[data-theme='light'] {
-  --dmd-bg-primary: #f7f6f1;
-  --dmd-bg-secondary: #eef1ed;
-  --dmd-bg-tertiary: #e2e9e4;
-  --dmd-bg-card: #fffefa;
-  --dmd-bg-elevated: rgba(247, 246, 241, 0.92);
-  --dmd-border-color: #d2dcd6;
-  --dmd-border-subtle: #e5ebe6;
-  
-  --dmd-text-primary: #132033;
-  --dmd-text-secondary: #536170;
-  --dmd-text-muted: #74818b;
-  
-  --dmd-code-bg: #1e1e2e;
-  --dmd-code-header-bg: #181825;
-  --dmd-code-text: #cdd6f4;
-  --dmd-inline-code-bg: #f1f5f9;
-  --dmd-inline-code-text: #0f172a;
-  
-  --dmd-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --dmd-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
-  --dmd-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
+/* Semantic layout/motion contract referenced by shell + density rules. */
+:root {
+  --dmd-nav-height: 68px;
+  --dmd-sidebar-width: 252px;
+  --dmd-toc-width: 220px;
+  --dmd-space-section: 2.75rem;
+  --dmd-rule-strong: var(--dmd-border-color);
+  --dmd-focus: var(--dmd-accent-glow);
 }
 
 /* ==========================================================================
-   DARK MODE DEFAULTS
+   ATLAS (default)
+   Neutral mineral canvas, cobalt action color, structured document chrome.
+   Base tokens intentionally mirror Atlas so unstyled roots still look right.
    ========================================================================== */
-:root[data-theme='dark'] {
-  --dmd-bg-primary: #101c27;
-  --dmd-bg-secondary: #162631;
-  --dmd-bg-tertiary: #20333d;
-  --dmd-bg-card: #15242e;
-  --dmd-bg-elevated: rgba(16, 28, 39, 0.92);
-  --dmd-border-color: #314650;
-  --dmd-border-subtle: #243842;
-  
-  --dmd-text-primary: #f3f5ef;
-  --dmd-text-secondary: #b7c4c4;
-  --dmd-text-muted: #80959b;
-  
-  --dmd-code-bg: #0b0f19;
-  --dmd-code-header-bg: #070a10;
-  --dmd-code-text: #e2e8f0;
-  --dmd-inline-code-bg: #1e293b;
-  --dmd-inline-code-text: #f1f5f9;
-  
-  --dmd-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
-  --dmd-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.3);
-  --dmd-shadow-lg: 0 10px 25px -3px rgba(0, 0, 0, 0.5);
+
+:root,
+:root[data-dmd-theme='atlas'] {
+  --dmd-bg-primary: #f7f7f5;
+  --dmd-bg-secondary: #eff0ee;
+  --dmd-bg-tertiary: #e4e6e3;
+  --dmd-bg-card: #ffffff;
+  --dmd-bg-elevated: rgba(247, 247, 245, 0.88);
+
+  --dmd-border-color: #ddded8;
+  --dmd-border-subtle: #e9eae4;
+
+  --dmd-text-primary: #1a1d21;
+  --dmd-text-secondary: #575f66;
+  --dmd-text-muted: #788089;
+
+  --dmd-accent: #315cf5;
+  --dmd-accent-hover: #2449c8;
+  --dmd-accent-subtle: rgba(49, 92, 245, 0.1);
+  --dmd-accent-glow: rgba(49, 92, 245, 0.32);
+
+  --dmd-code-bg: #16181d;
+  --dmd-code-header-bg: #101216;
+  --dmd-code-text: #dfe3ea;
+  --dmd-inline-code-bg: #eceef1;
+  --dmd-inline-code-text: #14181d;
+
+  --dmd-shadow-sm: 0 1px 2px rgba(20, 22, 26, 0.06);
+  --dmd-shadow-md: 0 4px 10px -2px rgba(20, 22, 26, 0.08), 0 2px 4px -2px rgba(20, 22, 26, 0.05);
+  --dmd-shadow-lg: 0 14px 28px -8px rgba(20, 22, 26, 0.18), 0 4px 10px -4px rgba(20, 22, 26, 0.08);
+
+  --dmd-font-body: var(--dmd-font-sans);
+}
+
+:root[data-dmd-theme='atlas'][data-theme='dark'] {
+  --dmd-bg-primary: #121417;
+  --dmd-bg-secondary: #181b1f;
+  --dmd-bg-tertiary: #212529;
+  --dmd-bg-card: #191d21;
+  --dmd-bg-elevated: rgba(18, 20, 23, 0.85);
+
+  --dmd-border-color: #2b3036;
+  --dmd-border-subtle: #22262b;
+
+  --dmd-text-primary: #ededef;
+  --dmd-text-secondary: #a8afb6;
+  --dmd-text-muted: #767e87;
+
+  --dmd-accent: #5b8cff;
+  --dmd-accent-hover: #7ba4ff;
+  --dmd-accent-subtle: rgba(91, 140, 255, 0.13);
+  --dmd-accent-glow: rgba(91, 140, 255, 0.35);
+
+  --dmd-code-bg: #0d0f12;
+  --dmd-code-header-bg: #08090b;
+  --dmd-code-text: #dde3ec;
+  --dmd-inline-code-bg: #23282e;
+  --dmd-inline-code-text: #e7ebf1;
+
+  --dmd-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --dmd-shadow-md: 0 4px 12px -2px rgba(0, 0, 0, 0.45), 0 2px 4px -2px rgba(0, 0, 0, 0.35);
+  --dmd-shadow-lg: 0 18px 34px -10px rgba(0, 0, 0, 0.55), 0 6px 12px -6px rgba(0, 0, 0, 0.4);
+}
+
+
+/* ==========================================================================
+   BLUEPRINT
+   Cool technical canvas, squared geometry, visible structural rules,
+   coral signal color. Diagram-inspired boundaries over glassy softness.
+   ========================================================================== */
+
+:root[data-dmd-theme='blueprint'] {
+  --dmd-bg-primary: #f2f5f7;
+  --dmd-bg-secondary: #e8edf0;
+  --dmd-bg-tertiary: #dde5ea;
+  --dmd-bg-card: #fafcfd;
+
+  --dmd-border-color: #c6d3da;
+  --dmd-border-subtle: #dbe3e8;
+
+  --dmd-text-primary: #14212b;
+  --dmd-text-secondary: #45606f;
+  --dmd-text-muted: #6c8494;
+
+  --dmd-accent: #ef5340;
+  --dmd-accent-hover: #d43d2b;
+  --dmd-accent-subtle: rgba(239, 83, 64, 0.09);
+  --dmd-accent-glow: rgba(239, 83, 64, 0.3);
+
+  --dmd-code-bg: #101b23;
+  --dmd-code-header-bg: #0b141a;
+  --dmd-code-text: #ccdae2;
+  --dmd-inline-code-bg: #e1e9ee;
+  --dmd-inline-code-text: #0d1a22;
+
+  --dmd-shadow-sm: none;
+  --dmd-shadow-md: 0 0 0 1px var(--dmd-border-color);
+  --dmd-shadow-lg: 0 0 0 1px var(--dmd-border-color), 0 10px 24px rgba(16, 27, 35, 0.14);
+
+  --dmd-radius-sm: 2px;
+  --dmd-radius-md: 3px;
+  --dmd-radius-lg: 4px;
+  --dmd-radius-full: 3px;
+
+  --dmd-bg-elevated: rgba(242, 245, 247, 0.92);
+  --dmd-nav-height: 60px;
+  --dmd-sidebar-width: 264px;
+  --dmd-font-display: var(--dmd-font-sans);
+  --dmd-font-body: var(--dmd-font-sans);
+}
+
+:root[data-dmd-theme='blueprint'][data-theme='dark'] {
+  --dmd-bg-primary: #0f171e;
+  --dmd-bg-secondary: #131e26;
+  --dmd-bg-tertiary: #182731;
+  --dmd-bg-card: #121c24;
+
+  --dmd-border-color: #24363f;
+  --dmd-border-subtle: #1b2a33;
+
+  --dmd-text-primary: #dbe6ec;
+  --dmd-text-secondary: #92aab8;
+  --dmd-text-muted: #66808f;
+
+  --dmd-accent: #ff6a55;
+  --dmd-accent-hover: #ff8571;
+  --dmd-accent-subtle: rgba(255, 106, 85, 0.11);
+  --dmd-accent-glow: rgba(255, 106, 85, 0.32);
+
+  --dmd-code-bg: #0a1116;
+  --dmd-code-header-bg: #060b0f;
+  --dmd-code-text: #cadbe4;
+  --dmd-inline-code-bg: #18242c;
+  --dmd-inline-code-text: #d5e4ed;
+
+  --dmd-bg-elevated: rgba(15, 23, 30, 0.88);
 }
 
 /* ==========================================================================
-   PRESET PALETTES (INDIGO, EMERALD, SUNSET, VIOLET, ROSE, SLATE, CYBERPUNK)
+   TERMINAL
+   Dark-first operational console. Flat surfaces, sharp corners, monospace
+   utility type, phosphor-green action color, crisp borders instead of glass.
    ========================================================================== */
-:root[data-preset='indigo'] {
-  --dmd-accent: #6366f1;
-  --dmd-accent-hover: #4f46e5;
-  --dmd-accent-subtle: rgba(99, 102, 241, 0.12);
-  --dmd-accent-glow: rgba(99, 102, 241, 0.35);
+
+:root[data-dmd-theme='terminal'] {
+  --dmd-bg-primary: #f3f4f1;
+  --dmd-bg-secondary: #e9ebe6;
+  --dmd-bg-tertiary: #dfe2db;
+  --dmd-bg-card: #fbfcfa;
+
+  --dmd-border-color: #c9cdc3;
+  --dmd-border-subtle: #dcdfd7;
+
+  --dmd-text-primary: #161c17;
+  --dmd-text-secondary: #4a564d;
+  --dmd-text-muted: #6f7b70;
+
+  --dmd-accent: #0c7c40;
+  --dmd-accent-hover: #076132;
+  --dmd-accent-subtle: rgba(12, 124, 64, 0.09);
+  --dmd-accent-glow: rgba(12, 124, 64, 0.28);
+
+  --dmd-code-bg: #0a0e0b;
+  --dmd-code-header-bg: #050706;
+  --dmd-code-text: #cfe8d4;
+  --dmd-inline-code-bg: #e2e6df;
+  --dmd-inline-code-text: #10150f;
+
+  --dmd-shadow-sm: none;
+  --dmd-shadow-md: 0 0 0 1px var(--dmd-border-color);
+  --dmd-shadow-lg: 0 0 0 1px var(--dmd-border-color), 0 12px 26px rgba(6, 10, 7, 0.22);
+
+  --dmd-radius-sm: 0px;
+  --dmd-radius-md: 2px;
+  --dmd-radius-lg: 2px;
+  --dmd-radius-full: 4px;
+
+  --dmd-nav-height: 54px;
+  --dmd-sidebar-width: 240px;
+  --dmd-toc-width: 200px;
+  --dmd-space-section: 2.25rem;
+  --dmd-transition: 0.13s linear;
+  --dmd-font-display: var(--dmd-font-mono);
+  --dmd-font-body: var(--dmd-font-sans);
+  --dmd-bg-elevated: rgba(243, 244, 241, 0.97);
 }
 
-:root[data-preset='emerald'] {
-  --dmd-accent: #10b981;
-  --dmd-accent-hover: #059669;
-  --dmd-accent-subtle: rgba(16, 185, 129, 0.12);
-  --dmd-accent-glow: rgba(16, 185, 129, 0.35);
+:root[data-dmd-theme='terminal'][data-theme='dark'] {
+  --dmd-bg-primary: #0a0e0c;
+  --dmd-bg-secondary: #0f1511;
+  --dmd-bg-tertiary: #151d17;
+  --dmd-bg-card: #0e130f;
+
+  --dmd-border-color: #26382a;
+  --dmd-border-subtle: #1a291e;
+
+  --dmd-text-primary: #d8e6d8;
+  --dmd-text-secondary: #93a794;
+  --dmd-text-muted: #647864;
+
+  --dmd-accent: #39e87f;
+  --dmd-accent-hover: #75f2a5;
+  --dmd-accent-subtle: rgba(57, 232, 127, 0.1);
+  --dmd-accent-glow: rgba(57, 232, 127, 0.3);
+
+  --dmd-code-bg: #060907;
+  --dmd-code-header-bg: #030504;
+  --dmd-code-text: #cde9d3;
+  --dmd-inline-code-bg: #16201a;
+  --dmd-inline-code-text: #d5ecd9;
+
+  --dmd-bg-elevated: rgba(10, 14, 12, 0.95);
 }
 
-:root[data-preset='sunset'] {
-  --dmd-accent: #f59e0b;
-  --dmd-accent-hover: #d97706;
-  --dmd-accent-subtle: rgba(245, 158, 11, 0.12);
-  --dmd-accent-glow: rgba(245, 158, 11, 0.35);
+/* ==========================================================================
+   EDITORIAL
+   Warm paper reading surface, serif display type, brick signal color,
+   generous rhythm and softer geometry for publication-style content.
+   ========================================================================== */
+
+:root[data-dmd-theme='editorial'] {
+  --dmd-bg-primary: #faf6ee;
+  --dmd-bg-secondary: #f2ecdf;
+  --dmd-bg-tertiary: #eae1cf;
+  --dmd-bg-card: #fffdf7;
+  --dmd-bg-elevated: rgba(250, 246, 238, 0.94);
+
+  --dmd-border-color: #ded2ba;
+  --dmd-border-subtle: #eae0cd;
+
+  --dmd-text-primary: #22201a;
+  --dmd-text-secondary: #665e4c;
+  --dmd-text-muted: #857c68;
+
+  --dmd-accent: #a34a33;
+  --dmd-accent-hover: #873623;
+  --dmd-accent-subtle: rgba(163, 74, 51, 0.09);
+  --dmd-accent-glow: rgba(163, 74, 51, 0.28);
+
+  --dmd-code-bg: #211d15;
+  --dmd-code-header-bg: #191610;
+  --dmd-code-text: #e8e0ce;
+  --dmd-inline-code-bg: #f0e8d6;
+  --dmd-inline-code-text: #2a2519;
+
+  --dmd-shadow-sm: 0 1px 2px rgba(58, 48, 30, 0.06);
+  --dmd-shadow-md: 0 4px 12px -2px rgba(58, 48, 30, 0.09), 0 2px 5px -2px rgba(58, 48, 30, 0.05);
+  --dmd-shadow-lg: 0 16px 30px -10px rgba(58, 48, 30, 0.2), 0 5px 12px -6px rgba(58, 48, 30, 0.08);
+
+  --dmd-radius-sm: 8px;
+  --dmd-radius-md: 12px;
+  --dmd-radius-lg: 20px;
+
+  --dmd-sidebar-width: 268px;
+  --dmd-space-section: 3.5rem;
+  --dmd-font-display: Iowan Old Style, Palatino Linotype, Book Antiqua, Palatino, Georgia, serif;
 }
 
-:root[data-preset='violet'] {
-  --dmd-accent: #8b5cf6;
-  --dmd-accent-hover: #7c3aed;
-  --dmd-accent-subtle: rgba(139, 92, 246, 0.12);
-  --dmd-accent-glow: rgba(139, 92, 246, 0.35);
+:root[data-dmd-theme='editorial'][data-theme='dark'] {
+  --dmd-bg-primary: #171512;
+  --dmd-bg-secondary: #1d1a16;
+  --dmd-bg-tertiary: #26221b;
+  --dmd-bg-card: #1c1915;
+  --dmd-bg-elevated: rgba(23, 21, 18, 0.9);
+
+  --dmd-border-color: #363023;
+  --dmd-border-subtle: #2a251c;
+
+  --dmd-text-primary: #ece7db;
+  --dmd-text-secondary: #b0a78f;
+  --dmd-text-muted: #7e7560;
+
+  --dmd-accent: #dd805f;
+  --dmd-accent-hover: #eda385;
+  --dmd-accent-subtle: rgba(221, 128, 95, 0.12);
+  --dmd-accent-glow: rgba(221, 128, 95, 0.3);
+
+  --dmd-code-bg: #100e0a;
+  --dmd-code-header-bg: #0a0806;
+  --dmd-code-text: #e3dbc9;
+  --dmd-inline-code-bg: #282219;
+  --dmd-inline-code-text: #ece5d4;
 }
 
-:root[data-preset='rose'] {
-  --dmd-accent: #f43f5e;
-  --dmd-accent-hover: #e11d48;
-  --dmd-accent-subtle: rgba(244, 63, 94, 0.12);
-  --dmd-accent-glow: rgba(244, 63, 94, 0.35);
+/* ==========================================================================
+   DENSITY
+   Compact trims vertical rhythm and panel widths across every family.
+   Family files may already lower values; compact clamps beneath them.
+   ========================================================================== */
+
+:root[data-dmd-density='compact'] {
+  --dmd-nav-height: 52px;
+  --dmd-sidebar-width: 228px;
+  --dmd-toc-width: 196px;
+  --dmd-space-section: 2rem;
 }
 
-:root[data-preset='slate'] {
-  --dmd-accent: #64748b;
-  --dmd-accent-hover: #475569;
-  --dmd-accent-subtle: rgba(100, 116, 139, 0.12);
-  --dmd-accent-glow: rgba(100, 116, 139, 0.35);
+:root[data-dmd-theme='editorial'][data-dmd-density='compact'] {
+  --dmd-space-section: 2.5rem;
 }
 
-:root[data-preset='cyberpunk'] {
-  --dmd-accent: #00f0ff;
-  --dmd-accent-hover: #00c8d6;
-  --dmd-accent-subtle: rgba(0, 240, 255, 0.15);
-  --dmd-accent-glow: rgba(0, 240, 255, 0.45);
+/* ==========================================================================
+   MOTION SAFETY
+   ========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dmd-transition: 0s;
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

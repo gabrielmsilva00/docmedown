@@ -6,8 +6,10 @@
   "version": "1.0.0",
   "rootDoc": "README.md",
   "theme": {
-    "preset": "indigo",
-    "defaultMode": "auto"
+    "family": "atlas",
+    "density": "comfortable",
+    "defaultMode": "auto",
+    "codeTheme": "github"
   },
   "nav": [
     { "label": "Overview", "href": "#/README" },

@@ -11,9 +11,14 @@ import type {
   remoteSourceSchema,
   SidebarItemConfigShape,
   socialLinkSchema,
+  themeDensitySchema,
+  themeFamilySchema,
   themePresetSchema,
 } from "./config-schema";
 
+export type ThemeFamily = z.infer<typeof themeFamilySchema>;
+export type ThemeDensity = z.infer<typeof themeDensitySchema>;
+/** @deprecated Use ThemeFamily. */
 export type ThemePreset = z.infer<typeof themePresetSchema>;
 export type ColorMode = z.infer<typeof colorModeSchema>;
 export type NavLink = z.infer<typeof navLinkSchema>;

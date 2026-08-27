@@ -12,7 +12,13 @@ interface DocMeDownAppProps {
 
 export const DocMeDownApp: React.FC<DocMeDownAppProps> = ({ config, basePath = "" }) => {
   return (
-    <ThemeProvider defaultMode={config.theme?.defaultMode} defaultPreset={config.theme?.preset}>
+    <ThemeProvider
+      defaultMode={config.theme?.defaultMode}
+      defaultFamily={config.theme?.family}
+      defaultDensity={config.theme?.density}
+      defaultAccentColor={config.theme?.accentColor}
+      defaultAccentColorDark={config.theme?.accentColorDark}
+    >
       <DocProvider initialConfig={config} basePath={basePath}>
         <Layout />
       </DocProvider>

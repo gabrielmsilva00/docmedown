@@ -80,19 +80,66 @@ Unknown properties are rejected. GitHub and GitLab sources require a `repo` in `
 
 ---
 
-## 🎨 Theme Presets
+## 🎨 Theme Families
 
-DocMeDown includes 7 hand-curated theme presets designed with high contrast and sleek glassmorphism:
+DocMeDown ships four complete visual **families**. A family is not an accent
+color: it redefines canvas, surface structure, borders, geometry, typography
+rhythm, elevation strategy, and motion feel — consistently across light and
+dark modes.
 
-| Preset Name | Accent Hex | Visual Identity |
-| :--- | :--- | :--- |
-| `"indigo"` *(default)* | `#6366f1` | Clean, modern, developer-first |
-| `"emerald"` | `#10b981` | High-tech, fresh, terminal vibe |
-| `"sunset"` | `#f59e0b` | Warm amber and energy |
-| `"violet"` | `#8b5cf6` | Vibrant, creative purple |
-| `"rose"` | `#f43f5e` | Bold, stylish quartz |
-| `"slate"` | `#64748b` | Minimalist monochrome |
-| `"cyberpunk"` | `#00f0ff` | Neon glow & deep contrast |
+| Family | Character | Geometry | Display type |
+| :--- | :--- | :--- | :--- |
+| `atlas` *(default)* | Neutral mineral canvas, cobalt actions | Medium radius, quiet shadows | Sans |
+| `blueprint` | Cool technical canvas, coral signals | Squared, visible drafting rules | Sans |
+| `terminal` | Dark-first operational console | Sharp corners, flat surfaces | Mono |
+| `editorial` | Warm paper reading surface, brick accents | Soft radius, generous rhythm | Serif |
+
+```json title="docs.json"
+{
+  "theme": {
+    "family": "terminal",
+    "density": "compact",
+    "defaultMode": "auto",
+    "codeTheme": "one-dark"
+  }
+}
+```
+
+### Reading density
+
+`theme.density` accepts `"comfortable"` (default) or `"compact"`. Compact trims
+the navbar height, panel widths, and section rhythm across every family. The
+**Appearance** menu in the navbar exposes family, mode, and density at runtime;
+preferences persist locally and invalid saved values are discarded safely.
+
+### Brand accent override
+
+Families choose a harmonious action color for you. To force your brand color:
+
+```json title="docs.json"
+{
+  "theme": {
+    "family": "atlas",
+    "accentColor": "#0ea5e9",
+    "accentColorDark": "#38bdf8"
+  }
+}
+```
+
+`accentColorDark` applies while dark mode is resolved, falling back to
+`accentColor`.
+
+### Legacy presets
+
+The old accent-only `preset` option is deprecated and accepted for one release
+cycle. It maps automatically onto the matching family:
+
+| Legacy preset | Resolved family |
+| :--- | :--- |
+| `indigo`, `emerald`, `violet` | `atlas` |
+| `slate` | `blueprint` |
+| `cyberpunk` | `terminal` |
+| `sunset`, `rose` | `editorial` |
 
 ---
 

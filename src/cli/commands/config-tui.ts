@@ -3,7 +3,7 @@ import path from "node:path";
 import chalk from "chalk";
 import prompts from "prompts";
 import { normalizeConfig, parseDocConfigJson } from "../../runtime/config";
-import type { ColorMode, DocConfig, ThemePreset } from "../../runtime/types";
+import type { ColorMode, DocConfig, ThemeFamily } from "../../runtime/types";
 
 export async function configTuiCommand(configPathArg?: string) {
   console.log(chalk.bold.magenta("\n⚡ DocMeDown - Interactive Configuration Wizard\n"));
@@ -51,20 +51,15 @@ export async function configTuiCommand(configPathArg?: string) {
     },
     {
       type: "select",
-      name: "preset",
-      message: "Select Theme Color Palette:",
+      name: "family",
+      message: "Select Documentation Theme Family:",
       choices: [
-        { title: "Indigo (Modern & Clean)", value: "indigo" },
-        { title: "Emerald (Fresh & Tech)", value: "emerald" },
-        { title: "Sunset (Warm Amber)", value: "sunset" },
-        { title: "Violet (Vibrant Purple)", value: "violet" },
-        { title: "Rose (Bold Quartz)", value: "rose" },
-        { title: "Slate (Minimalist Monochrome)", value: "slate" },
-        { title: "Cyberpunk (Neon Glow)", value: "cyberpunk" },
+        { title: "Atlas (Editorial technical reference)", value: "atlas" },
+        { title: "Blueprint (Structured and schematic)", value: "blueprint" },
+        { title: "Terminal (Compact operational console)", value: "terminal" },
+        { title: "Editorial (Spacious publication reading)", value: "editorial" },
       ],
-      initial: ["indigo", "emerald", "sunset", "violet", "rose", "slate", "cyberpunk"].indexOf(
-        existingConfig.theme?.preset || "indigo",
-      ),
+      initial: ["atlas", "blueprint", "terminal", "editorial"].indexOf(existingConfig.theme?.family || "atlas"),
     },
     {
       type: "select",
@@ -126,7 +121,7 @@ export async function configTuiCommand(configPathArg?: string) {
     tagline: response.tagline,
     theme: {
       ...existingConfig.theme,
-      preset: response.preset as ThemePreset,
+      family: response.family as ThemeFamily,
       defaultMode: response.defaultMode as ColorMode,
     },
     socials: response.githubSocial ? [{ type: "github", url: response.githubSocial }] : existingConfig.socials,

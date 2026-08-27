@@ -92,7 +92,16 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "preset": { "enum": ["indigo", "emerald", "sunset", "violet", "rose", "slate", "cyberpunk"] },
+        "family": {
+          "enum": ["atlas", "blueprint", "terminal", "editorial"],
+          "description": "Complete visual system controlling canvas, geometry, typography rhythm and motion."
+        },
+        "density": { "enum": ["comfortable", "compact"], "description": "Reading density across shell panels." },
+        "preset": {
+          "enum": ["indigo", "emerald", "sunset", "violet", "rose", "slate", "cyberpunk"],
+          "deprecated": true,
+          "description": "Legacy accent preset. Mapped automatically onto theme.family; use family instead."
+        },
         "defaultMode": { "enum": ["light", "dark", "auto"] },
         "accentColor": { "type": "string" },
         "accentColorDark": { "type": "string" },

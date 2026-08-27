@@ -76,7 +76,7 @@ a:hover {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 68px;
+  height: var(--dmd-nav-height);
   padding: 0 clamp(1rem, 3vw, 2.5rem);
   background: var(--dmd-bg-elevated);
   backdrop-filter: blur(12px);
@@ -219,20 +219,10 @@ a:hover {
 }
 
 .dmd-preset-select {
-  font-size: 0.8rem;
-  font-weight: 600;
-  padding: 0.35rem 0.6rem;
-  border-radius: var(--dmd-radius-md);
-  background: var(--dmd-bg-card);
-  color: var(--dmd-text-secondary);
-  border: 1px solid var(--dmd-border-color);
-  cursor: pointer;
-  outline: none;
+  display: none;
 }
 
-.dmd-preset-select:hover, .dmd-preset-select:focus {
-  border-color: var(--dmd-accent);
-}
+/* Appearances render through AppearanceMenu; kept invisible so stale markup never flashes. */
 
 /* ==========================================================================
    LAYOUT BODY & SIDEBAR
@@ -247,11 +237,11 @@ a:hover {
 }
 
 .dmd-sidebar {
-  width: 252px;
+  width: var(--dmd-sidebar-width);
   flex-shrink: 0;
   position: sticky;
-  top: 68px;
-  height: calc(100vh - 68px);
+  top: var(--dmd-nav-height);
+  height: calc(100vh - var(--dmd-nav-height));
   overflow-y: auto;
   padding: 1.6rem 1rem 2rem 0;
   border-right: 1px solid var(--dmd-border-color);
@@ -456,10 +446,11 @@ a:hover {
 }
 
 .dmd-markdown-body h2 {
+  font-family: var(--dmd-font-display);
   font-size: 1.75rem;
   font-weight: 700;
   line-height: 1.35;
-  margin: 2.25rem 0 1rem;
+  margin: var(--dmd-space-section) 0 1rem;
   padding-bottom: 0.4rem;
   border-bottom: 0;
   letter-spacing: -0.02em;
@@ -918,11 +909,11 @@ a:hover {
    TABLE OF CONTENTS (TOC)
    ========================================================================== */
 .dmd-toc {
-  width: 230px;
+  width: var(--dmd-toc-width);
   flex-shrink: 0;
   position: sticky;
-  top: 84px;
-  height: calc(100vh - 100px);
+  top: calc(var(--dmd-nav-height) + 16px);
+  height: calc(100vh - var(--dmd-nav-height) - 32px);
   overflow-y: auto;
   font-size: 0.85rem;
 }
@@ -1198,6 +1189,344 @@ a:hover {
     display: none;
   }
 }
+
+/* ==========================================================================
+   APPEARANCE MENU
+   In-product theme picker with real miniature previews per family.
+   Miniature palettes are fixed so each card always shows its own family
+   regardless of the currently active theme.
+   ========================================================================== */
+.dmd-appearance {
+  position: relative;
+}
+
+.dmd-appearance-trigger {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--dmd-text-secondary);
+  background: var(--dmd-bg-card);
+  border: 1px solid var(--dmd-border-color);
+  border-radius: var(--dmd-radius-md);
+  cursor: pointer;
+  transition: all var(--dmd-transition);
+}
+
+.dmd-appearance-trigger:hover,
+.dmd-appearance-trigger[aria-expanded='true'] {
+  color: var(--dmd-text-primary);
+  border-color: var(--dmd-accent);
+}
+
+.dmd-appearance-panel {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 200;
+  width: min(360px, calc(100vw - 2rem));
+  padding: 1.1rem;
+  background: var(--dmd-bg-card);
+  border: 1px solid var(--dmd-border-color);
+  border-radius: var(--dmd-radius-lg);
+  box-shadow: var(--dmd-shadow-lg);
+}
+
+.dmd-appearance-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.9rem;
+  font-weight: 700;
+  color: var(--dmd-text-primary);
+}
+
+.dmd-appearance-close {
+  border: 0;
+  background: none;
+  color: var(--dmd-text-muted);
+  font-size: 1.15rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0.15rem 0.35rem;
+  border-radius: var(--dmd-radius-sm);
+}
+
+.dmd-appearance-close:hover {
+  color: var(--dmd-text-primary);
+  background: var(--dmd-bg-tertiary);
+}
+
+.dmd-appearance-section + .dmd-appearance-section {
+  margin-top: 1rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--dmd-border-subtle);
+}
+
+.dmd-appearance-label {
+  margin-bottom: 0.55rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--dmd-text-muted);
+  font-family: var(--dmd-font-mono);
+}
+
+.dmd-theme-family-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.55rem;
+}
+
+.dmd-theme-family-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.4rem;
+  padding: 0.65rem;
+  text-align: left;
+  background: var(--dmd-bg-secondary);
+  border: 1px solid var(--dmd-border-color);
+  border-radius: var(--dmd-radius-md);
+  cursor: pointer;
+  transition: all var(--dmd-transition);
+}
+
+.dmd-theme-family-card:hover {
+  border-color: var(--dmd-accent);
+}
+
+.dmd-theme-family-card.active {
+  border-color: var(--dmd-accent);
+  box-shadow: 0 0 0 1px var(--dmd-accent);
+  background: var(--dmd-accent-subtle);
+}
+
+.dmd-theme-family-name {
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: var(--dmd-text-primary);
+}
+
+.dmd-theme-family-description {
+  font-size: 0.7rem;
+  color: var(--dmd-text-muted);
+}
+
+/* Fieldset-based groups keep semantic form structure without native chrome. */
+fieldset.dmd-appearance-section {
+  border: 0;
+  margin-inline: 0;
+  padding: 0;
+  min-width: 0;
+}
+
+.dmd-appearance-section > .dmd-segmented-control {
+  width: 100%;
+}
+
+.dmd-segmented-control {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 2px;
+  padding: 2px;
+  background: var(--dmd-bg-tertiary);
+  border-radius: var(--dmd-radius-md);
+}
+
+.dmd-segmented-control button {
+  padding: 0.32rem 0.4rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: capitalize;
+  color: var(--dmd-text-muted);
+  background: transparent;
+  border: 0;
+  border-radius: calc(var(--dmd-radius-md) - 2px);
+  cursor: pointer;
+  transition: all var(--dmd-transition);
+}
+
+.dmd-segmented-control button.active {
+  background: var(--dmd-bg-card);
+  color: var(--dmd-text-primary);
+  box-shadow: var(--dmd-shadow-sm);
+}
+
+.dmd-appearance-quick-mode {
+  margin-top: 0.6rem;
+  width: 100%;
+  padding: 0.4rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--dmd-accent);
+  background: transparent;
+  border: 1px dashed var(--dmd-border-color);
+  border-radius: var(--dmd-radius-md);
+  cursor: pointer;
+}
+
+.dmd-appearance-quick-mode:hover {
+  border-color: var(--dmd-accent);
+  background: var(--dmd-accent-subtle);
+}
+
+/* Miniature preview canvases: fixed palettes so each card always shows its
+   own family regardless of the currently active theme. */
+.dmd-theme-preview {
+  display: block;
+  width: 100%;
+  height: 34px;
+  border-radius: 3px;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(128, 128, 128, 0.25);
+}
+
+.dmd-theme-preview > span {
+  position: absolute;
+  border-radius: 1px;
+}
+
+.dmd-theme-preview > span:nth-child(1) {
+  left: 6%;
+  top: 18%;
+  width: 30%;
+  height: 64%;
+}
+
+.dmd-theme-preview > span:nth-child(2) {
+  left: 44%;
+  top: 24%;
+  width: 46%;
+  height: 14%;
+}
+
+.dmd-theme-preview > span:nth-child(3) {
+  left: 44%;
+  top: 52%;
+  width: 30%;
+  height: 14%;
+}
+
+.dmd-theme-preview-atlas { background: #f7f7f5; }
+.dmd-theme-preview-atlas > span:nth-child(1) { background: #315cf5; }
+.dmd-theme-preview-atlas > span:nth-child(2),
+.dmd-theme-preview-atlas > span:nth-child(3) { background: #ddded8; }
+
+.dmd-theme-preview-blueprint {
+  background: #f2f5f7;
+  box-shadow: inset 0 0 0 1px #c6d3da;
+  border-radius: 0;
+}
+.dmd-theme-preview-blueprint > span:nth-child(1) { background: #ef5340; border-radius: 0; }
+.dmd-theme-preview-blueprint > span:nth-child(2),
+.dmd-theme-preview-blueprint > span:nth-child(3) { background: #c6d3da; border-radius: 0; }
+
+.dmd-theme-preview-terminal { background: #0a0e0c; border-radius: 0; }
+.dmd-theme-preview-terminal > span:nth-child(1) { background: #39e87f; border-radius: 0; }
+.dmd-theme-preview-terminal > span:nth-child(2),
+.dmd-theme-preview-terminal > span:nth-child(3) { background: #26382a; border-radius: 0; }
+
+.dmd-theme-preview-editorial { background: #faf6ee; }
+.dmd-theme-preview-editorial > span:nth-child(1) { background: #a34a33; border-radius: 40% 3px 3px 3px; }
+.dmd-theme-preview-editorial > span:nth-child(2),
+.dmd-theme-preview-editorial > span:nth-child(3) { background: #ded2ba; }
+
+/* Compact trigger mark reflects the ACTIVE family through live tokens. */
+.dmd-theme-mark {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  border: 1px solid var(--dmd-border-color);
+  background: linear-gradient(135deg, var(--dmd-accent) 0 38%, var(--dmd-bg-primary) 38%);
+}
+
+.dmd-theme-mark-terminal {
+  border-radius: 1px;
+}
+
+/* ==========================================================================
+   FAMILY CHARACTER
+   Per-family chrome accents layered above shared layout rules.
+   ========================================================================== */
+
+/* Terminal: console chrome, mono utility type, zero glass. */
+[data-dmd-theme='terminal'] .dmd-navbar,
+[data-dmd-theme='terminal'] .dmd-appearance-panel {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  background: var(--dmd-bg-primary);
+}
+
+[data-dmd-theme='terminal'] .dmd-brand-title,
+[data-dmd-theme='terminal'] .dmd-nav-link,
+[data-dmd-theme='terminal'] .dmd-search-placeholder,
+[data-dmd-theme='terminal'] .dmd-sidebar-label,
+[data-dmd-theme='terminal'] .dmd-category-header {
+  font-family: var(--dmd-font-mono);
+  letter-spacing: 0.02em;
+}
+
+[data-dmd-theme='terminal'] .dmd-brand-title::before {
+  content: '> ';
+  color: var(--dmd-accent);
+}
+
+/* Blueprint: structural drafting rules emphasize hierarchy boundaries. */
+[data-dmd-theme='blueprint'] .dmd-markdown-body h2,
+[data-dmd-theme='blueprint'] .dmd-markdown-body hr {
+  border-bottom: 1px solid var(--dmd-border-color);
+  padding-bottom: 0.45rem;
+}
+
+[data-dmd-theme='blueprint'] .dmd-sidebar-sublist {
+  border-left: 1px dashed var(--dmd-border-color);
+}
+
+[data-dmd-theme='blueprint'] .dmd-navbar {
+  border-bottom-width: 2px;
+  border-bottom-color: var(--dmd-rule-strong);
+}
+
+/* Editorial: measured publication column and gentle display tracking. */
+[data-dmd-theme='editorial'] .dmd-main-content {
+  max-width: 74ch;
+  margin-inline: auto;
+  padding-inline: clamp(0.75rem, 3vw, 2.5rem);
+}
+
+[data-dmd-theme='editorial'] .dmd-markdown-body h1 {
+  letter-spacing: 0.005em;
+  line-height: 1.12;
+}
+
+[data-dmd-theme='editorial'] .dmd-brand-title {
+  font-family: var(--dmd-font-display);
+  font-weight: 650;
+}
+
+/* ==========================================================================
+   NAVIGATION RAILS
+   Active-state reinforcement for sidebar + page map across families.
+   ========================================================================== */
+.dmd-toc-link.active {
+  position: relative;
+  color: var(--dmd-accent);
+  font-weight: 600;
+  box-shadow: inset 2px 0 0 var(--dmd-accent);
+  padding-left: 0.5rem;
+}
+
+.dmd-sidebar-link.active {
+  color: var(--dmd-accent);
+  font-weight: 650;
+}
+
 
 @media (max-width: 768px) {
   .dmd-mobile-menu-btn {

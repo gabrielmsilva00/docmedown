@@ -1,13 +1,11 @@
 import type React from "react";
 import { useDoc } from "../provider/DocProvider";
 import { useTheme } from "../provider/ThemeProvider";
-import type { ThemePreset } from "../types";
+import { AppearanceMenu } from "./AppearanceMenu";
 
 export const Navbar: React.FC = () => {
   const { config, setIsSearchOpen, isMobileSidebarOpen, setIsMobileSidebarOpen } = useDoc();
-  const { resolvedMode, toggleMode, preset, setPreset } = useTheme();
-
-  const presets: ThemePreset[] = ["indigo", "emerald", "sunset", "violet", "rose", "slate", "cyberpunk"];
+  const { resolvedMode, toggleMode } = useTheme();
 
   return (
     <header className="dmd-navbar">
@@ -153,21 +151,7 @@ export const Navbar: React.FC = () => {
           </div>
         )}
 
-        {/* Theme Preset Picker Dropdown */}
-        <div className="dmd-preset-picker">
-          <select
-            value={preset}
-            onChange={(e) => setPreset(e.target.value as ThemePreset)}
-            className="dmd-preset-select"
-            title="Theme Palette"
-          >
-            {presets.map((p) => (
-              <option key={p} value={p}>
-                {p.charAt(0).toUpperCase() + p.slice(1)}
-              </option>
-            ))}
-          </select>
-        </div>
+        <AppearanceMenu />
 
         {/* Dark / Light Mode Switch */}
         <button

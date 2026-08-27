@@ -2,7 +2,12 @@ import { z } from "zod";
 
 const nonEmptyString = z.string().trim().min(1, "Must not be empty.");
 
+/** Legacy accent presets accepted for one compatibility cycle. */
 export const themePresetSchema = z.enum(["indigo", "emerald", "sunset", "violet", "rose", "slate", "cyberpunk"]);
+
+/** Complete visual systems, not merely accent-color variations. */
+export const themeFamilySchema = z.enum(["atlas", "blueprint", "terminal", "editorial"]);
+export const themeDensitySchema = z.enum(["comfortable", "compact"]);
 
 export const colorModeSchema = z.enum(["light", "dark", "auto"]);
 export const socialTypeSchema = z.enum(["github", "gitlab", "twitter", "x", "discord", "custom"]);
@@ -86,6 +91,9 @@ export const sidebarItemSchema: z.ZodType<SidebarItemConfigShape> = z.lazy(() =>
 
 export const docThemeConfigSchema = z
   .object({
+    family: themeFamilySchema.optional(),
+    density: themeDensitySchema.optional(),
+    /** @deprecated Use `family`. Preserved to migrate existing docs.json files. */
     preset: themePresetSchema.optional(),
     defaultMode: colorModeSchema.optional(),
     accentColor: z.string().optional(),

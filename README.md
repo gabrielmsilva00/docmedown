@@ -10,7 +10,7 @@
 
 Source code, issues, and releases live at [github.com/gabrielmsilva00/docmedown](https://github.com/gabrielmsilva00/docmedown).
 
-Drop a single `index.html` file into any directory of `.md` files, and you have a blazing fast, glassmorphic documentation website.
+Drop a single `index.html` file into any directory of `.md` files, and you have a fast, responsive documentation website with a complete reading interface.
 
 ---
 
@@ -21,11 +21,11 @@ Drop a single `index.html` file into any directory of `.md` files, and you have 
   - Run via single-line CLI: `npx docmedown ./docs`
   - Or drop `<script src="docmedown.js"></script>` into an `index.html` on any static host.
 - ⚡ **Dynamic Remote GitHub / GitLab Mode**: Document any GitHub or GitLab repository *live* without hosting markdown files statically! Changes pushed to your repo dynamically update the documentation website immediately.
-- 📦 **100% Offline Single-File Bundler**: Generate a self-contained `index.html` with all markdown content and scripts inlined, ready to be double-clicked (`file:///`) offline anywhere without a web server.
-- 🎨 **Glassmorphic Modern Design**: Dark & Light modes, customizable themes (**Indigo, Emerald, Sunset, Violet, Rose, Slate, Cyberpunk**), reading progress bar, breadcrumbs, and TOC scrollspy.
+- 📦 **Compressed Offline Copies**: Generate or download a minified, self-extracting `index.html` containing the complete documentation corpus, custom components, Mermaid renderer, styles, and runtime. Double-click it under `file:///` without a web server.
+- 🎨 **Four Complete Theme Families**: Atlas, Blueprint, Terminal, and Editorial each redefine surfaces, geometry, typography, spacing, and diagram palettes—not merely the accent color. Every family supports light, dark, automatic mode, and comfortable or compact density.
 - 🔍 **Instant Fuzzy Search**: Keyboard-driven command palette (`⌘K` / `Ctrl+K`) with real-time in-browser indexing.
 - ⚛️ **React Custom Components (.dmd)**: Support for custom React components inside `.dmd/` or built-in components (`<Tabs>`, `<CardGrid>`, `<Badge>`, `<Steps>`).
-- 📊 **Mermaid Diagrams & KaTeX Math**: Render interactive architecture diagrams and LaTeX equations natively.
+- 📊 **Mermaid Diagrams & KaTeX Math**: Theme-aware diagrams with automatic Fit, zoom, 1:1 view, SVG export, expanded review, and offline parity, plus native LaTeX equations.
 - 💡 **GitHub-Style Callouts**: Full support for `[!NOTE]`, `[!TIP]`, `[!IMPORTANT]`, `[!WARNING]`, and `[!CAUTION]`.
 
 ---
@@ -90,7 +90,7 @@ Then mount it into a specific element. `init` resolves to an instance with a `de
       basePath: '/help',
       config: {
         name: 'Project help',
-        theme: { preset: 'emerald', defaultMode: 'auto' }
+        theme: { family: 'terminal', density: 'compact', defaultMode: 'auto' }
       }
     });
 
@@ -121,7 +121,8 @@ Simply create `docs.json`:
     "docsDir": "docs"
   },
   "theme": {
-    "preset": "indigo",
+    "family": "blueprint",
+    "density": "comfortable",
     "defaultMode": "auto"
   }
 }
@@ -139,7 +140,9 @@ Every standard build produces both your serveable documentation files and a **10
 npx docmedown build ./docs
 ```
 
-The serveable manifest and runtime remain in `./docs`. The offline artifact is written to `./docs/.dist/index.html`; dot-prefixed directories are excluded from document discovery. Open that file directly in a browser (`file:///.../.dist/index.html`) on air-gapped machines, send it via email, or distribute it with offline desktop applications. Use `--no-single-file` to skip the offline artifact, or `--out-dir <path>` to place it elsewhere.
+The serveable manifest and runtime remain in `./docs`. The offline artifact is written to `./docs/.dist/index.html`; dot-prefixed directories are excluded from document discovery. The artifact stores compact JSON and the production runtime in a gzip-compressed, base64-encoded envelope with a minified self-extractor. Open that file directly in a browser (`file:///.../.dist/index.html`) on air-gapped machines, send it via email, or distribute it with offline desktop applications. Use `--no-single-file` to skip the offline artifact, or `--out-dir <path>` to place it elsewhere.
+
+Serveable DocMeDown sites also include a **Download** action in the navbar. It reads the already-loaded documentation corpus and current runtime, compresses them locally with the browser's native gzip stream, and downloads the same self-contained format without requesting `.dist/index.html`. In a downloaded or CLI-built offline copy, the control is greyed out as **Offline copy** because the page is already portable.
 
 `docmedown serve ./docs` and `docmedown dev ./docs` also run this standard build at startup. While the server is running, Markdown and `docs.json` changes are debounced, then rebuild the serveable artifacts and `./docs/.dist/index.html` before the browser reloads.
 
@@ -150,6 +153,20 @@ npx docmedown build ./docs --watch
 ```
 
 Within this repository, the equivalent command is `npm run build:docs:watch`.
+
+---
+
+## 🚢 GitHub Pages Hosting
+
+The repository includes `.github/workflows/pages.yml`, which builds the production runtime and generated documentation assets before publishing `./docs/` through GitHub Pages. This is required because `_docs.js`, `_manifest.json`, and `docmedown.iife.js` are generated files and intentionally ignored by Git.
+
+To enable it for a repository fork or project site:
+
+1. Push the workflow to the `main` branch.
+2. In **Settings → Pages**, set the source to **GitHub Actions**.
+3. Push documentation or runtime changes; the workflow runs `npm ci`, `npm run build`, and `npm run build:docs`, then uploads the complete `docs/` directory.
+
+The generated entrypoint uses same-directory relative URLs (`./_docs.js` and `./docmedown.iife.js`), so it works at both a custom domain and a project URL such as `/repository-name/`. The Pages workflow verifies those generated files before upload and includes `.nojekyll` for direct static-file compatibility. Hash routing keeps document navigation client-side without requiring server rewrites.
 
 ---
 
@@ -197,8 +214,8 @@ The standard build embeds `.dmd/components.js` in `docs/.dist/index.html`, so th
     badgeType="success"
   />
   <Card
-    title="Glassmorphic Theme"
-    description="Sleek dark and light modes."
+    title="Complete Theme Families"
+    description="Atlas, Blueprint, Terminal, and Editorial change the entire reading system."
     badge="New"
     badgeType="new"
   />
@@ -226,8 +243,10 @@ DocMeDown validates configuration from `docs.json`, `dmd.json`, inline `#dmd-con
   "version": "1.0.0",
   "rootDoc": "README.md",
   "theme": {
-    "preset": "indigo",
-    "defaultMode": "auto"
+    "family": "atlas",
+    "density": "comfortable",
+    "defaultMode": "auto",
+    "codeTheme": "github"
   },
   "nav": [
     { "label": "Overview", "href": "#/README" },
@@ -250,17 +269,16 @@ DocMeDown validates configuration from `docs.json`, `dmd.json`, inline `#dmd-con
 
 Unknown keys are rejected. The npm package also ships the portable schema at `schemas/docs.schema.json`; TypeScript consumers can import `docConfigSchema` and `parseDocConfig` from `docmedown`. See the full [configuration reference](./docs/configuration.md) for every field and validation rule.
 
-### Color Presets Available
+### Theme Families
 
-| Preset | Accent Color | Vibe |
+| Family | Best suited for | Visual system |
 | :--- | :--- | :--- |
-| `indigo` *(default)* | `#6366f1` | Clean, modern, developer-focused |
-| `emerald` | `#10b981` | Fresh, high-tech, eco |
-| `sunset` | `#f59e0b` | Warm amber and energy |
-| `violet` | `#8b5cf6` | Vibrant, creative |
-| `rose` | `#f43f5e` | Bold, stylish quartz |
-| `slate` | `#64748b` | Minimalist monochrome |
-| `cyberpunk` | `#00f0ff` | Glowing neon aesthetic |
+| `atlas` *(default)* | General product and API documentation | Neutral mineral canvas, cobalt actions, balanced spacing |
+| `blueprint` | Architecture and technical specifications | Squared geometry, drafting rules, coral signals |
+| `terminal` | CLI, operations, and infrastructure manuals | Dark-first console character, compact rhythm, monospace utilities |
+| `editorial` | Guides, handbooks, and long-form reading | Warm paper surfaces, serif display type, generous article rhythm |
+
+Use the **Appearance** menu to switch family, color mode, and reading density at runtime. Set `accentColor` and `accentColorDark` only when a brand color must override the family default. Legacy accent-only presets remain accepted temporarily for migration but should not be used in new configurations.
 
 ---
 

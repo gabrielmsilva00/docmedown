@@ -1,0 +1,66 @@
+name: Deploy documentation to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build runtime and declarations
+        run: npm run build
+
+      - name: Build serveable documentation assets
+        run: npm run build:docs
+
+      - name: Verify generated Pages assets
+        run: |
+          test -f docs/index.html
+          test -f docs/.nojekyll
+          test -f docs/_docs.js
+          test -f docs/_manifest.json
+          test -f docs/docmedown.iife.js
+          grep -q 'src="./_docs.js"' docs/index.html
+          grep -q 'src="./docmedown.iife.js"' docs/index.html
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

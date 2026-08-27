@@ -46,7 +46,7 @@
     "build:docs:watch": "node ./bin/docmedown.js build ./docs --watch",
     "build:offline": "node ./bin/docmedown.js build ./docs",
     "config:docs": "node ./bin/docmedown.js config ./docs/docs.json",
-    "test": "npx tsx --test tests/parser.test.ts tests/scanner.test.ts tests/runtime-integration.test.ts tests/package-smoke.test.ts",
+    "test": "npx tsx --test tests/parser.test.ts tests/scanner.test.ts tests/theme-schema.test.ts tests/runtime-integration.test.ts tests/package-smoke.test.ts tests/hosting.test.ts",
     "test:artifacts": "npx tsx --test tests/offline-artifact.test.ts",
     "test:release": "npm run typecheck && npm run lint && npm run test && npm run build && npm run build:docs && npm run test:artifacts && npm pack --dry-run",
     "deploy": "node ./scripts/deploy.mjs",

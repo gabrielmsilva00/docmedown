@@ -50,7 +50,7 @@ If you already have a folder with Markdown files, you only need to create a sing
 </html>
 ```
 
-Open this directory with any web server (or double-click offline), and your documentation is immediately interactive!
+Open this directory through a local or static web server and your documentation is immediately interactive. Browsers generally block neighboring Markdown `fetch()` calls from a hand-written `file:///` page; for true double-click offline use, run `npx docmedown build ./docs` and open the generated `.dist/index.html` instead.
 
 ---
 
@@ -99,7 +99,7 @@ Before serving, DocMeDown builds the live documentation assets and `./docs/.dist
 
 Since DocMeDown runs as a client-side React SPA, deploying your documentation is as simple as hosting static files:
 
-- **GitHub Pages**: Push your `./docs` folder to the `gh-pages` branch or configure GitHub Pages to serve `/docs`.
+- **GitHub Pages**: Use the repository's GitHub Actions workflow, which runs `npm ci`, `npm run build`, and `npm run build:docs` before publishing the complete `./docs` artifact. Direct `/docs` branch hosting also requires the generated `_docs.js`, `_manifest.json`, and `docmedown.iife.js` files to be present, plus the generated `.nojekyll` marker.
 - **Vercel / Netlify / Cloudflare Pages**: Point the build output to `./docs` (no build command needed).
 - **Amazon S3 / Google Cloud Storage**: Copy your folder to an S3 bucket configured for static website hosting.
 
@@ -109,4 +109,4 @@ Since DocMeDown runs as a client-side React SPA, deploying your documentation is
 
 - Explore the [CLI Command Reference](./guides/cli-reference.md).
 - Learn how to document a [Remote GitHub Repository](./guides/remote-github.md) dynamically.
-- Check out the [Configuration Reference](./configuration.md) to customize themes and navigation.
+- Check out the [Configuration Reference](./configuration.md) to customize theme family, mode, density, branding, and navigation.

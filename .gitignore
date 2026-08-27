@@ -8,6 +8,10 @@ docs/**/.dist/
 docs/**/_manifest.json
 docs/**/_docs.js
 docs/**/docmedown.iife.js
+# The root marker is tracked so fresh clones pass the hosting contract tests;
+# nested markers are regenerated per documentation root on every build.
+docs/**/.nojekyll
+!docs/.nojekyll
 
 # Local configuration and credentials
 .env

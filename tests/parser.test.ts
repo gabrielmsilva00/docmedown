@@ -1,8 +1,19 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { processAlerts } from "../src/runtime/markdown/callouts";
+import { renderCodeBlock } from "../src/runtime/markdown/highlighter";
 import { renderMath } from "../src/runtime/markdown/katex";
-import { createMermaidConfig } from "../src/runtime/markdown/mermaid";
+import {
+  buildMermaidConfig,
+  calculateDiagramFit,
+  decodeDiagramSource,
+  encodeDiagramSource,
+  extractDiagramSubgraphs,
+  formatDiagramMarkdown,
+  formatDiagramSubgraphMarkdown,
+  isDiagramFamily,
+  readDiagramSize,
+} from "../src/runtime/markdown/mermaid";
 import { extractFrontmatter, parseMarkdown, slugifyHeading } from "../src/runtime/markdown/parser";
 import { HashRouter } from "../src/runtime/router";
 
@@ -47,39 +58,95 @@ test("LaTeX Math rendering", () => {
   assert.ok(rendered.includes("katex"));
 });
 
-test("Mermaid uses self-contained SVG labels and DocMeDown theme tokens", () => {
-  const originalDocument = (globalThis as any).document;
-  (globalThis as any).document = {
-    documentElement: {
-      getAttribute: () => "dark",
-    },
-  };
+test("Mermaid engine builds deterministic base themes per family and mode", () => {
+  const terminalDark = buildMermaidConfig("terminal", "dark");
+  assert.equal(terminalDark.theme, "base");
+  assert.equal(terminalDark.htmlLabels, false);
+  assert.equal(terminalDark.flowchart?.htmlLabels, false);
+  assert.equal(terminalDark.securityLevel, "strict");
+  assert.equal(terminalDark.suppressErrorRendering, true);
+  assert.equal(terminalDark.themeVariables.darkMode, true);
+  // Terminal dark palette values straight from FAMILY_TOKENS.
+  assert.equal(terminalDark.themeVariables.lineColor, "#39e87f");
+  assert.equal(terminalDark.themeVariables.primaryTextColor, "#d8e6d8");
+  assert.match(String(terminalDark.fontFamily), /mono/i);
 
-  const originalGetComputedStyle = globalThis.getComputedStyle;
-  globalThis.getComputedStyle = () =>
-    ({
-      getPropertyValue: (name: string) =>
-        ({
-          "--dmd-font-sans": "system-ui, sans-serif",
-          "--dmd-bg-card": "#15242e",
-          "--dmd-bg-secondary": "#162631",
-          "--dmd-border-color": "#314650",
-          "--dmd-text-primary": "#f3f5ef",
-          "--dmd-accent": "#6366f1",
-        })[name] || "",
-    }) as typeof getComputedStyle;
+  const atlasLight = buildMermaidConfig("atlas", "light");
+  assert.equal(atlasLight.themeVariables.darkMode, false);
+  assert.equal(atlasLight.themeVariables.background, "#f7f7f5");
+  assert.equal(atlasLight.themeVariables.lineColor, "#315cf5");
 
-  try {
-    const config = createMermaidConfig();
-    assert.equal(config.htmlLabels, false);
-    assert.equal(config.securityLevel, "strict");
-    assert.equal(config.theme, "dark");
-    assert.equal(config.themeVariables.primaryColor, "#15242e");
-    assert.equal(config.themeVariables.primaryTextColor, "#f3f5ef");
-  } finally {
-    (globalThis as any).document = originalDocument;
-    globalThis.getComputedStyle = originalGetComputedStyle;
-  }
+  // Explicit tokens win over family defaults (config accent overrides).
+  const custom = buildMermaidConfig("atlas", "dark", {
+    canvas: "#000000",
+    surface: "#111111",
+    surfaceRaised: "#222222",
+    ink: "#ffffff",
+    inkSecondary: "#cccccc",
+    rule: "#333333",
+    accent: "#ff0000",
+    codeSurface: "#0a0a0a",
+    codeInk: "#eeeeee",
+    fontFamily: "monospace",
+  });
+  assert.equal(custom.themeVariables.lineColor, "#ff0000");
+});
+
+test("diagram placeholders round-trip unicode sources through attributes", () => {
+  const source = 'graph TD\nA["café ☕"] --> B{ok?}';
+  assert.equal(decodeDiagramSource(encodeDiagramSource(source)), source);
+  const placeholder = renderCodeBlock(source, "mermaid");
+  assert.match(placeholder, /class="dmd-diagram-host"/);
+  assert.doesNotMatch(placeholder, /class="dmd-diagram"/);
+  assert.equal(isDiagramFamily("terminal"), true);
+  assert.equal(isDiagramFamily("neon"), false);
+});
+
+test("diagram copy actions produce portable graph and subgraph Markdown", () => {
+  const source = "graph LR\nA[Input] --> B[Rendered docs]";
+  assert.equal(formatDiagramMarkdown(`\n${source}\n`), `\`\`\`mermaid\n${source}\n\`\`\``);
+
+  const architecture = `graph TD
+    subgraph Outer ["Outer system"]
+        A[Input]
+        subgraph Inner ["Inner process"]
+            B[Transform]
+        end
+    end
+    A --> B`;
+  const subgraphs = extractDiagramSubgraphs(architecture);
+  assert.equal(subgraphs.length, 2);
+  assert.deepEqual(
+    subgraphs.map(({ id, label }) => ({ id, label })),
+    [
+      { id: "Outer", label: "Outer system" },
+      { id: "Inner", label: "Inner process" },
+    ],
+  );
+  assert.match(subgraphs[0].source, /subgraph Inner/);
+  assert.match(subgraphs[0].source, /^\s*subgraph Outer/m);
+  assert.equal(
+    formatDiagramSubgraphMarkdown(architecture, subgraphs[1].source),
+    `\`\`\`mermaid\ngraph TD\nsubgraph Inner ["Inner process"]\n    B[Transform]\nend\n\`\`\``,
+  );
+});
+
+test("diagram camera reads SVG bounds and fits without clipping", () => {
+  const diagram = readDiagramSize('<svg viewBox="-8 -8 960 1200" width="100%"></svg>');
+  assert.deepEqual(diagram, { width: 960, height: 1200 });
+  assert.equal(calculateDiagramFit(diagram!, { width: 720, height: 1200 }), 0.75);
+  assert.equal(calculateDiagramFit(diagram!, { width: 720, height: 600 }), 0.5);
+  assert.equal(calculateDiagramFit({ width: 400, height: 300 }, { width: 800, height: 600 }), 1);
+  assert.equal(readDiagramSize("<svg></svg>"), null);
+});
+
+test("architecture overview fit keeps measured SVG content in document layout", () => {
+  // Browser getBBox() expands Mermaid's too-short nominal viewBox to include
+  // the complete third output cluster before the camera computes Fit.
+  const measuredArchitecture = { width: 813.302, height: 1132.5 };
+  const fit = calculateDiagramFit(measuredArchitecture, { width: 681, height: measuredArchitecture.height });
+  assert.ok(fit > 0.83 && fit < 0.85);
+  assert.equal(Math.round(measuredArchitecture.height * fit), 948);
 });
 
 test("Full markdown parsing with headings", () => {

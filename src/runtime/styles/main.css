@@ -218,6 +218,61 @@ a:hover {
   background: var(--dmd-accent-subtle);
 }
 
+.dmd-offline-download-wrap {
+  position: relative;
+}
+
+.dmd-offline-download-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 36px;
+  padding: 0 0.7rem;
+  border-radius: var(--dmd-radius-md);
+  border: 1px solid var(--dmd-border-color);
+  background: var(--dmd-bg-card);
+  color: var(--dmd-text-secondary);
+  font-family: var(--dmd-font-mono);
+  font-size: 0.72rem;
+  font-weight: 650;
+  cursor: pointer;
+  transition: all var(--dmd-transition);
+}
+
+.dmd-offline-download-btn:hover:not(:disabled) {
+  border-color: var(--dmd-accent);
+  color: var(--dmd-accent);
+  background: var(--dmd-accent-subtle);
+}
+
+.dmd-offline-download-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.46;
+  color: var(--dmd-text-muted);
+  background: var(--dmd-bg-secondary);
+}
+
+.dmd-offline-download-error {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  z-index: 210;
+  width: min(20rem, calc(100vw - 2rem));
+  padding: 0.6rem 0.7rem;
+  border: 1px solid rgba(220, 70, 50, 0.45);
+  border-radius: var(--dmd-radius-md);
+  background: var(--dmd-bg-card);
+  box-shadow: var(--dmd-shadow-lg);
+  color: #d85b4a;
+  font-size: 0.76rem;
+  line-height: 1.45;
+}
+
+[data-theme="dark"] .dmd-offline-download-error {
+  color: #ff9f92;
+}
+
 .dmd-preset-select {
   display: none;
 }
@@ -470,6 +525,8 @@ a:hover {
 
 .dmd-heading {
   position: relative;
+  /* Anchor navigation must clear the sticky navbar in every family/density. */
+  scroll-margin-top: calc(var(--dmd-nav-height) + 1.25rem);
 }
 
 .dmd-heading-anchor {
@@ -536,23 +593,328 @@ a:hover {
   border: 1px solid var(--dmd-border-color);
 }
 
-/* Mermaid uses an SVG viewport. Keep diagrams contained without relying on
-   foreignObject HTML labels, which are inconsistent in standalone files. */
-.dmd-mermaid-container {
+/* Diagram viewers: data-driven placeholders mount an interactive
+   MermaidDiagram React component (zoom, export, fullscreen, re-themed live). */
+.dmd-diagram-host,
+.dmd-diagram-viewer {
   margin: 1.5rem 0;
-  padding: 1rem;
-  overflow-x: auto;
+}
+
+.dmd-diagram-host > .dmd-diagram-viewer {
+  margin: 0;
+}
+
+.dmd-diagram-frame {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
   background: var(--dmd-bg-card);
   border: 1px solid var(--dmd-border-color);
   border-radius: var(--dmd-radius-md);
+  box-shadow: var(--dmd-shadow-sm);
+  overflow: hidden;
 }
 
-.dmd-mermaid-container svg {
+.dmd-diagram-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  min-height: 2.5rem;
+  padding: 0.35rem 0.55rem;
+  background: var(--dmd-bg-secondary);
+  border-bottom: 1px solid var(--dmd-border-subtle);
+}
+
+.dmd-diagram-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.22rem 0.55rem;
+  font-family: var(--dmd-font-mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--dmd-text-secondary);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--dmd-radius-sm);
+  cursor: pointer;
+  transition: all var(--dmd-transition);
+}
+
+.dmd-diagram-btn:hover:not(:disabled) {
+  color: var(--dmd-accent);
+  border-color: var(--dmd-accent);
+  background: var(--dmd-accent-subtle);
+}
+
+.dmd-diagram-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.dmd-diagram-zoom-label {
+  min-width: 3.2ch;
+  text-align: center;
+  font-family: var(--dmd-font-mono);
+  font-size: 0.68rem;
+  color: var(--dmd-text-muted);
+}
+
+.dmd-diagram-toolbar-spacer {
+  flex: 1;
+}
+
+.dmd-diagram-toolbar-divider {
+  width: 1px;
+  height: 1rem;
+  margin: 0 0.15rem;
+  background: var(--dmd-border-color);
+}
+
+.dmd-diagram-copy-all {
+  color: var(--dmd-accent);
+}
+
+.dmd-diagram-icon-btn {
+  width: 1.8rem;
+  height: 1.8rem;
+  padding: 0;
+}
+
+.dmd-diagram-icon-btn svg,
+.dmd-diagram-subgraph-copy svg {
+  width: 0.92rem;
+  height: 0.92rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.dmd-diagram-btn.copied,
+.dmd-diagram-subgraph-copy.copied {
+  color: var(--dmd-accent);
+  border-color: var(--dmd-accent);
+  background: var(--dmd-accent-subtle);
+}
+
+.dmd-diagram-stage {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  min-width: 0;
+  min-height: 8rem;
+  padding: clamp(0.75rem, 2.5vw, 1.5rem);
+  overflow: hidden;
+  overscroll-behavior: none;
+  background:
+    linear-gradient(var(--dmd-border-subtle) 1px, transparent 1px),
+    linear-gradient(90deg, var(--dmd-border-subtle) 1px, transparent 1px),
+    var(--dmd-bg-primary);
+  background-size: 24px 24px;
+  cursor: grab;
+  touch-action: none;
+  contain: layout paint;
+}
+
+.dmd-diagram-stage.is-panning {
+  cursor: grabbing;
+  user-select: none;
+}
+
+.dmd-diagram-canvas {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform-origin: center;
+  will-change: transform, width, height;
+  transition: width var(--dmd-transition), height var(--dmd-transition), transform var(--dmd-transition);
+}
+
+.dmd-diagram-stage.is-panning .dmd-diagram-canvas {
+  transition: none;
+}
+
+.dmd-diagram-svg {
+  width: 100%;
+  height: 100%;
+}
+
+.dmd-diagram-svg > svg {
   display: block;
   width: 100%;
-  height: auto;
-  min-width: 32rem;
+  height: 100%;
+  max-width: none;
+  overflow: visible;
   margin: 0 auto;
+}
+
+/* Nodes and labels remain selectable; cluster surfaces and empty graph space
+   act as the camera's drag plane. */
+.dmd-diagram-svg .node,
+.dmd-diagram-svg text,
+.dmd-diagram-svg tspan {
+  cursor: text;
+  user-select: text;
+}
+
+.dmd-diagram-svg .cluster > rect {
+  cursor: grab;
+}
+
+.dmd-diagram-stage.is-panning .dmd-diagram-svg .cluster > rect {
+  cursor: grabbing;
+}
+
+/* Lift informational blocks above the drafting grid. filter works for SVG
+   geometry while regular box-shadow does not. */
+.dmd-diagram-svg .node .label-container,
+.dmd-diagram-svg .cluster > rect {
+  filter: drop-shadow(0 5px 7px rgba(7, 12, 20, 0.18));
+  transition: filter var(--dmd-transition), stroke var(--dmd-transition);
+}
+
+[data-theme="dark"] .dmd-diagram-svg .node .label-container,
+[data-theme="dark"] .dmd-diagram-svg .cluster > rect {
+  filter: drop-shadow(0 7px 10px rgba(0, 0, 0, 0.34));
+}
+
+.dmd-diagram-svg .node:hover .label-container {
+  filter: drop-shadow(0 7px 11px rgba(7, 12, 20, 0.26));
+  stroke: var(--dmd-accent) !important;
+}
+
+/* A quiet moving dash suggests direction without turning diagrams into a
+   loading animation. Mermaid's marker heads remain static and sharp. */
+.dmd-diagram-svg path.flowchart-link {
+  stroke-dasharray: 7 6 !important;
+  animation: dmd-diagram-flow 1.8s linear infinite;
+}
+
+@keyframes dmd-diagram-flow {
+  to {
+    stroke-dashoffset: -26;
+  }
+}
+
+.dmd-diagram-subgraph-copy {
+  position: absolute;
+  z-index: 3;
+  translate: -100% 0;
+  display: grid;
+  place-items: center;
+  width: 1.65rem;
+  height: 1.65rem;
+  padding: 0;
+  color: var(--dmd-text-secondary);
+  background: var(--dmd-bg-elevated);
+  border: 1px solid var(--dmd-border-color);
+  border-radius: var(--dmd-radius-sm);
+  box-shadow: var(--dmd-shadow-sm);
+  cursor: pointer;
+  transition: color var(--dmd-transition), border-color var(--dmd-transition), background var(--dmd-transition);
+}
+
+.dmd-diagram-subgraph-copy:hover,
+.dmd-diagram-subgraph-copy:focus-visible {
+  color: var(--dmd-accent);
+  border-color: var(--dmd-accent);
+  background: var(--dmd-accent-subtle);
+  outline: none;
+}
+
+.dmd-diagram-status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Expanded mode turns the frame into a reading overlay. Escape closes it. */
+.dmd-diagram-viewer.is-expanded {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: grid;
+  place-items: center;
+  padding: clamp(1rem, 4vw, 3rem);
+  background: rgba(8, 10, 14, 0.62);
+  backdrop-filter: blur(2px);
+}
+
+.dmd-diagram-viewer.is-expanded .dmd-diagram-frame {
+  width: min(1150px, 100%);
+  height: min(900px, 100%);
+  max-height: 100%;
+}
+
+.dmd-diagram-viewer.is-expanded .dmd-diagram-stage {
+  flex: 1;
+  min-height: 0;
+  aspect-ratio: auto;
+}
+
+.dmd-diagram-viewer.is-expanded .dmd-diagram-canvas svg {
+  max-width: 100%;
+}
+
+@media (max-width: 520px) {
+  .dmd-diagram-toolbar-spacer {
+    display: none;
+  }
+
+  .dmd-diagram-toolbar {
+    justify-content: center;
+  }
+
+  .dmd-diagram-btn {
+    min-height: 2rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dmd-diagram-svg path.flowchart-link {
+    animation: none;
+    stroke-dasharray: none !important;
+  }
+
+  .dmd-diagram-canvas {
+    transition: none;
+  }
+}
+
+.dmd-diagram-error {
+  margin: 0;
+  padding: 0.9rem 1rem;
+  font-family: var(--dmd-font-mono);
+  font-size: 0.78rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: #f1958b;
+  background: rgba(220, 70, 50, 0.08);
+  border: 1px solid rgba(220, 70, 50, 0.35);
+  border-radius: var(--dmd-radius-sm);
+}
+
+[data-theme="dark"] .dmd-diagram-error {
+  color: #ffb3aa;
+}
+
+.dmd-diagram-loading {
+  padding: 2.5rem 1rem;
+  text-align: center;
+  font-family: var(--dmd-font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--dmd-text-muted);
 }
 
 /* ==========================================================================
@@ -1528,11 +1890,17 @@ fieldset.dmd-appearance-section {
 }
 
 
-@media (max-width: 768px) {
+/* Tablet and smaller use the reading-first shell. Keeping the persistent
+   sidebar below this width squeezed diagrams and long-form content into an
+   unusable half-column while the desktop navbar overflowed horizontally. */
+@media (max-width: 960px) {
   .dmd-mobile-menu-btn {
     display: flex;
   }
   .dmd-navbar-center {
+    display: none;
+  }
+  .dmd-nav-links {
     display: none;
   }
   .dmd-sidebar {
@@ -1557,7 +1925,12 @@ fieldset.dmd-appearance-section {
     z-index: 140;
   }
   .dmd-main-wrapper {
-    padding: 1.5rem 0.25rem;
+    width: 100%;
+    padding: clamp(1.25rem, 4vw, 2.5rem) clamp(0.25rem, 2vw, 1.25rem);
+  }
+  .dmd-main-content {
+    max-width: 780px;
+    margin-inline: auto;
   }
   .dmd-card-grid-2, .dmd-card-grid-3, .dmd-card-grid-4 {
     grid-template-columns: 1fr;
@@ -1575,6 +1948,25 @@ fieldset.dmd-appearance-section {
   }
   .dmd-markdown-body h1 {
     font-size: 2.45rem;
+  }
+}
+
+@media (max-width: 520px) {
+  .dmd-social-links {
+    display: none;
+  }
+
+  .dmd-brand-version {
+    display: none;
+  }
+
+  .dmd-offline-download-btn span {
+    display: none;
+  }
+
+  .dmd-offline-download-btn {
+    width: 36px;
+    padding: 0;
   }
 }
 

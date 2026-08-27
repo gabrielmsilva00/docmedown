@@ -18,11 +18,22 @@ import "prismjs/components/prism-sql";
 import "prismjs/components/prism-docker";
 import "prismjs/components/prism-diff";
 
+import { encodeDiagramSource } from "./mermaid";
+
+/**
+ * Mermaid fences emit a data-driven placeholder. The runtime mounts an
+ * interactive MermaidDiagram React component onto it, which owns family-aware
+ * theming, zoom/pan, export, and error reporting.
+ */
+function diagramPlaceholder(code: string): string {
+  return `<div class="dmd-diagram-host" data-dmd-diagram="${encodeDiagramSource(code)}"></div>`;
+}
+
 export function highlightCode(code: string, lang: string = ""): string {
   const cleanLang = lang.trim().toLowerCase();
 
   if (cleanLang === "mermaid") {
-    return `<div class="dmd-mermaid-container"><pre class="mermaid">${escapeHtml(code)}</pre></div>`;
+    return diagramPlaceholder(code);
   }
 
   const grammar = Prism.languages[cleanLang] || Prism.languages.javascript;
@@ -52,7 +63,7 @@ export function renderCodeBlock(code: string, infoString: string = ""): string {
   }
 
   if (lang.toLowerCase() === "mermaid") {
-    return `<div class="dmd-mermaid-container"><pre class="mermaid">${escapeHtml(code)}</pre></div>`;
+    return diagramPlaceholder(code);
   }
 
   const highlighted = highlightCode(code, lang);

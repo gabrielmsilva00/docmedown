@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { test } from "node:test";
 import { normalizeConfig } from "../src/runtime/config";
-import { docConfigSchema } from "../src/runtime/config-schema";
+import { docConfigSchema, docThemeConfigSchema } from "../src/runtime/config-schema";
 
 const packageRoot = path.resolve(__dirname, "..");
 
@@ -46,12 +46,26 @@ test("unknown families, densities, or modes are rejected with a precise path", (
 test("family schema and JSON Schema stay aligned", () => {
   const jsonSchemaPath = path.join(packageRoot, "schemas", "docs.schema.json");
   const jsonSchema = JSON.parse(fs.readFileSync(jsonSchemaPath, "utf-8"));
-  const zodValues = docConfigSchema.shape.theme.unwrap().shape.family.unwrap().options;
-  const jsonFamily = jsonSchema.properties.theme.properties.family;
+  const zodValues = docThemeConfigSchema.shape.family.unwrap().options;
+  const jsonFamily = jsonSchema.$defs.theme.properties.family;
 
   assert.ok(jsonFamily, "docs.schema.json must declare theme.family");
   assert.deepEqual([...jsonFamily.enum], [...zodValues]);
-  assert.equal(jsonSchema.properties.theme.properties.preset.deprecated, true);
+  assert.equal(jsonSchema.$defs.theme.properties.preset.deprecated, true);
+});
+
+test("all documented theme enums match the executable and portable schemas", () => {
+  const jsonSchema = JSON.parse(fs.readFileSync(path.join(packageRoot, "schemas", "docs.schema.json"), "utf-8"));
+  const themeShape = docThemeConfigSchema.shape;
+  const properties = jsonSchema.$defs.theme.properties;
+
+  assert.deepEqual(properties.density.enum, themeShape.density.unwrap().options);
+  assert.deepEqual(properties.defaultMode.enum, themeShape.defaultMode.unwrap().options);
+  assert.deepEqual(properties.codeTheme.enum, themeShape.codeTheme.unwrap().options);
+
+  const configurationGuide = fs.readFileSync(path.join(packageRoot, "docs", "configuration.md"), "utf-8");
+  for (const value of properties.codeTheme.enum) assert.match(configurationGuide, new RegExp(`\\b${value}\\b`));
+  assert.doesNotMatch(configurationGuide, /\bnord\b/);
 });
 
 test("template docs.json uses the family contract without legacy presets", () => {
@@ -69,7 +83,7 @@ test("every theme family defines light and dark token layers", () => {
     assert.match(themesCss, new RegExp(`data-dmd-theme='${family}'`), `light layer missing for ${family}`);
     assert.match(
       themesCss,
-      new RegExp(`data-dmd-theme='${family}'\\[data-theme='dark'\\]`),
+      new RegExp(`data-dmd-theme='${family}'\\]\\[data-theme='dark'\\]`),
       `dark layer missing for ${family}`,
     );
   }
@@ -84,4 +98,15 @@ test("shell layout consumes density tokens instead of hardcoded chrome sizes", (
   assert.match(mainCss, /\.dmd-navbar\s*\{[^}]*height:\s*var\(--dmd-nav-height\)/s);
   assert.match(mainCss, /\.dmd-sidebar\s*\{[^}]*width:\s*var\(--dmd-sidebar-width\)/s);
   assert.match(mainCss, /\.dmd-toc\s*\{[^}]*width:\s*var\(--dmd-toc-width\)/s);
+});
+
+test("Mermaid viewer uses a square clipped viewport with pan-only navigation", () => {
+  const mainCss = fs.readFileSync(path.resolve(__dirname, "../src/runtime/styles/main.css"), "utf-8");
+  const stageRule = mainCss.match(/\.dmd-diagram-stage\s*\{([\s\S]*?)\n\}/)?.[1] || "";
+
+  assert.match(stageRule, /aspect-ratio:\s*1/);
+  assert.match(stageRule, /overflow:\s*hidden/);
+  assert.match(stageRule, /overscroll-behavior:\s*none/);
+  assert.match(stageRule, /touch-action:\s*none/);
+  assert.doesNotMatch(stageRule, /overflow:\s*auto/);
 });

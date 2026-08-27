@@ -2,7 +2,8 @@ import type React from "react";
 import { useEffect, useRef } from "react";
 import ReactDOM from "react-dom/client";
 import { ComponentRegistry } from "../components/DmdRegistry";
-import { renderMermaidDiagrams } from "./mermaid";
+import { MermaidDiagram } from "../components/MermaidDiagram";
+import { decodeDiagramSource } from "./mermaid";
 
 interface MarkdownRendererProps {
   html: string;
@@ -61,11 +62,29 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ html, onNavi
 
     if (!containerRef.current) return;
 
+    // Diagram viewers mount before any registry work so documents WITHOUT
+    // custom components still render their mermaid fences (this used to sit
+    // behind an early return, which silently skipped plain-HTML docs).
+    const diagramHosts = containerRef.current.querySelectorAll<HTMLDivElement>(".dmd-diagram-host[data-dmd-diagram]");
+    diagramHosts.forEach((host) => {
+      if (host.hasAttribute("data-dmd-mounted")) return;
+      host.setAttribute("data-dmd-mounted", "true");
+
+      let source = "";
+      try {
+        source = decodeDiagramSource(host.getAttribute("data-dmd-diagram") || "");
+      } catch {
+        return;
+      }
+
+      const root = ReactDOM.createRoot(host);
+      root.render(<MermaidDiagram source={source} />);
+      rootsRef.current.push(root);
+    });
+
     const registry = ComponentRegistry.getInstance();
     const registered = registry.getAll();
     const componentNames = Object.keys(registered);
-
-    if (componentNames.length === 0) return;
 
     // Scan for tags matching registered components
     for (const name of componentNames) {
@@ -99,9 +118,6 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ html, onNavi
         rootsRef.current.push(root);
       });
     }
-
-    // Render Mermaid diagrams whenever HTML changes
-    renderMermaidDiagrams();
 
     return () => {
       rootsRef.current.forEach((root) => {

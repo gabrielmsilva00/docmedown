@@ -38,10 +38,10 @@ Use standard GitHub alert blockquotes:
 > This is a standard informative note callout.
 
 > [!TIP]
-> You can toggle dark and light modes with the button in the top navigation bar.
+> Open **Appearance** in the top navigation to switch theme family, automatic/light/dark mode, and reading density.
 
 > [!IMPORTANT]
-> Ensure all your Markdown files use standard `.md` or `.mdx` extensions.
+> Use `.md` or `.mdx` filenames for discovery. DocMeDown parses both as Markdown; `.mdx` does not invoke an MDX compiler—use `.dmd/components.js` for React components.
 
 > [!WARNING]
 > Do not commit private API tokens in public repositories.
@@ -81,7 +81,9 @@ export class HashRouter {
 
 ## 3. Mermaid Architecture Diagrams
 
-Render flowcharts, sequence diagrams, class diagrams, and state diagrams natively. Mermaid ships in the DocMeDown runtime and uses SVG text labels with the active DocMeDown theme, so the same diagrams render from a serveable site and a `.dist/index.html` file without a CDN request:
+Render flowcharts, sequence diagrams, class diagrams, and state diagrams natively. Mermaid ships in the DocMeDown runtime, and every diagram mounts inside a square interactive viewer that is aware of your active [theme family](../configuration.md). Diagrams re-render when you switch families or color modes, automatically repair their SVG bounds, fit to the full viewport width, support zoom, 1:1 view, SVG download, expanded review, and report syntax errors inline instead of failing silently. Arrow paths use subtle directional motion and blocks receive depth without changing their semantic colors.
+
+Use the clipboard icon in the toolbar to copy the complete fenced Mermaid block. Flowchart subgraphs expose their own clipboard icons in the top-right corner; each copies that complete `subgraph ... end` block as a standalone Mermaid fence. The viewer never exposes native scrollbars: after zooming, drag empty graph or cluster space to pan in either direction. Dragging inside a node or text label preserves native text selection, and touch devices use the same direct panning camera. Everything works identically from a serveable site and a `.dist/index.html` file under `file:///`—no CDN request:
 
 ````markdown
 ```mermaid

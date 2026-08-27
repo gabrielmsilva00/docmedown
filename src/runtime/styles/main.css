@@ -545,6 +545,25 @@ a:hover {
   border: 1px solid var(--dmd-border-color);
 }
 
+/* Mermaid uses an SVG viewport. Keep diagrams contained without relying on
+   foreignObject HTML labels, which are inconsistent in standalone files. */
+.dmd-mermaid-container {
+  margin: 1.5rem 0;
+  padding: 1rem;
+  overflow-x: auto;
+  background: var(--dmd-bg-card);
+  border: 1px solid var(--dmd-border-color);
+  border-radius: var(--dmd-radius-md);
+}
+
+.dmd-mermaid-container svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  min-width: 32rem;
+  margin: 0 auto;
+}
+
 /* ==========================================================================
    CODE BLOCKS & PRISM
    ========================================================================== */

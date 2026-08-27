@@ -32,6 +32,8 @@ export default {
 };
 ```
 
+`docmedown build` bundles this module and its relative JavaScript imports into both `_docs.js` and `.dist/index.html`, so the same component behavior works from a static host and `file:///` offline bundle.
+
 ---
 
 ## 2. Using Custom and Built-in Components

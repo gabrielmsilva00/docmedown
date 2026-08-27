@@ -56,7 +56,9 @@ export class ComponentRegistry {
   }
 
   /**
-   * Dynamically loads custom components from .dmd/components.js if available
+   * Registers embedded components after the runtime has published `window.React`.
+   * Offline sources are bundled at build time because Blob modules cannot resolve
+   * relative imports against the original `.dmd` directory.
    */
   public async loadDmdDirectory(basePath: string = "") {
     if (typeof window === "undefined") return;
@@ -77,7 +79,7 @@ export class ComponentRegistry {
       try {
         const components = await embeddedComponents;
         if (components && typeof components === "object") {
-          this.registerMultiple(components);
+          this.registerMultiple(components as ComponentMap);
           return;
         }
       } catch (error) {
@@ -96,7 +98,7 @@ export class ComponentRegistry {
         if (mod) {
           const comps = mod.default || mod;
           if (typeof comps === "object") {
-            this.registerMultiple(comps);
+            this.registerMultiple(comps as ComponentMap);
             console.log("[DocMeDown] Loaded custom .dmd components:", Object.keys(comps));
             return;
           }

@@ -19,6 +19,7 @@ test("package metadata exposes stable CommonJS, ESM, type, and browser entry poi
   assert.equal(packageJson.scripts.deploy, "node ./scripts/deploy.mjs");
   assert.equal(packageJson.scripts["deploy:dry-run"], "npm run deploy -- --dry-run");
   assert.equal(packageJson.scripts.lint, "biome check .");
+  assert.equal(packageJson.scripts["test:artifacts"], "npx tsx --test tests/offline-artifact.test.ts");
   assert.ok(fs.existsSync(path.join(packageRoot, "scripts", "deploy.mjs")));
   assert.ok(fs.existsSync(path.join(packageRoot, "schemas", "docs.schema.json")));
 });

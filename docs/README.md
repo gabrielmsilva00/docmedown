@@ -65,7 +65,7 @@ graph TD
 
 ## 🎨 Interactive Live Demo
 
-Below is a live interactive component loaded dynamically from `docs/.dmd/components.jsx`:
+Below are live interactive components loaded from `docs/.dmd/components.js`:
 
 <InteractiveThemeDemo />
 

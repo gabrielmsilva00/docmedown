@@ -28,8 +28,10 @@ npx docmedown build ./docs
 ### What Happens During Build:
 1. **Manifest Inlining**: Scans all `.md` files and extracts headings and metadata.
 2. **Document Inlining**: Encodes the manifest and Markdown corpus into a parser-safe payload that initializes the offline runtime without network requests.
-3. **Component Inlining**: Includes `.dmd/components.js` when present, so custom browser-loadable components remain available offline.
-4. **Runtime Inlining**: Embeds the full standalone React SPA runtime and CSS directly into the HTML file.
+3. **Component Bundling**: Bundles `.dmd/components.js` and its relative JavaScript imports before inlining, so custom components remain available from a `file:///` URL.
+4. **Runtime Inlining**: Embeds the full standalone React SPA runtime, Mermaid renderer, and CSS directly into the HTML file.
+
+Mermaid support makes the runtime larger because every diagram renderer is kept inside the artifact. This is intentional: no chart, component, font, or syntax-rendering behavior depends on a network request when the bundle is opened from `file:///`.
 
 ---
 
@@ -37,7 +39,8 @@ npx docmedown build ./docs
 
 Once built, simply **double-click `index.html`**:
 - Opens seamlessly in any modern browser via `file:///C:/.../index.html`.
-- Full navigation, interactive components, dark/light theme switcher, and instant search work **100% offline without a web server**.
+- Full navigation, built-in and custom React components, Mermaid diagrams, dark/light theme switching, typography, and instant search work **100% offline without a web server**.
+- Serveable and `.dist/index.html` output use the same local font stacks, so they do not depend on Google Fonts or another network font provider.
 - Ideal for:
   - Software release attachments (`.zip` / `.tar.gz`)
   - Embedded hardware device user manuals

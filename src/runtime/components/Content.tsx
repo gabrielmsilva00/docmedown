@@ -122,7 +122,9 @@ export const Content: React.FC = () => {
 
         {/* Markdown Rendered Content */}
         <article className="dmd-article">
-          <MarkdownRenderer html={currentDoc.html} onNavigate={navigate} />
+          {/* A route change replaces generated Markdown placeholders. Remount the
+              renderer so built-in and `.dmd` components mount against that new DOM. */}
+          <MarkdownRenderer key={currentDoc.slug} html={currentDoc.html} onNavigate={navigate} />
         </article>
 
         {/* Edit on GitHub Link */}

@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import chalk from "chalk";
 import chokidar from "chokidar";
+import { buildSync } from "esbuild";
 import { normalizeConfig, parseDocConfigJson } from "../../runtime/config";
 import type { DocConfig } from "../../runtime/types";
 import { generateManifest, scanDirectory } from "../utils/scanner";
@@ -30,6 +31,54 @@ export function encodeOfflinePayload(value: unknown): string {
 
 export function escapeInlineScriptContent(value: string): string {
   return value.replace(/<\/script/gi, "<\\/script");
+}
+
+/**
+ * Resolves local imports before a custom component module is embedded in `_docs.js`
+ * or a single-file bundle. Blob modules do not have a stable filesystem URL, so a
+ * raw `.dmd/components.js` file cannot resolve its own relative imports offline.
+ */
+export function bundleCustomComponents(componentsPath: string): string | undefined {
+  if (!fs.existsSync(componentsPath)) return undefined;
+
+  try {
+    const result = buildSync({
+      entryPoints: [componentsPath],
+      bundle: true,
+      format: "esm",
+      platform: "browser",
+      target: "es2022",
+      write: false,
+      legalComments: "none",
+    });
+
+    const bundledSource = result.outputFiles[0]?.text;
+    if (!bundledSource) {
+      throw new Error("esbuild did not produce an output module.");
+    }
+
+    return bundledSource;
+  } catch (error) {
+    throw new Error(
+      `Could not bundle custom components from ${componentsPath}: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+}
+
+/**
+ * Creates the data bootstrap shared by the single-file bundle. Component modules
+ * are intentionally not evaluated here: the runtime publishes `window.React`
+ * first, then ComponentRegistry imports and registers the embedded module.
+ */
+export function createOfflineDataBootstrap(offlinePayload: string): string {
+  return `
+    (function () {
+      const encoded = '${offlinePayload}';
+      const bytes = Uint8Array.from(atob(encoded), (character) => character.charCodeAt(0));
+      const data = JSON.parse(new TextDecoder().decode(bytes));
+      window.__DOCMEDOWN_DATA__ = data;
+      window.__DOCMEDOWN_CONFIG__ = data.manifest.config;
+    })();`;
 }
 
 function escapeHtml(value: string): string {
@@ -138,9 +187,10 @@ export async function buildCommand(targetDirArg: string = "./docs", options: Bui
   }
 
   const componentsPath = path.join(targetDir, ".dmd", "components.js");
-  const componentsSource = fs.existsSync(componentsPath) ? fs.readFileSync(componentsPath, "utf-8") : undefined;
+  const componentsSource = bundleCustomComponents(componentsPath);
 
-  // 2. Generate _docs.js for 100% offline file:/// double-click compatibility
+  // 2. Generate _docs.js for precompiled local and file:/// documentation data.
+  // Custom components are bundled so embedded Blob modules can use relative imports.
   const docsJsContent = `window.__DOCMEDOWN_DATA__ = ${JSON.stringify({ manifest, docs: docsMap, componentsSource }, null, 2)};\n`;
   const docsJsPath = path.join(onlineDir, "_docs.js");
   fs.writeFileSync(docsJsPath, docsJsContent, "utf-8");
@@ -165,6 +215,7 @@ export async function buildCommand(targetDirArg: string = "./docs", options: Bui
 
     const offlinePayload = encodeOfflinePayload({ manifest, docs: docsMap, componentsSource });
     const safeBundleJs = escapeInlineScriptContent(bundleJs);
+    const offlineDataBootstrap = createOfflineDataBootstrap(offlinePayload);
     const singleFileHtml = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -175,20 +226,7 @@ export async function buildCommand(targetDirArg: string = "./docs", options: Bui
 <body>
   <div id="dmd-app"></div>
   <script>
-    (function () {
-      const encoded = '${offlinePayload}';
-      const bytes = Uint8Array.from(atob(encoded), (character) => character.charCodeAt(0));
-      const data = JSON.parse(new TextDecoder().decode(bytes));
-      window.__DOCMEDOWN_DATA__ = data;
-      window.__DOCMEDOWN_CONFIG__ = data.manifest.config;
-      if (data.componentsSource) {
-        const componentModule = new Blob([data.componentsSource], { type: 'text/javascript' });
-        const componentModuleUrl = URL.createObjectURL(componentModule);
-        window.__DOCMEDOWN_COMPONENTS_READY__ = import(componentModuleUrl)
-          .then((module) => module.default || module)
-          .finally(() => URL.revokeObjectURL(componentModuleUrl));
-      }
-    })();
+${offlineDataBootstrap}
   </script>
   <script>
 ${safeBundleJs}

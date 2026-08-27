@@ -81,7 +81,7 @@ export class HashRouter {
 
 ## 3. Mermaid Architecture Diagrams
 
-Render flowcharts, sequence diagrams, class diagrams, and state diagrams natively:
+Render flowcharts, sequence diagrams, class diagrams, and state diagrams natively. Mermaid ships in the DocMeDown runtime and uses SVG text labels with the active DocMeDown theme, so the same diagrams render from a serveable site and a `.dist/index.html` file without a CDN request:
 
 ````markdown
 ```mermaid

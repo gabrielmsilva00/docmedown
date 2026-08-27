@@ -2,6 +2,15 @@
 
 All notable changes to DocMeDown are documented here.
 
+## Unreleased
+
+### Fixed
+
+- Offline `.dist/index.html` bundles now load custom `.dmd/components.js` modules after React is available and bundle their relative JavaScript imports.
+- Mermaid now ships inside the runtime, so diagrams render from `file:///` without a CDN request.
+- Serveable and offline output now use the same local font stacks instead of relying on Google Fonts only in serveable HTML.
+- Runtime builds clean stale chunks before packaging; the serveable and offline IIFE remains self-contained while ESM/CJS retain their required Mermaid chunks.
+
 ## 0.1.1 - 2026-08-26
 
 ### Added

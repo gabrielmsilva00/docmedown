@@ -44,6 +44,8 @@ export default {
 
 You can now use `<InteractiveMetric label="API Success Rate" />` directly in any `.md` file!
 
+When you run `docmedown build`, the generated `_docs.js` and `.dist/index.html` bundle this entry module with its relative JavaScript imports. Keep browser-only code in the component graph and use `window.React`; server-only Node APIs cannot run in either static or offline documentation output.
+
 ---
 
 ## 2. Ready-to-Use Built-in Components

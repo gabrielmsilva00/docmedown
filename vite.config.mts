@@ -19,7 +19,10 @@ export default defineConfig({
   },
   build: {
     outDir: "dist",
-    emptyOutDir: false,
+    // `npm run build` regenerates CLI and declaration output after Vite completes.
+    // Start from a clean runtime directory so the ESM/CJS Mermaid chunks always
+    // match their entry files; the IIFE remains self-contained for docs output.
+    emptyOutDir: true,
     lib: {
       entry: path.resolve(rootDirectory, "src/runtime/index.tsx"),
       name: "DocMeDown",

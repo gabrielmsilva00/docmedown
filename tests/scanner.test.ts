@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
 import {
+  bundleCustomComponents,
+  createOfflineDataBootstrap,
   DEFAULT_OFFLINE_OUTPUT_DIRECTORY,
   encodeOfflinePayload,
   escapeInlineScriptContent,
@@ -97,4 +101,30 @@ test("Offline payload and inlined runtime are safe around script closing sequenc
   assert.ok(!encoded.toLowerCase().includes("</script"));
   assert.deepEqual(decoded, payload);
   assert.equal(escapedRuntime, 'const example = "<\\/script>";');
+});
+
+test("Offline custom component bundles resolve relative imports and defer module evaluation to the runtime", () => {
+  const temporaryDirectory = fs.mkdtempSync(path.join(os.tmpdir(), "docmedown-components-"));
+  const componentsPath = path.join(temporaryDirectory, "components.js");
+
+  try {
+    fs.writeFileSync(path.join(temporaryDirectory, "shared.js"), "export const label = 'Bundled component';", "utf-8");
+    fs.writeFileSync(
+      componentsPath,
+      'import { label } from "./shared.js"; export function OfflineWidget() { return window.React.createElement("span", null, label); } export default { OfflineWidget };',
+      "utf-8",
+    );
+
+    const bundledSource = bundleCustomComponents(componentsPath);
+    const bootstrap = createOfflineDataBootstrap(
+      encodeOfflinePayload({ manifest: { config: {} }, docs: {}, componentsSource: bundledSource }),
+    );
+
+    assert.ok(bundledSource?.includes("Bundled component"));
+    assert.ok(!bundledSource?.includes("./shared.js"));
+    assert.ok(bootstrap.includes("window.__DOCMEDOWN_DATA__ = data"));
+    assert.ok(!bootstrap.includes("__DOCMEDOWN_COMPONENTS_READY__"));
+  } finally {
+    fs.rmSync(temporaryDirectory, { recursive: true, force: true });
+  }
 });

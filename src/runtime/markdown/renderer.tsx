@@ -46,7 +46,8 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ html, onNavi
     }
   }, []);
 
-  // Mount custom React components (.dmd & builtins) into HTML placeholders
+  // Mount custom React components (.dmd and builtins) once per document route.
+  // Content keys this renderer by slug so its HTML placeholders are fresh on navigation.
   useEffect(() => {
     // Unmount previous component roots
     rootsRef.current.forEach((root) => {

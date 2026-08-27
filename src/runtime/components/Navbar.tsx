@@ -2,6 +2,7 @@ import type React from "react";
 import { useDoc } from "../provider/DocProvider";
 import { useTheme } from "../provider/ThemeProvider";
 import { AppearanceMenu } from "./AppearanceMenu";
+import { OfflineDownloadButton } from "./OfflineDownloadButton";
 
 export const Navbar: React.FC = () => {
   const { config, setIsSearchOpen, isMobileSidebarOpen, setIsMobileSidebarOpen } = useDoc();
@@ -150,6 +151,8 @@ export const Navbar: React.FC = () => {
             ))}
           </div>
         )}
+
+        <OfflineDownloadButton />
 
         <AppearanceMenu />
 

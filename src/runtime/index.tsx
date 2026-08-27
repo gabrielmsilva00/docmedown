@@ -21,6 +21,12 @@ export {
   sidebarItemSchema,
   socialLinkSchema,
 } from "./config-schema";
+export {
+  createOfflineDownload,
+  downloadOfflineCopy,
+  isOfflineDocumentation,
+  sanitizeDownloadName,
+} from "./offline-export";
 export * from "./types";
 
 const mountedRoots = new WeakMap<HTMLElement, ReturnType<typeof ReactDOM.createRoot>>();

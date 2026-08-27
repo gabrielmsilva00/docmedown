@@ -1,9 +1,15 @@
 import fs from "node:fs";
 import path from "node:path";
+import { gzipSync } from "node:zlib";
 import chalk from "chalk";
 import chokidar from "chokidar";
 import { buildSync } from "esbuild";
 import { normalizeConfig, parseDocConfigJson } from "../../runtime/config";
+import {
+  createCompressedOfflineHtml,
+  OFFLINE_FORMAT_VERSION,
+  type OfflineEnvelope,
+} from "../../runtime/offline-export";
 import type { DocConfig } from "../../runtime/types";
 import { generateManifest, scanDirectory } from "../utils/scanner";
 
@@ -29,6 +35,10 @@ export function encodeOfflinePayload(value: unknown): string {
   return Buffer.from(JSON.stringify(value), "utf-8").toString("base64");
 }
 
+export function encodeCompressedOfflineEnvelope(envelope: OfflineEnvelope): string {
+  return gzipSync(Buffer.from(JSON.stringify(envelope), "utf-8"), { level: 9 }).toString("base64");
+}
+
 export function escapeInlineScriptContent(value: string): string {
   return value.replace(/<\/script/gi, "<\\/script");
 }
@@ -49,6 +59,7 @@ export function bundleCustomComponents(componentsPath: string): string | undefin
       platform: "browser",
       target: "es2022",
       write: false,
+      minify: true,
       legalComments: "none",
     });
 
@@ -79,15 +90,6 @@ export function createOfflineDataBootstrap(offlinePayload: string): string {
       window.__DOCMEDOWN_DATA__ = data;
       window.__DOCMEDOWN_CONFIG__ = data.manifest.config;
     })();`;
-}
-
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
 }
 
 const GENERATED_DOC_OUTPUTS = ["_manifest.json", "_docs.js", "docmedown.iife.js"];
@@ -152,6 +154,11 @@ export async function buildCommand(targetDirArg: string = "./docs", options: Bui
     fs.mkdirSync(onlineDir, { recursive: true });
   }
 
+  // GitHub Pages branch deployments run through Jekyll by default. Keep the
+  // generated underscore-prefixed data file and other static assets untouched
+  // when a user publishes the documentation directory directly.
+  fs.writeFileSync(path.join(onlineDir, ".nojekyll"), "", "utf-8");
+
   if (buildOfflineBundle && !fs.existsSync(offlineDir)) {
     fs.mkdirSync(offlineDir, { recursive: true });
   }
@@ -213,30 +220,22 @@ export async function buildCommand(targetDirArg: string = "./docs", options: Bui
       console.warn(chalk.yellow("  ⚠ Local runtime bundle not found, linking CDN script."));
     }
 
-    const offlinePayload = encodeOfflinePayload({ manifest, docs: docsMap, componentsSource });
-    const safeBundleJs = escapeInlineScriptContent(bundleJs);
-    const offlineDataBootstrap = createOfflineDataBootstrap(offlinePayload);
-    const singleFileHtml = `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>${escapeHtml(config.name || "Documentation")}</title>
-</head>
-<body>
-  <div id="dmd-app"></div>
-  <script>
-${offlineDataBootstrap}
-  </script>
-  <script>
-${safeBundleJs}
-  </script>
-</body>
-</html>`;
+    const envelope: OfflineEnvelope = {
+      version: OFFLINE_FORMAT_VERSION,
+      data: { manifest, docs: docsMap, componentsSource },
+      runtime: bundleJs,
+    };
+    const encodedEnvelope = encodeCompressedOfflineEnvelope(envelope);
+    const singleFileHtml = createCompressedOfflineHtml(encodedEnvelope, config.name || "Documentation");
 
     const singleFilePath = path.join(offlineDir, "index.html");
     fs.writeFileSync(singleFilePath, singleFileHtml, "utf-8");
     console.log(chalk.bold.green(`  ✔ Built self-contained offline bundle: ${singleFilePath}`));
+    console.log(
+      chalk.dim(
+        `    Compressed ${Buffer.byteLength(JSON.stringify(envelope), "utf-8").toLocaleString()} bytes to ${Buffer.byteLength(singleFileHtml, "utf-8").toLocaleString()} bytes.`,
+      ),
+    );
     console.log(chalk.dim(`    You can now double-click index.html to view offline without any server!\n`));
   }
 

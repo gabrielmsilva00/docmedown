@@ -3,10 +3,12 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
+import { gunzipSync } from "node:zlib";
 import {
   bundleCustomComponents,
   createOfflineDataBootstrap,
   DEFAULT_OFFLINE_OUTPUT_DIRECTORY,
+  encodeCompressedOfflineEnvelope,
   encodeOfflinePayload,
   escapeInlineScriptContent,
   findNestedDocumentationRoots,
@@ -15,6 +17,12 @@ import {
 } from "../src/cli/commands/build";
 import { extractHeadings, generateManifest, scanDirectory } from "../src/cli/utils/scanner";
 import { DEFAULT_CONFIG } from "../src/runtime/config";
+import {
+  createCompressedOfflineHtml,
+  OFFLINE_FORMAT_VERSION,
+  type OfflineEnvelope,
+  sanitizeDownloadName,
+} from "../src/runtime/offline-export";
 
 test("Extract headings from markdown content", () => {
   const content = `
@@ -101,6 +109,36 @@ test("Offline payload and inlined runtime are safe around script closing sequenc
   assert.ok(!encoded.toLowerCase().includes("</script"));
   assert.deepEqual(decoded, payload);
   assert.equal(escapedRuntime, 'const example = "<\\/script>";');
+});
+
+test("Compressed offline envelopes round-trip and produce a minified self-extracting document", () => {
+  const envelope: OfflineEnvelope = {
+    version: OFFLINE_FORMAT_VERSION,
+    data: {
+      manifest: {
+        version: "1",
+        generatedAt: "now",
+        config: DEFAULT_CONFIG,
+        docs: [],
+        tree: [],
+      },
+      docs: { README: "# Offline </script> documentation" },
+      componentsSource: "export default {};",
+    },
+    runtime: 'window.example = "</script>";',
+  };
+  const encoded = encodeCompressedOfflineEnvelope(envelope);
+  const decoded = JSON.parse(gunzipSync(Buffer.from(encoded, "base64")).toString("utf-8"));
+  const html = createCompressedOfflineHtml(encoded, 'Docs <"offline">');
+
+  assert.deepEqual(decoded, envelope);
+  assert.ok(html.startsWith("<!doctype html>"));
+  assert.ok(html.includes('new DecompressionStream("gzip")'));
+  assert.ok(html.includes("window.__DOCMEDOWN_OFFLINE__=true"));
+  assert.ok(!html.includes("# Offline"));
+  assert.ok(!html.includes('window.example = "</script>"'));
+  assert.ok(html.includes("Docs &lt;&quot;offline&quot;&gt;"));
+  assert.equal(sanitizeDownloadName(" DocMeDown API v2 "), "docmedown-api-v2-offline.html");
 });
 
 test("Offline custom component bundles resolve relative imports and defer module evaluation to the runtime", () => {

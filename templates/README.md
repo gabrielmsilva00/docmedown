@@ -17,11 +17,11 @@ tags: [getting-started, overview, docs]
 
 ## Key Features
 
-- **🚀 Zero Build Friction**: Host statically, view locally offline (`file:///`), or document remote GitHub/GitLab repositories dynamically.
-- **🎨 Glassmorphic Themes**: Sleek Dark & Light modes with multiple vibrant color presets (Indigo, Emerald, Sunset, Violet, Rose, Slate, Cyberpunk).
+- **🚀 Zero Build Friction**: Host statically, build a self-contained `.dist/index.html` for `file:///`, or document remote GitHub/GitLab repositories dynamically.
+- **🎨 Complete Theme Families**: Atlas, Blueprint, Terminal, and Editorial each provide distinct surfaces, geometry, typography, spacing, and diagram palettes across light and dark modes.
 - **⚡ Fast Search**: In-browser fuzzy search with `⌘K` command palette.
 - **⚛️ React Components**: Support for custom React components via `.dmd/` global registry or ready-to-use builtins.
-- **📊 Diagrams & Math**: Native support for **Mermaid.js** diagrams and **KaTeX** math formulas.
+- **📊 Diagrams & Math**: A theme-aware Mermaid viewer with Fit, zoom, SVG export, and offline parity, plus KaTeX formulas.
 
 ---
 
@@ -46,7 +46,7 @@ graph LR
 > This is a standard informative note callout.
 
 > [!IMPORTANT]
-> Important guidelines or critical notices appear with highlighted violet accents.
+> Important guidelines or critical notices use the active family's semantic emphasis colors.
 
 > [!WARNING]
 > Warnings help developers avoid common pitfalls and mistakes.

@@ -25,7 +25,7 @@ This scaffolds your documentation directory, creates starter Markdown guides, an
 
 ## 2. Interactive Configuration TUI
 
-Need to customize your site title, theme palette, or configure a remote GitHub repository? Launch the interactive TUI configuration wizard:
+Need to customize your site title, theme family, color mode, or configure a remote GitHub repository? Launch the interactive TUI configuration wizard:
 
 ```bash
 npx docmedown config

@@ -65,7 +65,7 @@ graph TD
 
 ## 🎨 Interactive Live Demo
 
-Below are live interactive components loaded from `docs/.dmd/components.js`:
+Below are live custom components loaded from `docs/.dmd/components.js`. The first observes the real Appearance menu state; the second demonstrates component-local React state:
 
 <InteractiveThemeDemo />
 

@@ -1,4 +1,4 @@
-const { createElement, useState } = window.React;
+const { createElement, useEffect, useState } = window.React;
 
 const panelStyle = {
   margin: '1.25rem 0',
@@ -9,36 +9,54 @@ const panelStyle = {
 };
 
 export function InteractiveThemeDemo() {
-  const [activeTheme, setActiveTheme] = useState('indigo');
-  const themes = ['indigo', 'emerald', 'sunset', 'violet', 'rose', 'slate', 'cyberpunk'];
+  const readAppearance = () => ({
+    family: document.documentElement.getAttribute('data-dmd-theme') || 'atlas',
+    mode: document.documentElement.getAttribute('data-dmd-mode') || 'light',
+    density: document.documentElement.getAttribute('data-dmd-density') || 'comfortable',
+  });
+  const [appearance, setAppearance] = useState(readAppearance);
+
+  useEffect(() => {
+    const observer = new MutationObserver(() => setAppearance(readAppearance()));
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-dmd-theme', 'data-dmd-mode', 'data-dmd-density'],
+    });
+    return () => observer.disconnect();
+  }, []);
 
   return createElement(
     'div',
     { style: panelStyle },
-    createElement('strong', null, 'Theme palette demo'),
-    createElement('p', { style: { color: 'var(--dmd-text-secondary)' } }, 'Choose a palette for this documentation site.'),
+    createElement('strong', null, 'Live appearance state'),
+    createElement(
+      'p',
+      { style: { color: 'var(--dmd-text-secondary)' } },
+      'Use the Appearance menu above. This custom component observes the runtime theme contract directly.'
+    ),
     createElement(
       'div',
-      { style: { display: 'flex', flexWrap: 'wrap', gap: '0.5rem' } },
-      ...themes.map((theme) => createElement(
-        'button',
+      { style: { display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '0.6rem' } },
+      ...Object.entries(appearance).map(([label, value]) => createElement(
+        'div',
         {
-          key: theme,
-          type: 'button',
-          onClick: () => {
-            setActiveTheme(theme);
-            document.documentElement.setAttribute('data-preset', theme);
-          },
+          key: label,
           style: {
-            border: activeTheme === theme ? '2px solid var(--dmd-accent)' : '1px solid var(--dmd-border-color)',
-            borderRadius: '6px',
-            padding: '0.4rem 0.65rem',
+            border: '1px solid var(--dmd-border-color)',
+            borderRadius: 'var(--dmd-radius-md)',
+            padding: '0.65rem',
             background: 'var(--dmd-bg-secondary)',
-            color: 'var(--dmd-text-primary)',
-            cursor: 'pointer',
           },
         },
-        theme
+        createElement('div', {
+          style: {
+            color: 'var(--dmd-text-muted)',
+            fontFamily: 'var(--dmd-font-mono)',
+            fontSize: '0.68rem',
+            textTransform: 'uppercase',
+          },
+        }, label),
+        createElement('div', { style: { marginTop: '0.25rem', fontWeight: 700 } }, value)
       ))
     )
   );

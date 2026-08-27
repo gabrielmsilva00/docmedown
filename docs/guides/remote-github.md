@@ -49,7 +49,8 @@ Create a `docs.json` file:
     "docsDir": "docs"
   },
   "theme": {
-    "preset": "indigo",
+    "family": "blueprint",
+    "density": "comfortable",
     "defaultMode": "auto"
   }
 }

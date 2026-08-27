@@ -1,13 +1,13 @@
 ---
 title: Configuration Reference (docs.json)
-description: Complete reference for docs.json, theme presets, navigation, and options.
+description: Complete reference for docs.json, theme families, navigation, and runtime options.
 order: 3
 tags: [config, reference, themes, json]
 ---
 
 # Configuration Reference (`docs.json`)
 
-While DocMeDown works zero-config out of the box, `docs.json` allows you to customize branding, color palettes, navbar links, repository links, search behavior, and custom routes.
+While DocMeDown works zero-config out of the box, `docs.json` allows you to customize branding, complete theme families, reading density, navbar links, repository links, search behavior, and custom routes.
 
 ---
 
@@ -41,7 +41,8 @@ Unknown properties are rejected. GitHub and GitLab sources require a `repo` in `
   "version": "1.0.0",
   "rootDoc": "README.md",
   "theme": {
-    "preset": "indigo",
+    "family": "atlas",
+    "density": "comfortable",
     "defaultMode": "auto",
     "codeTheme": "github",
     "logo": {
@@ -129,6 +130,21 @@ Families choose a harmonious action color for you. To force your brand color:
 `accentColorDark` applies while dark mode is resolved, falling back to
 `accentColor`.
 
+### Theme field reference
+
+| Field | Values | Default | Purpose |
+| :--- | :--- | :--- | :--- |
+| `family` | `atlas`, `blueprint`, `terminal`, `editorial` | `atlas` | Selects the complete visual system. |
+| `defaultMode` | `auto`, `light`, `dark` | `auto` | Chooses the initial color mode; users may override it in Appearance. |
+| `density` | `comfortable`, `compact` | `comfortable` | Controls shell widths, control height, and reading rhythm. |
+| `codeTheme` | `github`, `one-dark`, `dracula`, `synthwave` | `github` | Selects syntax-highlight colors for fenced code. |
+| `accentColor` | CSS hex color | Family default | Overrides the action color in light mode and as the dark fallback. |
+| `accentColorDark` | CSS hex color | `accentColor` | Optional higher-contrast action color for dark mode. |
+
+The runtime writes the resolved state to `<html>` as `data-dmd-theme`,
+`data-dmd-mode`, and `data-dmd-density`. Custom components should consume the
+documented `--dmd-*` CSS tokens rather than hard-coding a family palette.
+
 ### Legacy presets
 
 The old accent-only `preset` option is deprecated and accepted for one release
@@ -185,7 +201,8 @@ If you prefer a single `index.html` file without a separate `docs.json`, you can
 {
   "name": "Embedded Docs",
   "theme": {
-    "preset": "violet",
+    "family": "editorial",
+    "density": "comfortable",
     "defaultMode": "dark"
   }
 }

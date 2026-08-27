@@ -1,12 +1,15 @@
 {
+  "$schema": "https://raw.githubusercontent.com/gabrielmsilva00/docmedown/main/schemas/docs.schema.json",
   "name": "Orbit Notes",
   "tagline": "A local documentation site nested inside DocMeDown",
   "description": "A complete local documentation example with isolated configuration and components.",
   "version": "1.0.0",
   "rootDoc": "README.md",
   "theme": {
-    "preset": "emerald",
-    "defaultMode": "auto"
+    "family": "terminal",
+    "density": "compact",
+    "defaultMode": "auto",
+    "codeTheme": "one-dark"
   },
   "nav": [
     { "label": "Overview", "href": "#/README" },

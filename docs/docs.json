@@ -1,12 +1,15 @@
 {
+  "$schema": "https://raw.githubusercontent.com/gabrielmsilva00/docmedown/main/schemas/docs.schema.json",
   "name": "DocMeDown",
   "tagline": "The simplest MarkDown documenter yet",
   "description": "Next-generation zero-friction documentation engine for developers",
   "version": "1.0.0",
   "rootDoc": "README.md",
   "theme": {
-    "preset": "indigo",
-    "defaultMode": "auto"
+    "family": "atlas",
+    "density": "comfortable",
+    "defaultMode": "auto",
+    "codeTheme": "github"
   },
   "nav": [
     {

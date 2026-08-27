@@ -1,4 +1,5 @@
 {
+  "$schema": "https://raw.githubusercontent.com/gabrielmsilva00/docmedown/main/schemas/docs.schema.json",
   "name": "React Repository Reader",
   "tagline": "An isolated nested site sourced from GitHub",
   "description": "A remote-source example with its own configuration and component directory.",
@@ -11,8 +12,10 @@
     "docsDir": ""
   },
   "theme": {
-    "preset": "violet",
-    "defaultMode": "auto"
+    "family": "blueprint",
+    "density": "comfortable",
+    "defaultMode": "auto",
+    "codeTheme": "github"
   },
   "nav": [
     { "label": "Overview", "href": "#/README" },

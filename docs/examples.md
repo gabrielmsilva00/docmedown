@@ -13,19 +13,19 @@ Each example below is a complete DocMeDown site. It owns its own `docs.json`, `.
 
 [Open the local documentation example](examples/local-docs/index.html)
 
-Use this site to see local Markdown pages, a separate theme, and an interactive component loaded from `examples/local-docs/.dmd/components.js`.
+Use this site to see local Markdown pages, the compact dark-first `terminal` family, and an interactive component loaded from `examples/local-docs/.dmd/components.js`.
 
 ## Remote GitHub site
 
 [Open the remote GitHub example](examples/remote-github/index.html)
 
-This nested site has no local Markdown corpus. Its own `docs.json` points the runtime at a GitHub repository and keeps that remote configuration separate from the parent site.
+This nested site has no local Markdown corpus. Its own `docs.json` points the runtime at a GitHub repository, uses the structured `blueprint` family, and keeps that remote configuration separate from the parent site.
 
 ## Offline documentation site
 
 [Open the offline example](examples/single-file-offline/index.html)
 
-This site is built from its own source documents. Its distributable single-file version is available at `examples/single-file-offline/.dist/index.html` after the standard build.
+This site is built from its own source documents and uses the long-form `editorial` family. Its distributable single-file version is available at `examples/single-file-offline/.dist/index.html` after the standard build.
 
 ## Nested documentation rule
 

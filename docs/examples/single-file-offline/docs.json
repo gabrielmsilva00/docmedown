@@ -1,12 +1,15 @@
 {
+  "$schema": "https://raw.githubusercontent.com/gabrielmsilva00/docmedown/main/schemas/docs.schema.json",
   "name": "Field Manual",
   "tagline": "A portable documentation site built for file:// viewing",
   "description": "An offline-first nested DocMeDown example.",
   "version": "Example",
   "rootDoc": "README.md",
   "theme": {
-    "preset": "sunset",
-    "defaultMode": "light"
+    "family": "editorial",
+    "density": "comfortable",
+    "defaultMode": "light",
+    "codeTheme": "github"
   },
   "nav": [
     { "label": "Manual", "href": "#/README" },

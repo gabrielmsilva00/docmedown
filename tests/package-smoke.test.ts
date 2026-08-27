@@ -35,3 +35,27 @@ test("published JSON Schema is valid JSON and exposes the supported configuratio
   assert.ok(schema.$defs.source);
   assert.deepEqual(schema.$defs.search.properties.maxResults, { type: "integer", minimum: 1, maximum: 100 });
 });
+
+test("maintained documentation examples use theme families instead of legacy presets", () => {
+  const configPaths = [
+    "docs/docs.json",
+    "docs/examples/local-docs/docs.json",
+    "docs/examples/remote-github/docs.json",
+    "docs/examples/single-file-offline/docs.json",
+    "templates/docs.json",
+  ];
+
+  const families = new Set<string>();
+  for (const relativePath of configPaths) {
+    const config = JSON.parse(fs.readFileSync(path.join(packageRoot, relativePath), "utf-8"));
+    assert.equal(config.theme?.preset, undefined, `${relativePath} must not teach the deprecated preset field`);
+    assert.match(config.theme?.family, /^(atlas|blueprint|terminal|editorial)$/);
+    assert.match(config.theme?.density, /^(comfortable|compact)$/);
+    families.add(config.theme.family);
+  }
+
+  assert.deepEqual([...families].sort(), ["atlas", "blueprint", "editorial", "terminal"]);
+  const readme = fs.readFileSync(path.join(packageRoot, "README.md"), "utf-8");
+  assert.doesNotMatch(readme, /"preset"\s*:/);
+  assert.match(readme, /Four Complete Theme Families/);
+});

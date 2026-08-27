@@ -17,7 +17,7 @@ Orbit Notes is a complete local documentation site stored inside the parent DocM
 
 ## What this example owns
 
-- Its own `docs.json` and emerald theme.
+- Its own `docs.json` with the compact `terminal` theme family.
 - Its own local Markdown pages and search index.
 - Its own `.dmd/components.js` module.
 - Its own offline artifact at `.dist/index.html`.

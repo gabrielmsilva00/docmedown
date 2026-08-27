@@ -75,8 +75,8 @@ npx docmedown config [path]
 
 Launches an interactive, beautiful terminal user interface (TUI) allowing you to visually configure:
 - Project title & tagline
-- Theme color palettes (Indigo, Emerald, Sunset, Violet, Rose, Slate, Cyberpunk)
-- Default light/dark mode
+- Theme family (`atlas`, `blueprint`, `terminal`, or `editorial`)
+- Default light, dark, or automatic color mode
 - Remote GitHub / GitLab repository source integration
 - Social and navbar links
 

@@ -6,6 +6,18 @@ All notable changes to DocMeDown are documented here.
 
 ---
 
+## 0.1.5 - 2026-08-28
+
+### Fixed
+
+- Mermaid wheel panning now uses a non-passive listener attached directly to the graph stage, eliminating browser warnings while preserving camera movement and page-scroll handoff.
+- Responsive shell breakpoints now transition as one system, preventing the collapsed page map from taking over the row and pushing article content offscreen between tablet and desktop widths.
+
+### Changed
+
+- Navigation, search, page maps, reading columns, touch targets, overlays, and short-landscape layouts now adapt across wide desktop, compact desktop, tablet, phone, coarse-pointer, and low-height viewports.
+- `npm run deploy` now validates and commits tracked release changes automatically, patch-bumps already released versions, promotes Unreleased changelog notes, preserves a non-mutating dry run, rejects untracked files, and retries npm registry verification during propagation delays.
+
 ## 0.1.4 - 2026-08-28
 
 ### Changed

@@ -100,6 +100,23 @@ test("shell layout consumes density tokens instead of hardcoded chrome sizes", (
   assert.match(mainCss, /\.dmd-toc\s*\{[^}]*width:\s*var\(--dmd-toc-width\)/s);
 });
 
+test("responsive shell transitions without a sidebar and page-map breakpoint gap", () => {
+  const mainCss = fs.readFileSync(path.join(packageRoot, "src/runtime/styles/main.css"), "utf-8");
+
+  assert.match(mainCss, /@media \(max-width: 1280px\)[\s\S]*?\.dmd-main-wrapper\s*\{[\s\S]*?flex-direction:\s*column/);
+  assert.match(mainCss, /@media \(max-width: 1280px\)[\s\S]*?\.dmd-toc\s*\{[\s\S]*?width:\s*100%/);
+  assert.match(mainCss, /@media \(max-width: 1024px\)[\s\S]*?\.dmd-sidebar\s*\{[\s\S]*?position:\s*fixed/);
+  assert.doesNotMatch(mainCss, /@media \(max-width: 960px\)/);
+});
+
+test("responsive shell includes touch and short-viewport adaptations", () => {
+  const mainCss = fs.readFileSync(path.join(packageRoot, "src/runtime/styles/main.css"), "utf-8");
+
+  assert.match(mainCss, /@media \(hover: none\), \(pointer: coarse\)/);
+  assert.match(mainCss, /@media \(max-height: 600px\)/);
+  assert.match(mainCss, /\.dmd-sidebar-link,[\s\S]*?\.dmd-toc-link[\s\S]*?min-height:\s*44px/);
+});
+
 test("Mermaid viewer uses a square clipped viewport with pan-only navigation", () => {
   const mainCss = fs.readFileSync(path.resolve(__dirname, "../src/runtime/styles/main.css"), "utf-8");
   const stageRule = mainCss.match(/\.dmd-diagram-stage\s*\{([\s\S]*?)\n\}/)?.[1] || "";
@@ -111,4 +128,12 @@ test("Mermaid viewer uses a square clipped viewport with pan-only navigation", (
   assert.doesNotMatch(stageRule, /overflow:\s*auto/);
   assert.doesNotMatch(stageRule, /overflow-y:\s*(?:auto|scroll)/);
   assert.doesNotMatch(stageRule, /scrollbar/);
+});
+
+test("Mermaid wheel panning uses a non-passive native listener", () => {
+  const component = fs.readFileSync(path.resolve(__dirname, "../src/runtime/components/MermaidDiagram.tsx"), "utf-8");
+
+  assert.match(component, /addEventListener\("wheel",\s*handleWheel,\s*\{\s*passive:\s*false\s*\}\)/);
+  assert.match(component, /removeEventListener\("wheel",\s*handleWheel\)/);
+  assert.doesNotMatch(component, /onWheel=\{handleWheel\}/);
 });

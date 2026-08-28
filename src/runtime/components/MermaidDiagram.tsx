@@ -396,21 +396,31 @@ export const MermaidDiagram: React.FC<MermaidDiagramProps> = ({ source }) => {
     }
   };
 
-  const handleWheel = (event: React.WheelEvent<HTMLDivElement>) => {
-    if (!renderedSize) return;
+  const handleWheel = useCallback(
+    (event: WheelEvent) => {
+      if (!renderedSize) return;
+      const stage = stageRef.current;
+      if (!stage) return;
+      const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? stage.clientHeight : 1;
+      const delta = { x: -event.deltaX * unit, y: -event.deltaY * unit };
+      const result = panDiagramCamera(cameraRef.current, delta, readCameraBounds());
+      const cameraMoved = result.camera.x !== cameraRef.current.x || result.camera.y !== cameraRef.current.y;
+
+      if (!cameraMoved && (expanded || result.remainder.y === 0)) return;
+      event.preventDefault();
+      cameraRef.current = result.camera;
+      if (cameraMoved) setCamera(result.camera);
+      if (!expanded && result.remainder.y !== 0) window.scrollBy({ top: -result.remainder.y, behavior: "instant" });
+    },
+    [expanded, readCameraBounds, renderedSize],
+  );
+
+  useEffect(() => {
     const stage = stageRef.current;
     if (!stage) return;
-    const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? stage.clientHeight : 1;
-    const delta = { x: -event.deltaX * unit, y: -event.deltaY * unit };
-    const result = panDiagramCamera(cameraRef.current, delta, readCameraBounds());
-    const cameraMoved = result.camera.x !== cameraRef.current.x || result.camera.y !== cameraRef.current.y;
-
-    if (!cameraMoved && (expanded || result.remainder.y === 0)) return;
-    event.preventDefault();
-    cameraRef.current = result.camera;
-    if (cameraMoved) setCamera(result.camera);
-    if (!expanded && result.remainder.y !== 0) window.scrollBy({ top: -result.remainder.y, behavior: "instant" });
-  };
+    stage.addEventListener("wheel", handleWheel, { passive: false });
+    return () => stage.removeEventListener("wheel", handleWheel);
+  }, [handleWheel]);
 
   const handlePanEnd = (event: React.PointerEvent<HTMLDivElement>) => {
     const stage = stageRef.current;
@@ -488,7 +498,6 @@ export const MermaidDiagram: React.FC<MermaidDiagramProps> = ({ source }) => {
           onPointerMove={handlePanMove}
           onPointerUp={handlePanEnd}
           onPointerCancel={handlePanEnd}
-          onWheel={handleWheel}
         >
           {error ? (
             <pre className="dmd-diagram-error">Diagram syntax error: {error}</pre>

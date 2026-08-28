@@ -89,12 +89,15 @@ a:hover {
   -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--dmd-border-color);
   transition: background-color var(--dmd-transition), border-color var(--dmd-transition);
+  gap: clamp(0.5rem, 1.5vw, 1.25rem);
 }
 
 .dmd-navbar-left {
   display: flex;
   align-items: center;
   gap: 1rem;
+  min-width: 0;
+  flex: 0 1 auto;
 }
 
 .dmd-mobile-menu-btn {
@@ -120,6 +123,7 @@ a:hover {
   display: flex;
   align-items: center;
   gap: 0.6rem;
+  min-width: 0;
   font-weight: 750;
   font-size: 1.08rem;
   letter-spacing: -0.02em;
@@ -128,6 +132,7 @@ a:hover {
 
 .dmd-brand-logo {
   height: 28px;
+  max-width: min(160px, 20vw);
   width: auto;
   object-fit: contain;
 }
@@ -144,9 +149,10 @@ a:hover {
 }
 
 .dmd-navbar-center {
-  flex: 1;
+  flex: 1 1 280px;
+  min-width: 0;
   max-width: 440px;
-  margin: 0 1.5rem;
+  margin: 0;
 }
 
 .dmd-search-trigger {
@@ -181,12 +187,15 @@ a:hover {
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  min-width: 0;
+  flex: 0 0 auto;
 }
 
 .dmd-nav-links {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  min-width: 0;
 }
 
 .dmd-nav-link {
@@ -296,6 +305,7 @@ a:hover {
 .dmd-layout-body {
   display: flex;
   flex: 1;
+  min-width: 0;
   max-width: 1560px;
   width: 100%;
   margin: 0 auto;
@@ -432,15 +442,19 @@ a:hover {
    MAIN CONTENT & ARTICLE
    ========================================================================== */
 .dmd-main-wrapper {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 780px) minmax(180px, var(--dmd-toc-width));
+  justify-content: center;
+  align-items: start;
   flex: 1;
   min-width: 0;
+  width: 100%;
   padding: clamp(1.5rem, 4vw, 3.5rem) clamp(1rem, 4vw, 4rem);
   gap: clamp(2rem, 5vw, 4.5rem);
 }
 
 .dmd-main-content {
-  flex: 1;
+  width: 100%;
   min-width: 0;
   max-width: 780px;
 }
@@ -1626,12 +1640,31 @@ a:hover {
 /* ==========================================================================
    MOBILE & RESPONSIVE
    ========================================================================== */
-@media (max-width: 1024px) {
+/* Compact desktop: keep the persistent documentation rail, but move the page
+   map above the article before three columns can squeeze the reading measure. */
+@media (max-width: 1280px) {
+  .dmd-navbar {
+    padding-inline: clamp(0.75rem, 2vw, 1.5rem);
+  }
+
+  .dmd-nav-links {
+    display: none;
+  }
+
+  .dmd-main-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.25rem;
+    padding: clamp(1.5rem, 4vw, 3rem) clamp(1rem, 4vw, 3rem);
+  }
+
   .dmd-toc {
     position: relative;
     top: auto;
     order: -1;
     width: 100%;
+    max-width: 780px;
     height: auto;
     overflow: visible;
     border: 1px solid var(--dmd-border-color);
@@ -1672,7 +1705,7 @@ a:hover {
   }
 
   .dmd-toc-link {
-    min-height: 40px;
+    min-height: 44px;
     display: flex;
     align-items: center;
   }
@@ -2017,19 +2050,16 @@ fieldset.dmd-appearance-section {
 }
 
 
-/* Tablet and smaller use the reading-first shell. Keeping the persistent
-   sidebar below this width squeezed diagrams and long-form content into an
-   unusable half-column while the desktop navbar overflowed horizontally. */
-@media (max-width: 960px) {
-  .dmd-mobile-menu-btn {
-    display: flex;
-  }
+/* Compact header: search becomes an icon before it can compete with the brand
+   and document actions. */
+@media (max-width: 1100px) {
   .dmd-navbar-center {
     display: block;
     flex: 0 0 auto;
     width: 44px;
-    margin: 0 0 0 auto;
+    margin-left: auto;
   }
+
   .dmd-search-trigger {
     justify-content: center;
     width: 44px;
@@ -2041,9 +2071,22 @@ fieldset.dmd-appearance-section {
   .dmd-search-shortcut {
     display: none;
   }
-  .dmd-nav-links {
+
+  .dmd-navbar-right {
+    gap: 0.45rem;
+  }
+
+  .dmd-social-links {
     display: none;
   }
+}
+
+/* Tablet and smaller use the reading-first drawer shell. */
+@media (max-width: 1024px) {
+  .dmd-mobile-menu-btn {
+    display: flex;
+  }
+
   .dmd-sidebar {
     position: fixed;
     top: 0;
@@ -2059,21 +2102,26 @@ fieldset.dmd-appearance-section {
     padding: max(0.75rem, env(safe-area-inset-top)) 1rem max(1.5rem, env(safe-area-inset-bottom));
     border-right: 1px solid var(--dmd-border-color);
   }
+
   .dmd-sidebar.mobile-open {
     transform: translateX(0);
     visibility: visible;
     box-shadow: var(--dmd-shadow-lg);
   }
+
   .dmd-sidebar-heading {
     min-height: 52px;
     margin-bottom: 0.5rem;
   }
+
   .dmd-sidebar-label {
     margin: 0 0.65rem;
   }
+
   .dmd-sidebar-close {
     display: flex;
   }
+
   .dmd-sidebar-backdrop {
     position: fixed;
     inset: 0;
@@ -2082,39 +2130,41 @@ fieldset.dmd-appearance-section {
     z-index: 140;
     cursor: pointer;
   }
+
   .dmd-main-wrapper {
-    flex-direction: column;
-    width: 100%;
-    gap: 1.25rem;
     padding: clamp(1.25rem, 4vw, 2.5rem) clamp(0.75rem, 3vw, 1.5rem);
   }
+
   .dmd-main-content {
     max-width: 780px;
     margin-inline: auto;
   }
-  .dmd-card-grid-2, .dmd-card-grid-3, .dmd-card-grid-4 {
-    grid-template-columns: 1fr;
-  }
+
   .dmd-page-nav {
     grid-template-columns: 1fr;
   }
+
   .dmd-page-nav > div:empty {
     display: none;
   }
+
   .dmd-content-header {
     align-items: flex-start;
     gap: 0.75rem;
     flex-direction: column;
   }
+
   .dmd-content-meta {
     gap: 0.65rem;
   }
+
   .dmd-markdown-body h1 {
     font-size: 2.45rem;
   }
 }
 
-@media (max-width: 760px) {
+/* Phone and narrow landscape: icon-first chrome and one reading column. */
+@media (max-width: 680px) {
   .dmd-navbar {
     gap: 0.4rem;
     padding-right: max(0.75rem, env(safe-area-inset-right));
@@ -2126,7 +2176,7 @@ fieldset.dmd-appearance-section {
     gap: 0.35rem;
   }
 
-  .dmd-social-links {
+  .dmd-brand-version {
     display: none;
   }
 
@@ -2148,6 +2198,12 @@ fieldset.dmd-appearance-section {
 
   .dmd-main-content {
     width: 100%;
+  }
+
+  .dmd-card-grid-2,
+  .dmd-card-grid-3,
+  .dmd-card-grid-4 {
+    grid-template-columns: 1fr;
   }
 
   .dmd-content-header {
@@ -2279,13 +2335,9 @@ fieldset.dmd-appearance-section {
   }
 }
 
-@media (max-width: 520px) {
-  .dmd-brand-version {
-    display: none;
-  }
-
+@media (max-width: 480px) {
   .dmd-brand-title {
-    max-width: 28vw;
+    max-width: 32vw;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -2314,13 +2366,66 @@ fieldset.dmd-appearance-section {
   }
 }
 
-@media (max-width: 390px) {
+@media (max-width: 360px) {
   .dmd-offline-download-wrap {
     display: none;
   }
 
   .dmd-brand-title {
-    max-width: 34vw;
+    max-width: 38vw;
+  }
+}
+
+/* Coarse pointers need reliable targets even on large tablets and touch laptops. */
+@media (hover: none), (pointer: coarse) {
+  .dmd-mobile-menu-btn,
+  .dmd-search-trigger,
+  .dmd-social-btn,
+  .dmd-theme-toggle-btn,
+  .dmd-offline-download-btn,
+  .dmd-appearance-trigger,
+  .dmd-sidebar-close,
+  .dmd-category-header,
+  .dmd-sidebar-link,
+  .dmd-toc-header,
+  .dmd-toc-link,
+  .dmd-tab-btn,
+  .dmd-diagram-btn,
+  .dmd-copy-btn {
+    min-height: 44px;
+  }
+
+  .dmd-social-btn,
+  .dmd-theme-toggle-btn,
+  .dmd-mobile-menu-btn,
+  .dmd-sidebar-close {
+    min-width: 44px;
+  }
+
+  .dmd-sidebar-link,
+  .dmd-toc-link {
+    padding-block: 0.65rem;
+  }
+}
+
+/* Short viewports keep drawers and overlays usable in landscape. */
+@media (max-height: 600px) {
+  .dmd-sidebar {
+    padding-top: max(0.35rem, env(safe-area-inset-top));
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+  }
+
+  .dmd-sidebar-heading {
+    min-height: 44px;
+    margin-bottom: 0.25rem;
+  }
+
+  .dmd-appearance-panel {
+    max-height: calc(100dvh - 1rem);
+  }
+
+  .dmd-diagram-viewer.is-expanded {
+    padding: 0.5rem;
   }
 }
 

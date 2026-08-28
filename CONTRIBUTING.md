@@ -35,11 +35,10 @@ Use `npm run lint:fix` to apply Biome formatting and safe lint/import fixes. Do 
 
 ## Deploying a release
 
-1. Bump the version in `package.json` and `package-lock.json` with `npm version <version> --no-git-tag-version`.
-2. Commit the release changes on `main` and ensure the working tree is clean.
-3. Run `npm run deploy`.
+1. Add release notes under `## Unreleased` in `CHANGELOG.md`.
+2. Run `npm run deploy` from `main`.
 
-The deploy pipeline runs the full release gate, pushes `main` and `v<version>` to GitHub, publishes the same version to npm, and verifies the registry result. Use `npm run deploy:dry-run` to validate the pipeline without pushing or publishing.
+The deploy pipeline accepts tracked working-tree changes, automatically bumps the patch version when the current version is already released, promotes the Unreleased changelog notes, runs the full release gate, commits tracked files, pushes `main` and `v<version>` to GitHub, publishes the same version to npm, and retries registry verification while npm metadata propagates. Untracked files remain a safety stop and must be added, ignored, or removed explicitly. Use `npm run deploy:dry-run` for a non-mutating validation and release plan.
 
 If npm write 2FA is enabled, provide the one-time password without recording it in shell history:
 

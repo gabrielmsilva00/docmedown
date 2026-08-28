@@ -1,10 +1,14 @@
 import type React from "react";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
+  calculateDiagramCameraBounds,
+  type DiagramCamera,
+  type DiagramCameraBounds,
   type DiagramSize,
   extractDiagramSubgraphs,
   formatDiagramMarkdown,
   formatDiagramSubgraphMarkdown,
+  panDiagramCamera,
   readDiagramSize,
   renderDiagramSvg,
   resolveDiagramContext,
@@ -28,17 +32,10 @@ interface DiagramSubgraphAction {
   top: number;
 }
 
-interface DiagramCamera {
-  x: number;
-  y: number;
-}
-
 interface PanGesture {
   pointerId: number;
-  startX: number;
-  startY: number;
-  cameraX: number;
-  cameraY: number;
+  lastX: number;
+  lastY: number;
 }
 
 async function writeClipboardText(text: string): Promise<void> {
@@ -106,6 +103,7 @@ export const MermaidDiagram: React.FC<MermaidDiagramProps> = ({ source }) => {
   const stageRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   const panRef = useRef<PanGesture | null>(null);
+  const cameraRef = useRef<DiagramCamera>(camera);
   const copyResetRef = useRef<number | null>(null);
 
   const renderedSize = useMemo(
@@ -319,31 +317,41 @@ export const MermaidDiagram: React.FC<MermaidDiagramProps> = ({ source }) => {
     setZoom(fitZoom);
   }, [fitZoom]);
 
+  const readCameraBounds = useCallback((): DiagramCameraBounds => {
+    const stage = stageRef.current;
+    if (!stage || !renderedSize) return { x: 0, y: 0 };
+    const styles = getComputedStyle(stage);
+    const viewport = {
+      width: Math.max(
+        0,
+        stage.clientWidth - Number.parseFloat(styles.paddingLeft) - Number.parseFloat(styles.paddingRight),
+      ),
+      height: Math.max(
+        0,
+        stage.clientHeight - Number.parseFloat(styles.paddingTop) - Number.parseFloat(styles.paddingBottom),
+      ),
+    };
+    return calculateDiagramCameraBounds(renderedSize, viewport);
+  }, [renderedSize]);
+
   const clampCamera = useCallback(
     (next: DiagramCamera): DiagramCamera => {
-      const stage = stageRef.current;
-      if (!stage || !renderedSize) return { x: 0, y: 0 };
-      const styles = getComputedStyle(stage);
-      const availableWidth =
-        stage.clientWidth - Number.parseFloat(styles.paddingLeft) - Number.parseFloat(styles.paddingRight);
-      const availableHeight =
-        stage.clientHeight - Number.parseFloat(styles.paddingTop) - Number.parseFloat(styles.paddingBottom);
-      const maxX = Math.max(0, (renderedSize.width - availableWidth) / 2);
-      const maxY = Math.max(0, (renderedSize.height - availableHeight) / 2);
-      return {
-        x: Math.min(maxX, Math.max(-maxX, next.x)),
-        y: Math.min(maxY, Math.max(-maxY, next.y)),
-      };
+      return panDiagramCamera({ x: 0, y: 0 }, next, readCameraBounds()).camera;
     },
-    [renderedSize],
+    [readCameraBounds],
   );
 
   useLayoutEffect(() => {
     setCamera((current) => {
       const next = clampCamera(current);
+      cameraRef.current = next;
       return next.x === current.x && next.y === current.y ? current : next;
     });
   }, [clampCamera]);
+
+  useLayoutEffect(() => {
+    cameraRef.current = camera;
+  }, [camera]);
 
   const copyMarkdown = useCallback(async (markdown: string, target: string) => {
     try {
@@ -366,10 +374,8 @@ export const MermaidDiagram: React.FC<MermaidDiagramProps> = ({ source }) => {
     if (!stage || (event.pointerType === "mouse" && event.button !== 0) || !canStartPan(event.target)) return;
     panRef.current = {
       pointerId: event.pointerId,
-      startX: event.clientX,
-      startY: event.clientY,
-      cameraX: camera.x,
-      cameraY: camera.y,
+      lastX: event.clientX,
+      lastY: event.clientY,
     };
     stage.setPointerCapture(event.pointerId);
     setIsPanning(true);
@@ -379,13 +385,31 @@ export const MermaidDiagram: React.FC<MermaidDiagramProps> = ({ source }) => {
   const handlePanMove = (event: React.PointerEvent<HTMLDivElement>) => {
     const gesture = panRef.current;
     if (gesture?.pointerId === event.pointerId) {
-      setCamera(
-        clampCamera({
-          x: gesture.cameraX + event.clientX - gesture.startX,
-          y: gesture.cameraY + event.clientY - gesture.startY,
-        }),
-      );
+      const delta = { x: event.clientX - gesture.lastX, y: event.clientY - gesture.lastY };
+      const result = panDiagramCamera(cameraRef.current, delta, readCameraBounds());
+      gesture.lastX = event.clientX;
+      gesture.lastY = event.clientY;
+      cameraRef.current = result.camera;
+      setCamera(result.camera);
+      if (!expanded && result.remainder.y !== 0) window.scrollBy({ top: -result.remainder.y, behavior: "instant" });
+      event.preventDefault();
     }
+  };
+
+  const handleWheel = (event: React.WheelEvent<HTMLDivElement>) => {
+    if (!renderedSize) return;
+    const stage = stageRef.current;
+    if (!stage) return;
+    const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? stage.clientHeight : 1;
+    const delta = { x: -event.deltaX * unit, y: -event.deltaY * unit };
+    const result = panDiagramCamera(cameraRef.current, delta, readCameraBounds());
+    const cameraMoved = result.camera.x !== cameraRef.current.x || result.camera.y !== cameraRef.current.y;
+
+    if (!cameraMoved && (expanded || result.remainder.y === 0)) return;
+    event.preventDefault();
+    cameraRef.current = result.camera;
+    if (cameraMoved) setCamera(result.camera);
+    if (!expanded && result.remainder.y !== 0) window.scrollBy({ top: -result.remainder.y, behavior: "instant" });
   };
 
   const handlePanEnd = (event: React.PointerEvent<HTMLDivElement>) => {
@@ -464,6 +488,7 @@ export const MermaidDiagram: React.FC<MermaidDiagramProps> = ({ source }) => {
           onPointerMove={handlePanMove}
           onPointerUp={handlePanEnd}
           onPointerCancel={handlePanEnd}
+          onWheel={handleWheel}
         >
           {error ? (
             <pre className="dmd-diagram-error">Diagram syntax error: {error}</pre>

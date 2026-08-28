@@ -109,4 +109,6 @@ test("Mermaid viewer uses a square clipped viewport with pan-only navigation", (
   assert.match(stageRule, /overscroll-behavior:\s*none/);
   assert.match(stageRule, /touch-action:\s*none/);
   assert.doesNotMatch(stageRule, /overflow:\s*auto/);
+  assert.doesNotMatch(stageRule, /overflow-y:\s*(?:auto|scroll)/);
+  assert.doesNotMatch(stageRule, /scrollbar/);
 });

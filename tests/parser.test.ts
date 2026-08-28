@@ -5,6 +5,7 @@ import { renderCodeBlock } from "../src/runtime/markdown/highlighter";
 import { renderMath } from "../src/runtime/markdown/katex";
 import {
   buildMermaidConfig,
+  calculateDiagramCameraBounds,
   calculateDiagramFit,
   decodeDiagramSource,
   encodeDiagramSource,
@@ -12,6 +13,7 @@ import {
   formatDiagramMarkdown,
   formatDiagramSubgraphMarkdown,
   isDiagramFamily,
+  panDiagramCamera,
   readDiagramSize,
 } from "../src/runtime/markdown/mermaid";
 import { extractFrontmatter, parseMarkdown, slugifyHeading } from "../src/runtime/markdown/parser";
@@ -138,6 +140,20 @@ test("diagram camera reads SVG bounds and fits without clipping", () => {
   assert.equal(calculateDiagramFit(diagram!, { width: 720, height: 600 }), 0.5);
   assert.equal(calculateDiagramFit({ width: 400, height: 300 }, { width: 800, height: 600 }), 1);
   assert.equal(readDiagramSize("<svg></svg>"), null);
+});
+
+test("diagram camera returns bounded pan remainder for document scroll handoff", () => {
+  const bounds = calculateDiagramCameraBounds({ width: 900, height: 1200 }, { width: 700, height: 600 });
+  assert.deepEqual(bounds, { x: 100, y: 300 });
+
+  const inside = panDiagramCamera({ x: 0, y: 0 }, { x: -40, y: -120 }, bounds);
+  assert.deepEqual(inside, { camera: { x: -40, y: -120 }, remainder: { x: 0, y: 0 } });
+
+  const bottomHandoff = panDiagramCamera(inside.camera, { x: 0, y: -240 }, bounds);
+  assert.deepEqual(bottomHandoff, { camera: { x: -40, y: -300 }, remainder: { x: 0, y: -60 } });
+
+  const topHandoff = panDiagramCamera({ x: 0, y: 280 }, { x: 0, y: 70 }, bounds);
+  assert.deepEqual(topHandoff, { camera: { x: 0, y: 300 }, remainder: { x: 0, y: 50 } });
 });
 
 test("architecture overview fit keeps measured SVG content in document layout", () => {

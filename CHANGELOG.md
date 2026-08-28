@@ -6,6 +6,12 @@ All notable changes to DocMeDown are documented here.
 
 ---
 
+## 0.1.4 - 2026-08-28
+
+### Changed
+
+- Mermaid viewers now use wheel input for vertical camera panning and hand continued wheel or drag movement to document scrolling after the graph reaches its top or bottom camera bound, without exposing native scrollbars.
+
 ## 0.1.3 - 2026-08-28
 
 ### Added

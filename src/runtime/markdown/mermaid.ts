@@ -38,6 +38,21 @@ export interface DiagramSize {
   height: number;
 }
 
+export interface DiagramCamera {
+  x: number;
+  y: number;
+}
+
+export interface DiagramCameraBounds {
+  x: number;
+  y: number;
+}
+
+export interface DiagramPanResult {
+  camera: DiagramCamera;
+  remainder: DiagramCamera;
+}
+
 export interface DiagramSubgraph {
   id: string;
   label: string;
@@ -64,6 +79,38 @@ export function calculateDiagramFit(diagram: DiagramSize, viewport: DiagramSize,
   if (diagram.width <= 0 || diagram.height <= 0 || viewport.width <= 0 || viewport.height <= 0) return 1;
   const scale = Math.min(viewport.width / diagram.width, viewport.height / diagram.height);
   return Math.max(0.05, allowUpscale ? scale : Math.min(1, scale));
+}
+
+/** Returns the camera travel available on each axis around a centered diagram. */
+export function calculateDiagramCameraBounds(diagram: DiagramSize, viewport: DiagramSize): DiagramCameraBounds {
+  return {
+    x: Math.max(0, (diagram.width - viewport.width) / 2),
+    y: Math.max(0, (diagram.height - viewport.height) / 2),
+  };
+}
+
+/**
+ * Applies a camera-space pan delta and returns any movement left after reaching
+ * a bound. The caller can hand the vertical remainder to document scrolling.
+ */
+export function panDiagramCamera(
+  current: DiagramCamera,
+  delta: DiagramCamera,
+  bounds: DiagramCameraBounds,
+): DiagramPanResult {
+  const requested = { x: current.x + delta.x, y: current.y + delta.y };
+  const camera = {
+    x: Math.min(bounds.x, Math.max(-bounds.x, requested.x)),
+    y: Math.min(bounds.y, Math.max(-bounds.y, requested.y)),
+  };
+
+  return {
+    camera,
+    remainder: {
+      x: requested.x - camera.x,
+      y: requested.y - camera.y,
+    },
+  };
 }
 
 /** Wraps a raw Mermaid definition in a portable Markdown fence. */

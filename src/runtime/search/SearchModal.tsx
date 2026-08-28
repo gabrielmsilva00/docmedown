@@ -25,12 +25,19 @@ export const SearchModal: React.FC<SearchModalProps> = ({
 
   useEffect(() => {
     if (isOpen) {
-      setTimeout(() => inputRef.current?.focus(), 50);
+      const previousOverflow = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      const focusTimer = window.setTimeout(() => inputRef.current?.focus(), 50);
       setSelectedIndex(0);
-    } else {
-      setQuery("");
-      setResults([]);
+
+      return () => {
+        window.clearTimeout(focusTimer);
+        document.body.style.overflow = previousOverflow;
+      };
     }
+
+    setQuery("");
+    setResults([]);
   }, [isOpen]);
 
   useEffect(() => {
@@ -97,8 +104,25 @@ export const SearchModal: React.FC<SearchModalProps> = ({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={placeholder}
+            aria-label={placeholder}
           />
-          <kbd className="dmd-kbd">ESC</kbd>
+          <kbd className="dmd-search-escape dmd-kbd">ESC</kbd>
+          <button type="button" className="dmd-search-close" aria-label="Close search" onClick={onClose}>
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <line x1="18" x2="6" y1="6" y2="18" />
+              <line x1="6" x2="18" y1="6" y2="18" />
+            </svg>
+          </button>
         </div>
 
         <div className="dmd-search-results">

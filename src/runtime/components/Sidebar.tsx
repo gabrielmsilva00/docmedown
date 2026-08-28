@@ -1,10 +1,27 @@
 import type React from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useDoc } from "../provider/DocProvider";
 import type { SidebarTreeNode } from "../types";
 
 export const Sidebar: React.FC = () => {
   const { tree, currentSlug, navigate, isLoading, isMobileSidebarOpen, setIsMobileSidebarOpen } = useDoc();
+
+  useEffect(() => {
+    if (!isMobileSidebarOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setIsMobileSidebarOpen(false);
+    };
+
+    window.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [isMobileSidebarOpen, setIsMobileSidebarOpen]);
 
   return (
     <>
@@ -19,10 +36,34 @@ export const Sidebar: React.FC = () => {
       )}
 
       <aside
+        id="dmd-sidebar"
         className={`dmd-sidebar ${isMobileSidebarOpen ? "mobile-open" : ""}`}
         aria-label="Documentation navigation"
       >
-        <div className="dmd-sidebar-label">Documentation</div>
+        <div className="dmd-sidebar-heading">
+          <div className="dmd-sidebar-label">Documentation</div>
+          <button
+            type="button"
+            className="dmd-sidebar-close"
+            aria-label="Close documentation navigation"
+            onClick={() => setIsMobileSidebarOpen(false)}
+          >
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <line x1="18" x2="6" y1="6" y2="18" />
+              <line x1="6" x2="18" y1="6" y2="18" />
+            </svg>
+          </button>
+        </div>
         <nav className="dmd-sidebar-nav">
           <ul className="dmd-sidebar-list">
             {tree.length === 0 && isLoading && <li className="dmd-sidebar-status">Loading pages…</li>}

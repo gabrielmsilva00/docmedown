@@ -67,7 +67,11 @@ export const Content: React.FC = () => {
   return (
     <>
       {/* Reading progress bar */}
-      <div className="dmd-progress-bar" style={{ width: `${scrollProgress}%` }} />
+      <div
+        className="dmd-progress-bar"
+        style={{ "--dmd-scroll-progress": scrollProgress / 100 } as React.CSSProperties}
+        aria-hidden="true"
+      />
 
       <main className="dmd-main-content">
         {/* Breadcrumbs & Metadata Bar */}

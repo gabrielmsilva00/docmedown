@@ -6,6 +6,26 @@ All notable changes to DocMeDown are documented here.
 
 ---
 
+## 0.1.3 - 2026-08-28
+
+### Added
+
+- A collapsible mobile and tablet “On this page” outline that preserves heading navigation instead of hiding the table of contents on narrow screens.
+- A theme-colored vertical reading-progress rail on mobile, while retaining the horizontal desktop progress indicator.
+- Explicit mobile close actions and accessible expanded-state semantics for documentation navigation and search.
+
+### Changed
+
+- Mobile navigation now uses a safe-area-aware, dynamic-viewport drawer with background scroll locking, Escape dismissal, larger touch targets, and improved brand truncation.
+- Search remains available as a compact navbar action on mobile and opens as a full-height, touch-friendly surface with larger result rows.
+- Appearance controls use a mobile bottom panel, and narrow layouts now stack page navigation, metadata, and footer content more clearly.
+- Code blocks, tables, tabs, diagrams, breadcrumbs, headings, and long technical strings now handle narrow viewports and horizontal overflow more reliably.
+
+### Fixed
+
+- Tablet and mobile readers no longer lose in-page navigation below the desktop table-of-contents breakpoint.
+- Mobile overlays now account for dynamic viewport height and device safe areas without allowing the underlying document to scroll.
+
 ## 0.1.2 - 2026-08-27
 
 ### Added

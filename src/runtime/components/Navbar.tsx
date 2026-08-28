@@ -14,7 +14,9 @@ export const Navbar: React.FC = () => {
         <button
           type="button"
           className="dmd-mobile-menu-btn"
-          aria-label="Toggle Navigation Menu"
+          aria-label={isMobileSidebarOpen ? "Close documentation navigation" : "Open documentation navigation"}
+          aria-controls="dmd-sidebar"
+          aria-expanded={isMobileSidebarOpen}
           onClick={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
         >
           <svg
@@ -50,7 +52,12 @@ export const Navbar: React.FC = () => {
 
       <div className="dmd-navbar-center">
         {config.search?.enabled !== false && (
-          <button type="button" className="dmd-search-trigger" onClick={() => setIsSearchOpen(true)}>
+          <button
+            type="button"
+            className="dmd-search-trigger"
+            aria-label={config.search?.placeholder || "Search documentation"}
+            onClick={() => setIsSearchOpen(true)}
+          >
             <svg
               width="15"
               height="15"
@@ -162,6 +169,7 @@ export const Navbar: React.FC = () => {
           className="dmd-theme-toggle-btn"
           onClick={toggleMode}
           title={`Switch to ${resolvedMode === "dark" ? "light" : "dark"} mode`}
+          aria-label={`Switch to ${resolvedMode === "dark" ? "light" : "dark"} mode`}
         >
           {resolvedMode === "dark" ? (
             <svg

@@ -9,6 +9,7 @@ interface TOCProps {
 
 export const TableOfContents: React.FC<TOCProps> = ({ headings, currentSlug }) => {
   const [activeId, setActiveId] = useState<string>("");
+  const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
     if (headings.length === 0) return;
@@ -39,8 +40,14 @@ export const TableOfContents: React.FC<TOCProps> = ({ headings, currentSlug }) =
   if (headings.length === 0) return null;
 
   return (
-    <aside className="dmd-toc">
-      <div className="dmd-toc-header">
+    <aside className={`dmd-toc ${isOpen ? "is-open" : ""}`}>
+      <button
+        type="button"
+        className="dmd-toc-header"
+        aria-expanded={isOpen}
+        aria-controls="dmd-toc-list"
+        onClick={() => setIsOpen((open) => !open)}
+      >
         <svg
           width="14"
           height="14"
@@ -59,8 +66,22 @@ export const TableOfContents: React.FC<TOCProps> = ({ headings, currentSlug }) =
           <line x1="3" x2="3.01" y1="18" y2="18" />
         </svg>
         <span>On this page</span>
-      </div>
-      <ul className="dmd-toc-list">
+        <svg
+          className="dmd-toc-chevron"
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+      </button>
+      <ul className="dmd-toc-list" id="dmd-toc-list">
         {headings.map((h) => {
           const isActive = activeId === h.id;
           return (
@@ -75,6 +96,7 @@ export const TableOfContents: React.FC<TOCProps> = ({ headings, currentSlug }) =
                     target.scrollIntoView({ behavior: "smooth", block: "start" });
                     history.pushState(null, "", `#/${currentSlug}#${h.id}`);
                     setActiveId(h.id);
+                    setIsOpen(false);
                   }
                 }}
               >

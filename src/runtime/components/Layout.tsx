@@ -19,7 +19,7 @@ export const Layout: React.FC = () => {
         <div className="dmd-main-wrapper">
           <Content />
           {currentDoc && currentDoc.headings.length > 0 && (
-            <TableOfContents headings={currentDoc.headings} currentSlug={currentSlug} />
+            <TableOfContents key={currentSlug} headings={currentDoc.headings} currentSlug={currentSlug} />
           )}
         </div>
       </div>

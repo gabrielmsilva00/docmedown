@@ -21,6 +21,7 @@ html {
 
 body {
   min-height: 100vh;
+  min-height: 100dvh;
   background-color: var(--dmd-bg-primary);
   color: var(--dmd-text-primary);
   overflow-x: hidden;
@@ -54,16 +55,21 @@ a:hover {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  min-height: 100dvh;
 }
 
 .dmd-progress-bar {
   position: fixed;
   top: 0;
   left: 0;
+  width: 100%;
   height: 3px;
   background: var(--dmd-accent);
   z-index: 1000;
-  transition: width 0.1s ease-out;
+  transform: scaleX(var(--dmd-scroll-progress, 0));
+  transform-origin: left center;
+  transition: transform 0.1s ease-out;
+  pointer-events: none;
 }
 
 /* ==========================================================================
@@ -93,11 +99,15 @@ a:hover {
 
 .dmd-mobile-menu-btn {
   display: none;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
   background: none;
   border: none;
   color: var(--dmd-text-secondary);
   cursor: pointer;
-  padding: 0.4rem;
+  padding: 0;
   border-radius: var(--dmd-radius-sm);
 }
 
@@ -152,6 +162,7 @@ a:hover {
   font-size: 0.875rem;
   cursor: pointer;
   transition: all var(--dmd-transition);
+  min-height: 38px;
 }
 
 .dmd-search-trigger:hover {
@@ -296,10 +307,34 @@ a:hover {
   flex-shrink: 0;
   position: sticky;
   top: var(--dmd-nav-height);
-  height: calc(100vh - var(--dmd-nav-height));
+  height: calc(100dvh - var(--dmd-nav-height));
   overflow-y: auto;
   padding: 1.6rem 1rem 2rem 0;
   border-right: 1px solid var(--dmd-border-color);
+}
+
+.dmd-sidebar-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.dmd-sidebar-close {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: var(--dmd-radius-md);
+  color: var(--dmd-text-secondary);
+  background: transparent;
+  cursor: pointer;
+}
+
+.dmd-sidebar-close:hover {
+  color: var(--dmd-text-primary);
+  background: var(--dmd-bg-tertiary);
 }
 
 .dmd-sidebar-label {
@@ -488,6 +523,7 @@ a:hover {
   font-size: 1.03rem;
   line-height: 1.8;
   color: var(--dmd-text-primary);
+  overflow-wrap: anywhere;
 }
 
 .dmd-markdown-body h1 {
@@ -1008,6 +1044,7 @@ a:hover {
   font-size: 0.88rem;
   line-height: 1.6;
   color: var(--dmd-code-text);
+  -webkit-overflow-scrolling: touch;
 }
 
 /* ==========================================================================
@@ -1069,6 +1106,8 @@ a:hover {
    ========================================================================== */
 .dmd-table-wrapper {
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-inline: contain;
   margin: 1.5rem 0;
   border-radius: var(--dmd-radius-md);
   border: 1px solid var(--dmd-border-color);
@@ -1113,6 +1152,9 @@ a:hover {
   padding: 0.35rem 0.5rem;
   background: var(--dmd-bg-secondary);
   border-bottom: 1px solid var(--dmd-border-color);
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: thin;
 }
 
 .dmd-tab-btn {
@@ -1128,6 +1170,7 @@ a:hover {
   border-radius: var(--dmd-radius-sm);
   cursor: pointer;
   transition: all var(--dmd-transition);
+  flex: 0 0 auto;
 }
 
 .dmd-tab-btn:hover {
@@ -1275,7 +1318,7 @@ a:hover {
   flex-shrink: 0;
   position: sticky;
   top: calc(var(--dmd-nav-height) + 16px);
-  height: calc(100vh - var(--dmd-nav-height) - 32px);
+  height: calc(100dvh - var(--dmd-nav-height) - 32px);
   overflow-y: auto;
   font-size: 0.85rem;
 }
@@ -1290,6 +1333,18 @@ a:hover {
   text-transform: uppercase;
   font-size: 0.75rem;
   letter-spacing: 0.05em;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: default;
+}
+
+.dmd-toc-chevron {
+  display: none;
+  margin-left: auto;
+  transition: transform var(--dmd-transition);
 }
 
 .dmd-toc-list {
@@ -1417,7 +1472,7 @@ a:hover {
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  padding-top: 12vh;
+  padding: max(12vh, env(safe-area-inset-top)) 1rem max(1rem, env(safe-area-inset-bottom));
 }
 
 .dmd-search-modal {
@@ -1428,6 +1483,9 @@ a:hover {
   border-radius: 12px;
   box-shadow: var(--dmd-shadow-lg);
   overflow: hidden;
+  max-height: min(680px, calc(100dvh - 2rem));
+  display: flex;
+  flex-direction: column;
 }
 
 .dmd-search-input-wrapper {
@@ -1445,6 +1503,26 @@ a:hover {
   outline: none;
   font-size: 1rem;
   color: var(--dmd-text-primary);
+  min-width: 0;
+}
+
+.dmd-search-close {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  border: 0;
+  border-radius: var(--dmd-radius-md);
+  color: var(--dmd-text-secondary);
+  background: transparent;
+  cursor: pointer;
+}
+
+.dmd-search-close:hover {
+  color: var(--dmd-text-primary);
+  background: var(--dmd-bg-tertiary);
 }
 
 .dmd-kbd {
@@ -1459,6 +1537,8 @@ a:hover {
 
 .dmd-search-results {
   max-height: 380px;
+  min-height: 0;
+  flex: 1;
   overflow-y: auto;
   padding: 0.5rem;
 }
@@ -1548,7 +1628,53 @@ a:hover {
    ========================================================================== */
 @media (max-width: 1024px) {
   .dmd-toc {
+    position: relative;
+    top: auto;
+    order: -1;
+    width: 100%;
+    height: auto;
+    overflow: visible;
+    border: 1px solid var(--dmd-border-color);
+    border-radius: var(--dmd-radius-md);
+    background: var(--dmd-bg-secondary);
+  }
+
+  .dmd-toc-header {
+    min-height: 44px;
+    margin: 0;
+    padding: 0.65rem 0.85rem;
+    color: var(--dmd-text-primary);
+    cursor: pointer;
+  }
+
+  .dmd-toc-chevron {
+    display: block;
+  }
+
+  .dmd-toc.is-open .dmd-toc-chevron {
+    transform: rotate(180deg);
+  }
+
+  .dmd-toc-list {
     display: none;
+    max-height: min(42vh, 320px);
+    overflow-y: auto;
+    margin: 0 0.65rem 0.65rem;
+    padding: 0 0.35rem 0.55rem 0.7rem;
+  }
+
+  .dmd-toc.is-open .dmd-toc-list {
+    display: block;
+  }
+
+  .dmd-toc-item {
+    margin: 0;
+  }
+
+  .dmd-toc-link {
+    min-height: 40px;
+    display: flex;
+    align-items: center;
   }
 }
 
@@ -1575,6 +1701,7 @@ a:hover {
   border-radius: var(--dmd-radius-md);
   cursor: pointer;
   transition: all var(--dmd-transition);
+  min-height: 36px;
 }
 
 .dmd-appearance-trigger:hover,
@@ -1898,6 +2025,20 @@ fieldset.dmd-appearance-section {
     display: flex;
   }
   .dmd-navbar-center {
+    display: block;
+    flex: 0 0 auto;
+    width: 44px;
+    margin: 0 0 0 auto;
+  }
+  .dmd-search-trigger {
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    min-height: 44px;
+    padding: 0;
+  }
+  .dmd-search-placeholder,
+  .dmd-search-shortcut {
     display: none;
   }
   .dmd-nav-links {
@@ -1907,26 +2048,45 @@ fieldset.dmd-appearance-section {
     position: fixed;
     top: 0;
     bottom: 0;
-    left: -280px;
-    height: 100vh;
+    left: 0;
+    width: min(86vw, 340px);
+    height: 100dvh;
     z-index: 150;
     background: var(--dmd-bg-card);
-    transition: left var(--dmd-transition);
-    padding: 1.5rem;
+    transform: translateX(-105%);
+    visibility: hidden;
+    transition: transform var(--dmd-transition), visibility var(--dmd-transition);
+    padding: max(0.75rem, env(safe-area-inset-top)) 1rem max(1.5rem, env(safe-area-inset-bottom));
+    border-right: 1px solid var(--dmd-border-color);
   }
   .dmd-sidebar.mobile-open {
-    left: 0;
+    transform: translateX(0);
+    visibility: visible;
     box-shadow: var(--dmd-shadow-lg);
+  }
+  .dmd-sidebar-heading {
+    min-height: 52px;
+    margin-bottom: 0.5rem;
+  }
+  .dmd-sidebar-label {
+    margin: 0 0.65rem;
+  }
+  .dmd-sidebar-close {
+    display: flex;
   }
   .dmd-sidebar-backdrop {
     position: fixed;
     inset: 0;
     background: rgba(0, 0, 0, 0.5);
+    border: 0;
     z-index: 140;
+    cursor: pointer;
   }
   .dmd-main-wrapper {
+    flex-direction: column;
     width: 100%;
-    padding: clamp(1.25rem, 4vw, 2.5rem) clamp(0.25rem, 2vw, 1.25rem);
+    gap: 1.25rem;
+    padding: clamp(1.25rem, 4vw, 2.5rem) clamp(0.75rem, 3vw, 1.5rem);
   }
   .dmd-main-content {
     max-width: 780px;
@@ -1937,6 +2097,9 @@ fieldset.dmd-appearance-section {
   }
   .dmd-page-nav {
     grid-template-columns: 1fr;
+  }
+  .dmd-page-nav > div:empty {
+    display: none;
   }
   .dmd-content-header {
     align-items: flex-start;
@@ -1951,22 +2114,213 @@ fieldset.dmd-appearance-section {
   }
 }
 
-@media (max-width: 520px) {
+@media (max-width: 760px) {
+  .dmd-navbar {
+    gap: 0.4rem;
+    padding-right: max(0.75rem, env(safe-area-inset-right));
+    padding-left: max(0.75rem, env(safe-area-inset-left));
+  }
+
+  .dmd-navbar-left,
+  .dmd-navbar-right {
+    gap: 0.35rem;
+  }
+
   .dmd-social-links {
     display: none;
   }
 
+  .dmd-social-btn,
+  .dmd-theme-toggle-btn,
+  .dmd-offline-download-btn,
+  .dmd-appearance-trigger {
+    width: 44px;
+    height: 44px;
+    min-height: 44px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .dmd-offline-download-btn span,
+  .dmd-appearance-trigger-label {
+    display: none;
+  }
+
+  .dmd-main-content {
+    width: 100%;
+  }
+
+  .dmd-content-header {
+    margin-bottom: 1.15rem;
+  }
+
+  .dmd-breadcrumbs {
+    width: 100%;
+    overflow: hidden;
+  }
+
+  .dmd-crumb.current {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .dmd-content-meta {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .dmd-markdown-body {
+    font-size: 1rem;
+    line-height: 1.72;
+  }
+
+  .dmd-markdown-body h1 {
+    font-size: clamp(2rem, 11vw, 2.75rem);
+    line-height: 1.08;
+    margin-bottom: 1.15rem;
+  }
+
+  .dmd-markdown-body h2 {
+    font-size: 1.5rem;
+  }
+
+  .dmd-heading-anchor {
+    display: none;
+  }
+
+  .dmd-code-block-wrapper,
+  .dmd-table-wrapper,
+  .dmd-diagram-host,
+  .dmd-diagram-viewer {
+    max-width: 100%;
+  }
+
+  .dmd-code-block-wrapper pre {
+    padding: 0.9rem 1rem;
+    font-size: 0.82rem;
+  }
+
+  .dmd-callout {
+    padding: 0.9rem 1rem;
+  }
+
+  .dmd-page-nav-card {
+    min-height: 88px;
+  }
+
+  .dmd-modal-backdrop {
+    align-items: stretch;
+    padding: max(0.5rem, env(safe-area-inset-top)) 0.5rem max(0.5rem, env(safe-area-inset-bottom));
+  }
+
+  .dmd-search-modal {
+    width: 100%;
+    max-width: none;
+    max-height: 100%;
+    border-radius: var(--dmd-radius-lg);
+  }
+
+  .dmd-search-input-wrapper {
+    min-height: 64px;
+    padding: 0.55rem 0.65rem 0.55rem 1rem;
+  }
+
+  .dmd-search-input {
+    font-size: 16px;
+  }
+
+  .dmd-search-escape,
+  .dmd-search-footer {
+    display: none;
+  }
+
+  .dmd-search-close {
+    display: flex;
+  }
+
+  .dmd-search-results {
+    max-height: none;
+    padding: 0.4rem;
+  }
+
+  .dmd-search-item {
+    min-height: 64px;
+    padding: 0.85rem;
+    text-align: left;
+  }
+
+  .dmd-appearance-panel {
+    position: fixed;
+    top: auto;
+    right: max(0.5rem, env(safe-area-inset-right));
+    bottom: max(0.5rem, env(safe-area-inset-bottom));
+    left: max(0.5rem, env(safe-area-inset-left));
+    width: auto;
+    max-height: calc(100dvh - max(1rem, env(safe-area-inset-top)) - max(1rem, env(safe-area-inset-bottom)));
+    overflow-y: auto;
+    border-radius: var(--dmd-radius-lg);
+  }
+
+  .dmd-segmented-control button,
+  .dmd-appearance-quick-mode,
+  .dmd-theme-family-card {
+    min-height: 44px;
+  }
+
+  .dmd-progress-bar {
+    top: var(--dmd-nav-height);
+    right: 0;
+    left: auto;
+    width: 3px;
+    height: calc(100dvh - var(--dmd-nav-height));
+    transform: scaleY(var(--dmd-scroll-progress, 0));
+    transform-origin: center top;
+  }
+}
+
+@media (max-width: 520px) {
   .dmd-brand-version {
     display: none;
   }
 
-  .dmd-offline-download-btn span {
+  .dmd-brand-title {
+    max-width: 28vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .dmd-theme-toggle-btn {
     display: none;
   }
 
-  .dmd-offline-download-btn {
-    width: 36px;
-    padding: 0;
+  .dmd-theme-family-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dmd-page-nav-card.next {
+    text-align: left;
+  }
+
+  .dmd-page-nav-card.next .dmd-page-nav-sub {
+    justify-content: flex-start;
+  }
+
+  .dmd-footer {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+}
+
+@media (max-width: 390px) {
+  .dmd-offline-download-wrap {
+    display: none;
+  }
+
+  .dmd-brand-title {
+    max-width: 34vw;
   }
 }
 

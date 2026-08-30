@@ -12,6 +12,11 @@
     "description": { "type": "string" },
     "version": { "type": "string" },
     "rootDoc": { "type": "string", "minLength": 1 },
+    "home": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Documentation home document (path or slug) or an explicit link. Defaults to README.md, PROJECT.md, ABOUT.md, or INDEX.md at the documentation root (case-sensitive pass first, then case-insensitive), then the alphabetically first Markdown document."
+    },
     "source": { "$ref": "#/$defs/source" },
     "theme": { "$ref": "#/$defs/theme" },
     "nav": { "type": "array", "items": { "$ref": "#/$defs/navLink" } },

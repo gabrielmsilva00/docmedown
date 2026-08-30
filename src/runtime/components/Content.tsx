@@ -3,7 +3,7 @@ import { MarkdownRenderer } from "../markdown/renderer";
 import { useDoc } from "../provider/DocProvider";
 
 export const Content: React.FC = () => {
-  const { currentDoc, currentSlug, isLoading, error, prevDoc, nextDoc, navigate, config } = useDoc();
+  const { currentDoc, currentSlug, isLoading, error, prevDoc, nextDoc, navigate, config, home } = useDoc();
   const [scrollProgress, setScrollProgress] = useState(0);
 
   // Track scroll progress for reading progress bar
@@ -77,7 +77,11 @@ export const Content: React.FC = () => {
         {/* Breadcrumbs & Metadata Bar */}
         <div className="dmd-content-header">
           <nav className="dmd-breadcrumbs" aria-label="Breadcrumb">
-            <button type="button" className="dmd-crumb" onClick={() => navigate("README")}>
+            <button
+              type="button"
+              className="dmd-crumb"
+              onClick={() => navigate(home?.kind === "route" && home.slug ? home.slug : "README")}
+            >
               Docs
             </button>
             {breadcrumbs.map((crumb, idx) => (

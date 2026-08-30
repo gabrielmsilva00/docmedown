@@ -117,6 +117,31 @@ test("responsive shell includes touch and short-viewport adaptations", () => {
   assert.match(mainCss, /\.dmd-sidebar-link,[\s\S]*?\.dmd-toc-link[\s\S]*?min-height:\s*44px/);
 });
 
+test("navbar enforces a single-line policy for every element", () => {
+  const mainCss = fs.readFileSync(path.join(packageRoot, "src/runtime/styles/main.css"), "utf-8");
+
+  assert.match(mainCss, /\.dmd-navbar\s*\{[^}]*white-space:\s*nowrap/);
+  assert.match(mainCss, /\.dmd-brand-title\s*\{[^}]*text-overflow:\s*ellipsis/);
+  assert.match(mainCss, /\.dmd-brand-version\s*\{[^}]*white-space:\s*nowrap/);
+  assert.match(mainCss, /\.dmd-search-trigger\s*\{[^}]*white-space:\s*nowrap/);
+
+  const placeholder = mainCss.match(/\.dmd-search-placeholder\s*\{([^}]*)\}/)?.[1] || "";
+  assert.match(placeholder, /min-width:\s*0/);
+  assert.match(placeholder, /overflow:\s*hidden/);
+  assert.match(placeholder, /text-overflow:\s*ellipsis/);
+  assert.match(placeholder, /white-space:\s*nowrap/);
+
+  assert.match(mainCss, /\.dmd-search-shortcut\s*\{[^}]*flex-shrink:\s*0/);
+  assert.match(mainCss, /\.dmd-kbd\s*\{[^}]*white-space:\s*nowrap/);
+  assert.match(mainCss, /\.dmd-nav-link\s*\{[^}]*white-space:\s*nowrap/);
+  assert.match(mainCss, /\.dmd-offline-download-btn\s*\{[^}]*white-space:\s*nowrap/);
+  assert.match(mainCss, /\.dmd-appearance-trigger\s*\{[^}]*white-space:\s*nowrap/);
+
+  // Dropdown panels rendered from the navbar restore normal text flow.
+  assert.match(mainCss, /\.dmd-appearance-panel\s*\{[^}]*white-space:\s*normal/);
+  assert.match(mainCss, /\.dmd-offline-download-error\s*\{[^}]*white-space:\s*normal/);
+});
+
 test("Mermaid viewer uses a square clipped viewport with pan-only navigation", () => {
   const mainCss = fs.readFileSync(path.resolve(__dirname, "../src/runtime/styles/main.css"), "utf-8");
   const stageRule = mainCss.match(/\.dmd-diagram-stage\s*\{([\s\S]*?)\n\}/)?.[1] || "";

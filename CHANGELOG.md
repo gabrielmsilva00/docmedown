@@ -6,6 +6,16 @@ All notable changes to DocMeDown are documented here.
 
 ---
 
+## 0.1.6 - 2026-08-30
+
+### Added
+
+- A navbar **Home** action (with a home-aware brand link) and a `home` configuration field. Without configuration, home resolves from `README.md`, `PROJECT.md`, `ABOUT.md`, or `INDEX.md` at the documentation root — case-sensitive pass first, then case-insensitively — and finally the alphabetically first Markdown document. Documentation inside documentation links Home to the original (outermost) documentation site whenever an enclosing DocMeDown manifest is reachable, and nested roots may also set `home` to an explicit relative link.
+
+### Fixed
+
+- The navbar now enforces a single-line policy for every element: long search placeholders and brand titles truncate with ellipsis, keyboard shortcut chips never wrap, and dropdown panels opened from the navbar restore normal text flow.
+
 ## 0.1.5 - 2026-08-28
 
 ### Fixed

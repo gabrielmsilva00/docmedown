@@ -5,6 +5,7 @@
   "description": "Fast, modern documentation created with DocMeDown",
   "version": "1.0.0",
   "rootDoc": "README.md",
+  "home": "README.md",
   "theme": {
     "family": "atlas",
     "density": "comfortable",

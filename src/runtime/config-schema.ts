@@ -133,6 +133,7 @@ export const docConfigSchema = z
     description: z.string().optional(),
     version: z.string().optional(),
     rootDoc: nonEmptyString.optional(),
+    home: nonEmptyString.optional(),
     source: remoteSourceSchema.optional(),
     theme: docThemeConfigSchema.optional(),
     nav: z.array(navLinkSchema).optional(),

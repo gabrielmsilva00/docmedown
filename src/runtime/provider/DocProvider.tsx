@@ -1,5 +1,11 @@
 import type React from "react";
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import {
+  findOriginalDocumentationHome,
+  type HomeDocumentInput,
+  type ResolvedHome,
+  resolveDocumentationHome,
+} from "../home";
 import { buildSidebarTree } from "../loader/auto-indexer";
 import { LocalDocLoader } from "../loader/local-loader";
 import { RemoteGithubLoader } from "../loader/remote-github";
@@ -30,6 +36,7 @@ interface DocContextType {
   error: string | null;
   prevDoc: NavDocItem | null;
   nextDoc: NavDocItem | null;
+  home: ResolvedHome | null;
   isSearchOpen: boolean;
   setIsSearchOpen: (open: boolean) => void;
   isMobileSidebarOpen: boolean;
@@ -60,6 +67,8 @@ export const DocProvider: React.FC<DocProviderProps> = ({ initialConfig, basePat
   const [error, setError] = useState<string | null>(null);
   const [isSearchOpen, setIsSearchOpen] = useState<boolean>(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState<boolean>(false);
+  const [docPaths, setDocPaths] = useState<HomeDocumentInput[]>([]);
+  const [originalHome, setOriginalHome] = useState<ResolvedHome | null>(null);
 
   const router = useMemo(() => new HashRouter(config.rootDoc || "README.md"), [config.rootDoc]);
   const searchIndex = useMemo(() => new DocSearchIndex(), []);
@@ -102,6 +111,7 @@ export const DocProvider: React.FC<DocProviderProps> = ({ initialConfig, basePat
           if (manifest.tree) setTree(manifest.tree);
           if (manifest.docs) {
             searchIndex.addDocs(manifest.docs);
+            setDocPaths(manifest.docs.map((doc) => ({ slug: doc.slug, path: doc.path })));
           }
           return;
         }
@@ -111,6 +121,7 @@ export const DocProvider: React.FC<DocProviderProps> = ({ initialConfig, basePat
           const files = await remoteGithub.discoverFiles();
           if (isCancelled) return;
           setTree(buildSidebarTree(files, {}, config.sidebar));
+          setDocPaths(files.map((file) => ({ path: file })));
           return;
         }
 
@@ -119,13 +130,18 @@ export const DocProvider: React.FC<DocProviderProps> = ({ initialConfig, basePat
           const files = await remoteGitlab.discoverFiles();
           if (isCancelled) return;
           setTree(buildSidebarTree(files, {}, config.sidebar));
+          setDocPaths(files.map((file) => ({ path: file })));
           return;
         }
 
         // 4. Default fallback tree for local zero-config mode
         setTree(buildSidebarTree(["README.md"], {}, config.sidebar));
+        setDocPaths([{ path: "README.md" }]);
       } catch {
-        if (!isCancelled) setTree(buildSidebarTree(["README.md"], {}, config.sidebar));
+        if (!isCancelled) {
+          setTree(buildSidebarTree(["README.md"], {}, config.sidebar));
+          setDocPaths([{ path: "README.md" }]);
+        }
       }
     }
 
@@ -135,6 +151,26 @@ export const DocProvider: React.FC<DocProviderProps> = ({ initialConfig, basePat
       isCancelled = true;
     };
   }, [config.sidebar, basePath, localLoader, remoteGithub, remoteGitlab, searchIndex]);
+
+  // Documentation inside documentation: when an enclosing DocMeDown manifest is
+  // reachable over HTTP, the Home action links to the original documentation.
+  useEffect(() => {
+    if (config.home) return;
+    if (remoteGithub || remoteGitlab) return;
+    if (typeof window === "undefined") return;
+    if (window.location.protocol !== "http:" && window.location.protocol !== "https:") return;
+
+    let cancelled = false;
+    findOriginalDocumentationHome((input) => fetch(input))
+      .then((resolved) => {
+        if (!cancelled && resolved) setOriginalHome(resolved);
+      })
+      .catch(() => undefined);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [config.home, remoteGithub, remoteGitlab]);
 
   // Load document content whenever currentSlug changes
   useEffect(() => {
@@ -217,6 +253,13 @@ export const DocProvider: React.FC<DocProviderProps> = ({ initialConfig, basePat
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
+  // The Home action targets the original documentation home when one exists,
+  // otherwise the resolved home of this documentation corpus.
+  const home = useMemo<ResolvedHome | null>(
+    () => originalHome ?? resolveDocumentationHome(docPaths, config),
+    [originalHome, docPaths, config],
+  );
+
   // Compute linear list of docs for previous/next navigation
   const flatDocs = useMemo(() => {
     const list: NavDocItem[] = [];
@@ -260,6 +303,7 @@ export const DocProvider: React.FC<DocProviderProps> = ({ initialConfig, basePat
         error,
         prevDoc,
         nextDoc,
+        home,
         isSearchOpen,
         setIsSearchOpen,
         isMobileSidebarOpen,

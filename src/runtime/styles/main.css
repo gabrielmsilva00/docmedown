@@ -38,6 +38,19 @@ input {
   outline-offset: 3px;
 }
 
+/* Screen-reader-only text for icon-only controls that need real anchor content. */
+.dmd-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 a {
   color: var(--dmd-accent);
   text-decoration: none;
@@ -90,6 +103,9 @@ a:hover {
   border-bottom: 1px solid var(--dmd-border-color);
   transition: background-color var(--dmd-transition), border-color var(--dmd-transition);
   gap: clamp(0.5rem, 1.5vw, 1.25rem);
+  /* Single-line policy: every navbar element renders on one row; shrinkable
+     text truncates with ellipsis instead of wrapping or growing the bar. */
+  white-space: nowrap;
 }
 
 .dmd-navbar-left {
@@ -137,6 +153,12 @@ a:hover {
   object-fit: contain;
 }
 
+.dmd-brand-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .dmd-brand-version {
   font-size: 0.75rem;
   padding: 0.15rem 0.45rem;
@@ -146,6 +168,7 @@ a:hover {
   color: var(--dmd-text-muted);
   font-family: var(--dmd-font-mono);
   font-weight: 500;
+  white-space: nowrap;
 }
 
 .dmd-navbar-center {
@@ -169,6 +192,7 @@ a:hover {
   cursor: pointer;
   transition: all var(--dmd-transition);
   min-height: 38px;
+  white-space: nowrap;
 }
 
 .dmd-search-trigger:hover {
@@ -180,7 +204,15 @@ a:hover {
 
 .dmd-search-placeholder {
   flex: 1;
+  min-width: 0;
+  overflow: hidden;
   text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dmd-search-shortcut {
+  flex-shrink: 0;
 }
 
 .dmd-navbar-right {
@@ -205,6 +237,7 @@ a:hover {
   padding: 0.35rem 0.65rem;
   border-radius: var(--dmd-radius-sm);
   transition: all var(--dmd-transition);
+  white-space: nowrap;
 }
 
 .dmd-nav-link:hover {
@@ -258,6 +291,7 @@ a:hover {
   font-weight: 650;
   cursor: pointer;
   transition: all var(--dmd-transition);
+  white-space: nowrap;
 }
 
 .dmd-offline-download-btn:hover:not(:disabled) {
@@ -287,6 +321,8 @@ a:hover {
   color: #d85b4a;
   font-size: 0.76rem;
   line-height: 1.45;
+  /* Navbar dropdowns opt back into normal text flow. */
+  white-space: normal;
 }
 
 [data-theme="dark"] .dmd-offline-download-error {
@@ -1547,6 +1583,7 @@ a:hover {
   background: var(--dmd-bg-tertiary);
   border: 1px solid var(--dmd-border-color);
   color: var(--dmd-text-muted);
+  white-space: nowrap;
 }
 
 .dmd-search-results {
@@ -1735,6 +1772,7 @@ a:hover {
   cursor: pointer;
   transition: all var(--dmd-transition);
   min-height: 36px;
+  white-space: nowrap;
 }
 
 .dmd-appearance-trigger:hover,
@@ -1754,6 +1792,8 @@ a:hover {
   border: 1px solid var(--dmd-border-color);
   border-radius: var(--dmd-radius-lg);
   box-shadow: var(--dmd-shadow-lg);
+  /* Navbar dropdowns opt back into normal text flow. */
+  white-space: normal;
 }
 
 .dmd-appearance-heading {

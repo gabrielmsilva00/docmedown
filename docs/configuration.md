@@ -40,6 +40,7 @@ Unknown properties are rejected. GitHub and GitLab sources require a `repo` in `
   "description": "Next-generation documentation toolkit",
   "version": "1.0.0",
   "rootDoc": "README.md",
+  "home": "README.md",
   "theme": {
     "family": "atlas",
     "density": "comfortable",
@@ -78,6 +79,39 @@ Unknown properties are rejected. GitHub and GitLab sources require a `repo` in `
   }
 }
 ```
+
+---
+
+## 🏠 Documentation home
+
+The navbar exposes a **Home** action, and the brand link points to the same
+place, so readers can always return to the documentation home. Pin it to a
+specific document with `home`:
+
+```json title="docs.json"
+{
+  "home": "PROJECT.md"
+}
+```
+
+`home` accepts a document path or slug (`"PROJECT.md"`, `"PROJECT"`,
+`"guides/intro"`). Documentation inside documentation may also set `home` to an
+explicit relative link — for example `"../../index.html#/"` — to send readers
+back to the site that contains it.
+
+When `home` is not configured, DocMeDown resolves it automatically from the
+files at the root of the documentation folder, in this order:
+
+1. `README.md`, `PROJECT.md`, `ABOUT.md`, or `INDEX.md` — a case-sensitive pass
+   over all four names first.
+2. The same names again case-insensitively (for example `readme.md` or
+   `Project.MD`).
+3. Otherwise, the alphabetically first Markdown document in the corpus.
+
+Nested documentation roots are covered automatically as well: when a nested
+documentation site is served inside an outer DocMeDown site, the Home action
+links to the **original** (outermost) documentation home instead of the nested
+one, so there is always a way back.
 
 ---
 

@@ -201,3 +201,33 @@ test("HashRouter link resolution", () => {
   assert.equal(router.resolveLink("https://google.com", "README"), "https://google.com");
   assert.equal(router.resolveLink("#anchor", "guide"), "#/guide#anchor");
 });
+
+test("headings expose inline HTML for display and clean plain text for search", () => {
+  const raw = "React &middot; ![GitHub license](https://img.shields.io/badge/a.svg) and `npm test`";
+  const parsed = parseMarkdown(`# ${raw}`, "README");
+  const heading = parsed.headings[0];
+
+  assert.equal(heading.level, 1);
+  assert.equal(heading.text, "React · GitHub license and npm test");
+  assert.match(heading.html!, /<img src="https:\/\/img\.shields\.io\/badge\/a\.svg"/);
+  assert.match(heading.html!, /alt="GitHub license"/);
+  assert.match(heading.html!, /<code>npm test<\/code>/);
+  assert.match(heading.html!, /middot;/);
+  assert.doesNotMatch(heading.html!, /&amp;(?:middot|amp|lt|gt);/);
+  assert.match(parsed.html, /<img src="https:\/\/img\.shields\.io\/badge\/a\.svg"/);
+
+  // Anchor IDs must remain byte-identical so existing deep links keep working:
+  // the slug comes from marked's token text (image tokens reduce to their alt).
+  assert.equal(heading.id, "react-middot-github-license-and-npm-test");
+});
+
+test("heading plain text keeps snake_case and decodes badge-link labels", () => {
+  const parsed = parseMarkdown(
+    "# [![CI](https://ci.example/badge.svg)](https://ci.example/runs) for `some_var_name`",
+    "README",
+  );
+
+  assert.equal(parsed.headings[0].text, "CI for some_var_name");
+  // The page map strips the nested anchor and keeps the badge image.
+  assert.match(parsed.headings[0].html!, /<img src="https:\/\/ci\.example\/badge\.svg"/);
+});

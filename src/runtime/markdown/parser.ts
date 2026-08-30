@@ -2,6 +2,7 @@ import { marked } from "marked";
 import type { DocFrontmatter, DocHeading } from "../types";
 import { processAlerts } from "./callouts";
 import { renderCodeBlock } from "./highlighter";
+import { inlineHeadingToPlainText } from "./inline-text";
 import { renderMath } from "./katex";
 
 export interface ParsedMarkdown {
@@ -103,7 +104,8 @@ export function parseMarkdown(rawContent: string, currentSlug: string = ""): Par
     if (depth <= 3) {
       headings.push({
         level: depth,
-        text: rawText,
+        text: inlineHeadingToPlainText(rawText),
+        html: text,
         id: slug,
       });
     }

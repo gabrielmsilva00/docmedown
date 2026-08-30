@@ -24,6 +24,7 @@
     "sidebar": { "type": "array", "items": { "$ref": "#/$defs/sidebarItem" } },
     "autoIndex": { "$ref": "#/$defs/autoIndex" },
     "search": { "$ref": "#/$defs/search" },
+    "offline": { "$ref": "#/$defs/offline" },
     "footer": { "$ref": "#/$defs/footer" },
     "componentsUrl": { "type": "string" },
     "editUrl": { "type": "string" }
@@ -142,6 +143,16 @@
         "enabled": { "type": "boolean" },
         "placeholder": { "type": "string" },
         "maxResults": { "type": "integer", "minimum": 1, "maximum": 100 }
+      }
+    },
+    "offline": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "embedNestedDocs": {
+          "type": "boolean",
+          "description": "Embed nested documentation sites into the single-file offline bundle so no external files are needed. Defaults to true; when false, links to other documentation files render as disabled links offline."
+        }
       }
     },
     "footer": {

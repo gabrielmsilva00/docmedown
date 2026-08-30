@@ -48,7 +48,10 @@ export interface DocMeDownInstance {
 
 export interface DocHeading {
   level: number;
+  /** Readable plain text (badges become alt text; entities decoded) for search and titles. */
   text: string;
+  /** Inline-rendered Markdown for display; omitted in manifest-only heading sets. */
+  html?: string;
   id: string;
 }
 

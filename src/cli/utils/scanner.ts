@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import matter from "gray-matter";
 import { buildSidebarTree, formatTitleFromFilename } from "../../runtime/loader/auto-indexer";
+import { inlineHeadingToPlainText } from "../../runtime/markdown/inline-text";
 import type { DocConfig, DocFileItem, DocHeading, DocManifest } from "../../runtime/types";
 
 export function extractHeadings(content: string): DocHeading[] {
@@ -12,8 +13,10 @@ export function extractHeadings(content: string): DocHeading[] {
     const match = line.match(/^(#{1,4})\s+(.+)$/);
     if (match) {
       const level = match[1].length;
-      const text = match[2].trim().replace(/[#*`_]/g, "");
-      const id = text
+      const rawHeading = match[2].trim();
+      const text = inlineHeadingToPlainText(rawHeading);
+      const id = rawHeading
+        .replace(/[#*`_]/g, "")
         .toLowerCase()
         .replace(/[^\w\s-]/g, "")
         .trim()

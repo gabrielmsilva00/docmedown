@@ -100,7 +100,16 @@ export const TableOfContents: React.FC<TOCProps> = ({ headings, currentSlug }) =
                   }
                 }}
               >
-                {h.text}
+                {h.html ? (
+                  <span
+                    className="dmd-toc-inline"
+                    /* Anchors cannot nest: a heading that is itself a link renders
+                       its label inside the page map's own link. */
+                    dangerouslySetInnerHTML={{ __html: h.html.replace(/<a\b[^>]*>([\s\S]*?)<\/a>/gi, "$1") }}
+                  />
+                ) : (
+                  h.text
+                )}
               </a>
             </li>
           );

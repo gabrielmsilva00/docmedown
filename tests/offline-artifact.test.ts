@@ -1,8 +1,11 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
 import { gunzipSync } from "node:zlib";
+import { buildCommand } from "../src/cli/commands/build";
+import { isRelativeHtmlLink, matchEmbeddedNestedSite } from "../src/runtime/offline-export";
 
 const packageRoot = path.resolve(__dirname, "..");
 
@@ -57,4 +60,56 @@ test("nested offline artifacts embed their own bundled custom components", () =>
   assert.ok(embeddedDocs.includes("OrbitCounter"));
   assert.ok(offlineEnvelope.data.componentsSource.includes("OrbitCounter"));
   assert.ok(!offlineHtml.includes("fonts.googleapis.com"));
+});
+
+test("the root offline bundle embeds nested documentation sites for self-contained navigation", () => {
+  const offlineHtml = readArtifact("docs", ".dist", "index.html");
+  const offlineEnvelope = decodeOfflineArtifact(offlineHtml);
+  const nested = offlineEnvelope.data.nestedSites;
+
+  assert.ok(nested, "root offline bundles embed nested sites by default");
+  assert.ok(nested["examples/local-docs"], "nested sites are keyed by their relative folder");
+  assert.equal(nested["examples/local-docs"].manifest.config.name, "Orbit Notes");
+  assert.ok(nested["examples/local-docs"].docs.README);
+  assert.ok(nested["examples/local-docs"].componentsSource?.includes("OrbitCounter"));
+  assert.ok(offlineHtml.includes("__DOCMEDOWN_RUNTIME_URL__"));
+});
+
+test("offline link helpers classify file links and embedded nested targets", () => {
+  assert.equal(isRelativeHtmlLink("examples/local-docs/index.html"), true);
+  assert.equal(isRelativeHtmlLink("./guides/extra.html"), true);
+  assert.equal(isRelativeHtmlLink("#/guides/extra"), false);
+  assert.equal(isRelativeHtmlLink("https://example.com/page.html"), false);
+  assert.equal(isRelativeHtmlLink("mailto:someone@example.com"), false);
+
+  const sites = { "examples/local-docs": { name: "Orbit Notes", manifest: {}, docs: {} } };
+  assert.equal(matchEmbeddedNestedSite("examples/local-docs/index.html", sites), "examples/local-docs");
+  assert.equal(matchEmbeddedNestedSite("./examples/local-docs/", sites), "examples/local-docs");
+  assert.equal(matchEmbeddedNestedSite("examples/local-docs/index.html#/README", sites), "examples/local-docs");
+  assert.equal(matchEmbeddedNestedSite("missing/index.html", sites), null);
+  assert.equal(matchEmbeddedNestedSite("examples/local-docs/index.html", null), null);
+});
+
+test("offline.embedNestedDocs: false keeps the single-file bundle free of nested sites", async () => {
+  const workspace = fs.mkdtempSync(path.join(os.tmpdir(), "docmedown-offline-"));
+  try {
+    fs.writeFileSync(
+      path.join(workspace, "docs.json"),
+      JSON.stringify({ name: "Tiny Docs", offline: { embedNestedDocs: false } }),
+      "utf-8",
+    );
+    fs.writeFileSync(path.join(workspace, "README.md"), "# Tiny Docs\n\nStandalone copy.", "utf-8");
+    fs.mkdirSync(path.join(workspace, "sub"));
+    fs.writeFileSync(path.join(workspace, "sub", "docs.json"), JSON.stringify({ name: "Sub Docs" }), "utf-8");
+    fs.writeFileSync(path.join(workspace, "sub", "note.md"), "# Sub note", "utf-8");
+
+    await buildCommand(workspace);
+
+    const rootOfflineHtml = fs.readFileSync(path.join(workspace, ".dist", "index.html"), "utf-8");
+    const rootEnvelope = decodeOfflineArtifact(rootOfflineHtml);
+    assert.equal(rootEnvelope.data.nestedSites, undefined);
+    assert.ok(fs.existsSync(path.join(workspace, "sub", ".dist", "index.html")));
+  } finally {
+    fs.rmSync(workspace, { recursive: true, force: true });
+  }
 });

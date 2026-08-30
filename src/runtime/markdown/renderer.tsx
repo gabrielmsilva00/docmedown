@@ -3,6 +3,14 @@ import { useEffect, useRef } from "react";
 import ReactDOM from "react-dom/client";
 import { ComponentRegistry } from "../components/DmdRegistry";
 import { MermaidDiagram } from "../components/MermaidDiagram";
+import {
+  getEmbeddedNestedSites,
+  isRelativeHtmlLink,
+  isSelfContainedOffline,
+  matchEmbeddedNestedSite,
+  notifyUnavailableOfflineLink,
+  openEmbeddedNestedSite,
+} from "../offline-export";
 import { decodeDiagramSource } from "./mermaid";
 
 interface MarkdownRendererProps {
@@ -131,6 +139,26 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ html, onNavi
     };
   }, []);
 
+  // Self-contained offline copies mark the file links they cannot fulfill so
+  // they read as disabled instead of failing with a browser navigation error.
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container || !html || !isSelfContainedOffline()) return;
+    const sites = getEmbeddedNestedSites();
+
+    container.querySelectorAll<HTMLAnchorElement>("a[href]").forEach((anchor) => {
+      const href = anchor.getAttribute("href") || "";
+      if (!isRelativeHtmlLink(href)) return;
+      if (matchEmbeddedNestedSite(href, sites)) {
+        anchor.setAttribute("data-dmd-embedded-link", "true");
+        return;
+      }
+      anchor.classList.add("dmd-link-disabled");
+      anchor.setAttribute("aria-disabled", "true");
+      anchor.setAttribute("title", "Unavailable in offline documentation");
+    });
+  }, [html]);
+
   // Handle internal markdown link clicks smoothly
   const handleContainerClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const target = (e.target as HTMLElement).closest("a");
@@ -141,6 +169,22 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ html, onNavi
 
     // External link or protocol
     if (href.startsWith("http://") || href.startsWith("https://") || href.startsWith("mailto:")) {
+      return;
+    }
+
+    // Self-contained offline copies never navigate to external files: embedded
+    // nested documentation opens from inside this file, everything else is
+    // reported as unavailable instead of failing with ERR_FILE_NOT_FOUND.
+    if (isSelfContainedOffline() && isRelativeHtmlLink(href)) {
+      e.preventDefault();
+      const nestedKey = matchEmbeddedNestedSite(href, getEmbeddedNestedSites());
+      if (nestedKey) {
+        openEmbeddedNestedSite(nestedKey, href).catch(() =>
+          notifyUnavailableOfflineLink("This nested documentation site could not be opened from the offline copy."),
+        );
+        return;
+      }
+      notifyUnavailableOfflineLink();
       return;
     }
 

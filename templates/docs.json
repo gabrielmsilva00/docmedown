@@ -25,5 +25,8 @@
   "search": {
     "enabled": true,
     "placeholder": "Search documentation..."
+  },
+  "offline": {
+    "embedNestedDocs": true
   }
 }

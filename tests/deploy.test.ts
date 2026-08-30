@@ -49,4 +49,12 @@ test("deploy command auto-commits tracked changes but refuses untracked files", 
   assert.match(script, /Registry metadata has not propagated yet/);
   assert.match(script, /git", \["fetch", "origin", "main"\]/);
   assert.doesNotMatch(script, /git", \["fetch", "origin", "main", "--tags"\]/);
+
+  // A missing Unreleased section must abort before the version bump mutates
+  // package files, so a failed promotion never leaves a half-applied release.
+  const prepareVersionBlock = script.match(/function prepareVersion\(nextVersion\) \{\n([\s\S]*?)\n\}/)?.[1] || "";
+  const promoteIndex = prepareVersionBlock.indexOf("promoteChangelog");
+  const versionCallIndex = prepareVersionBlock.indexOf('runNpm(["version"');
+  assert.ok(promoteIndex !== -1, "prepareVersion should compute the promoted changelog");
+  assert.ok(promoteIndex < versionCallIndex, "prepareVersion should validate the changelog before running npm version");
 });

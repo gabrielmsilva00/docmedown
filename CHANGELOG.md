@@ -6,6 +6,16 @@ All notable changes to DocMeDown are documented here.
 
 ---
 
+## 0.1.7 - 2026-08-30
+
+### Added
+
+- Self-contained offline bundles now embed every nested documentation site (`offline.embedNestedDocs`, enabled by default), so the root `.dist/index.html` opens subdocumentation without relative links or external files. Disabling embedding renders external file links as disabled, and every offline copy shows a startup limitations toast that expands into a detailed modal on click.
+
+### Fixed
+
+- The page map now renders inline Markdown in headings — badge images, links, inline code, and HTML entities — instead of raw syntax, while anchor IDs stay unchanged and search indexing plus document titles use the clean plain-text form.
+
 ## 0.1.6 - 2026-08-30
 
 ### Added

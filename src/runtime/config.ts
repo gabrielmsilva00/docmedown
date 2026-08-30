@@ -34,6 +34,9 @@ export const DEFAULT_CONFIG: DocConfig = {
     placeholder: "Search documentation...",
     maxResults: 10,
   },
+  offline: {
+    embedNestedDocs: true,
+  },
   footer: {
     copyright: `© ${new Date().getFullYear()} DocMeDown. All rights reserved.`,
     showBuiltWith: true,
@@ -73,6 +76,10 @@ export function normalizeConfig(userConfig: unknown = {}): DocConfig {
     search: {
       ...DEFAULT_CONFIG.search,
       ...parsedConfig.search,
+    },
+    offline: {
+      ...DEFAULT_CONFIG.offline,
+      ...parsedConfig.offline,
     },
     footer: {
       ...DEFAULT_CONFIG.footer,

@@ -115,6 +115,33 @@ one, so there is always a way back.
 
 ---
 
+## 📦 Offline documentation
+
+`docmedown build` produces a self-contained `.dist/index.html` that embeds every
+page, the search index, diagrams, custom components, and the runtime. Nested
+documentation roots are embedded too, so subdocumentation opens directly from
+the same single file — no relative links, no external files, no
+`ERR_FILE_NOT_FOUND`.
+
+```json title="docs.json"
+{
+  "offline": {
+    "embedNestedDocs": true
+  }
+}
+```
+
+`offline.embedNestedDocs` defaults to `true`. Set it to `false` to keep the
+offline file smaller: links to other documentation files then render as
+disabled links instead of navigating to files that do not travel with the copy.
+
+Opening any offline copy shows a toast about its limitations; selecting it
+expands a modal with the full list. Offline copies never reach the network for
+documentation content — only explicit internet links (for example GitHub) need
+a connection.
+
+---
+
 ## 🎨 Theme Families
 
 DocMeDown ships four complete visual **families**. A family is not an accent

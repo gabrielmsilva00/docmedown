@@ -121,6 +121,12 @@ export const docSearchConfigSchema = z
   })
   .strict();
 
+export const docOfflineConfigSchema = z
+  .object({
+    embedNestedDocs: z.boolean().optional(),
+  })
+  .strict();
+
 /**
  * Schema for unmerged user configuration. It intentionally keeps `name` optional
  * because callers may provide a partial override that inherits the default name.
@@ -149,6 +155,7 @@ export const docConfigSchema = z
       .strict()
       .optional(),
     search: docSearchConfigSchema.optional(),
+    offline: docOfflineConfigSchema.optional(),
     footer: z
       .object({
         copyright: z.string().optional(),

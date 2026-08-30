@@ -3,6 +3,7 @@ import { useDoc } from "../provider/DocProvider";
 import { SearchModal } from "../search/SearchModal";
 import { Content } from "./Content";
 import { Navbar } from "./Navbar";
+import { OfflineNotice } from "./OfflineNotice";
 import { Sidebar } from "./Sidebar";
 import { TableOfContents } from "./TableOfContents";
 
@@ -31,6 +32,8 @@ export const Layout: React.FC = () => {
         onSelect={(slug) => navigate(slug)}
         placeholder={config.search?.placeholder}
       />
+
+      <OfflineNotice />
     </div>
   );
 };

@@ -9,6 +9,7 @@ import {
   createCompressedOfflineHtml,
   OFFLINE_FORMAT_VERSION,
   type OfflineEnvelope,
+  type OfflineNestedSiteData,
 } from "../../runtime/offline-export";
 import type { DocConfig } from "../../runtime/types";
 import { generateManifest, scanDirectory } from "../utils/scanner";
@@ -123,6 +124,42 @@ export function findNestedDocumentationRoots(targetDir: string): string[] {
   return roots;
 }
 
+/**
+ * Loads every nested documentation root into an embeddable offline payload so
+ * the parent's single-file bundle can open subdocumentation without any
+ * external files. Keys are the nested root's path relative to the parent root.
+ */
+export function collectNestedOfflineSites(targetDir: string): Record<string, OfflineNestedSiteData> {
+  const sites: Record<string, OfflineNestedSiteData> = {};
+
+  for (const nestedRoot of findNestedDocumentationRoots(targetDir)) {
+    const key = path.relative(targetDir, nestedRoot).replace(/\\/g, "/");
+    const nestedConfigPath = path.join(nestedRoot, "docs.json");
+    let nestedConfig = normalizeConfig();
+    if (fs.existsSync(nestedConfigPath)) {
+      nestedConfig = normalizeConfig(parseDocConfigJson(fs.readFileSync(nestedConfigPath, "utf-8"), nestedConfigPath));
+    }
+
+    const nestedDocs: Record<string, string> = {};
+    for (const file of scanDirectory(nestedRoot)) {
+      const raw = fs.readFileSync(path.join(nestedRoot, file), "utf-8");
+      const slug = file.replace(/\.(md|mdx)$/i, "");
+      const cleanSlug = slug.toLowerCase() === "readme" || slug.toLowerCase() === "index" ? "README" : slug;
+      nestedDocs[cleanSlug] = raw;
+      nestedDocs[file] = raw;
+    }
+
+    sites[key] = {
+      name: nestedConfig.name || key,
+      manifest: generateManifest(nestedRoot, nestedConfig),
+      docs: nestedDocs,
+      componentsSource: bundleCustomComponents(path.join(nestedRoot, ".dmd", "components.js")),
+    };
+  }
+
+  return sites;
+}
+
 export function shouldWatchDocumentationSource(rootDir: string, changedPath: string): boolean {
   const relativePath = path.relative(rootDir, changedPath).replace(/\\/g, "/");
   const firstSegment = relativePath.split("/")[0];
@@ -220,9 +257,26 @@ export async function buildCommand(targetDirArg: string = "./docs", options: Bui
       console.warn(chalk.yellow("  ⚠ Local runtime bundle not found, linking CDN script."));
     }
 
+    const embedNestedDocs = config.offline?.embedNestedDocs !== false;
+    const nestedSites =
+      embedNestedDocs && options.buildNested !== false ? collectNestedOfflineSites(targetDir) : undefined;
+    const nestedCount = nestedSites ? Object.keys(nestedSites).length : 0;
+    if (nestedCount > 0) {
+      console.log(
+        chalk.green(
+          `  ✔ Embedded ${nestedCount} nested documentation site${nestedCount === 1 ? "" : "s"} into the offline bundle`,
+        ),
+      );
+    }
+
     const envelope: OfflineEnvelope = {
       version: OFFLINE_FORMAT_VERSION,
-      data: { manifest, docs: docsMap, componentsSource },
+      data: {
+        manifest,
+        docs: docsMap,
+        componentsSource,
+        ...(nestedSites && nestedCount > 0 ? { nestedSites } : {}),
+      },
       runtime: bundleJs,
     };
     const encodedEnvelope = encodeCompressedOfflineEnvelope(envelope);

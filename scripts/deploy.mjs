@@ -106,9 +106,10 @@ function publishArgs() {
 }
 
 function prepareVersion(nextVersion) {
-  runNpm(["version", nextVersion, "--no-git-tag-version"]);
   const changelog = fs.readFileSync(changelogPath, "utf-8");
-  fs.writeFileSync(changelogPath, promoteChangelog(changelog, nextVersion, localIsoDate()));
+  const promoted = promoteChangelog(changelog, nextVersion, localIsoDate());
+  runNpm(["version", nextVersion, "--no-git-tag-version"]);
+  fs.writeFileSync(changelogPath, promoted);
 }
 
 function commitTrackedRelease(version) {

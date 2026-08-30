@@ -45,6 +45,15 @@ Option details
   assert.equal(headings[2].id, "configuration");
 });
 
+test("manifest headings carry clean plain text for search indexing", () => {
+  const headings = extractHeadings(
+    "# React &middot; ![GitHub license](https://img.shields.io/badge/a.svg) and `npm test`\n",
+  );
+
+  assert.equal(headings[0].text, "React · GitHub license and npm test");
+  assert.equal(headings[0].id, "react-middot-github-licensehttpsimgshieldsiobadgeasvg-and-npm-test");
+});
+
 test("Scan templates directory and generate manifest", () => {
   const templatesDir = path.resolve(__dirname, "../templates");
   const files = scanDirectory(templatesDir);

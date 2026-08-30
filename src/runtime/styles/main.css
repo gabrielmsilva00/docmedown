@@ -1432,6 +1432,24 @@ a:hover {
   padding-left: calc(0.55rem - 2px);
 }
 
+/* Inline Markdown inside page-map entries: badge images, code, and links stay
+   compact and inherit the map typography instead of showing raw syntax. */
+.dmd-toc-inline img {
+  display: inline-block;
+  height: 1em;
+  width: auto;
+  margin: 0 0.15em;
+  vertical-align: -0.12em;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  filter: none;
+}
+
+.dmd-toc-inline code {
+  font-size: 0.85em;
+}
+
 /* ==========================================================================
    FOOTER & NEXT/PREV
    ========================================================================== */
@@ -1672,6 +1690,108 @@ a:hover {
   border-top: 1px solid var(--dmd-border-color);
   font-size: 0.75rem;
   color: var(--dmd-text-muted);
+}
+
+/* ==========================================================================
+   OFFLINE NOTICE
+   Self-contained copies surface a dismissible toast that expands into a
+   limitations modal; unfulfillable file links read as disabled.
+   ========================================================================== */
+.dmd-offline-toast {
+  position: fixed;
+  left: 50%;
+  bottom: max(1rem, env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  z-index: 320;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem;
+  max-width: min(560px, calc(100vw - 2rem));
+  padding: 0.6rem 0.6rem 0.6rem 0.95rem;
+  background: var(--dmd-bg-card);
+  color: var(--dmd-text-secondary);
+  border: 1px solid var(--dmd-border-color);
+  border-radius: var(--dmd-radius-md);
+  box-shadow: var(--dmd-shadow-lg);
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+.dmd-offline-toast-action {
+  border: 0;
+  background: var(--dmd-accent-subtle);
+  color: var(--dmd-accent);
+  font-weight: 650;
+  font-size: 0.78rem;
+  padding: 0.35rem 0.7rem;
+  border-radius: var(--dmd-radius-sm);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--dmd-transition);
+}
+
+.dmd-offline-toast-action:hover {
+  background: var(--dmd-accent);
+  color: var(--dmd-bg-card);
+}
+
+.dmd-offline-toast-dismiss {
+  border: 0;
+  background: none;
+  color: var(--dmd-text-muted);
+  font-size: 1.05rem;
+  line-height: 1;
+  padding: 0.15rem 0.4rem;
+  border-radius: var(--dmd-radius-sm);
+  cursor: pointer;
+}
+
+.dmd-offline-toast-dismiss:hover {
+  color: var(--dmd-text-primary);
+  background: var(--dmd-bg-tertiary);
+}
+
+.dmd-offline-modal {
+  width: min(560px, calc(100vw - 2rem));
+  max-height: min(640px, calc(100dvh - 2rem));
+  overflow-y: auto;
+  background: var(--dmd-bg-card);
+  border: 1px solid var(--dmd-border-color);
+  border-radius: var(--dmd-radius-lg);
+  box-shadow: var(--dmd-shadow-lg);
+  padding: 1.25rem 1.4rem;
+}
+
+.dmd-offline-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.9rem;
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: var(--dmd-text-primary);
+}
+
+.dmd-offline-modal-list {
+  margin: 0 0 1.15rem;
+  padding-left: 1.15rem;
+  display: grid;
+  gap: 0.5rem;
+  color: var(--dmd-text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+.dmd-offline-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.dmd-link-disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  text-decoration: underline dotted;
 }
 
 /* ==========================================================================

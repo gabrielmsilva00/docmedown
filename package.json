@@ -1,6 +1,6 @@
 {
   "name": "docmedown",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "description": "The simplest MarkDown documenter yet. CLI & Web Script React SPA documentation engine.",
   "main": "./dist/docmedown.cjs",
   "module": "./dist/docmedown.mjs",

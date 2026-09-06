@@ -6,6 +6,14 @@ All notable changes to DocMeDown are documented here.
 
 ---
 
+## 0.1.9 - 2026-09-06
+
+### Added
+
+- `npm run deploy` is now robust: it detects when you are not authenticated and walks you through logging in (opening npm's login page in the browser automatically — no manual Enter needed), then verifies the session before publishing. It also no longer requires npm credentials for `--dry-run` validation runs.
+
+---
+
 ## 0.1.8 - 2026-09-06
 
 ### Added

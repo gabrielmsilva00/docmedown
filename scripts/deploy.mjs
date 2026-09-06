@@ -39,6 +39,55 @@ function runNpm(args, options) {
   return run(process.execPath, [npmCliPath, ...args], options);
 }
 
+function runNpmInteractive(args) {
+  // Non-capture: inherit this process's stdin/stdout so an interactive npm
+  // login (browser auth) can read/write the user's real terminal.
+  return run(process.execPath, [npmCliPath, ...args]);
+}
+
+// Ensure the publisher is authenticated to the registry before a real deploy.
+// Prefer a machine-readable token in the environment; fall back to an
+// interactive `npm login` on the user's own terminal (the browser auto-opens
+// via the direct openUrl path — no manual Enter needed). If we're not on a
+// TTY we can't complete an interactive login here, so we fail with guidance.
+function ensureAuthenticated() {
+  const whoami = runNpm(["whoami"], { capture: true });
+  if (whoami.status === 0) {
+    console.log(`\n✓ npm authenticated as ${whoami.stdout.trim() || "(default user)"}`);
+    return;
+  }
+
+  if (process.env.NPM_TOKEN || process.env.NODE_AUTH_TOKEN) {
+    throw new Error(`npm is not authenticated. Set NPM_TOKEN (or the configured auth token) and retry.`);
+  }
+
+  const interactive = Boolean(process.stdin.isTTY && process.stdout.isTTY);
+  if (!interactive) {
+    throw new Error(
+      `npm is not authenticated and this is not an interactive terminal, so an automatic ` +
+        `login is not possible.\n\n` +
+        `Run "npm login" first (it will open your browser), or set the NPM_TOKEN / node:auth-token ` +
+        `environment variable and rerun the deploy.`,
+    );
+  }
+
+  console.log(`\n🚦 npm is not authenticated. Opening the login page in your browser…`);
+  try {
+    // login uses the browser automatically (direct openUrl, no manual Enter);
+    // on this interactive terminal, the user completes the web flow and any
+    // one-time code is collected right here.
+    runNpmInteractive(["login"]);
+  } catch (err) {
+    throw new Error(`npm login failed. Please try "npm login" manually, then rerun the deploy.\n${err.message}`);
+  }
+
+  const verify = runNpm(["whoami"], { capture: true });
+  if (verify.status !== 0) {
+    throw new Error(`npm login did not complete. Please run "npm login" manually, then rerun the deploy.`);
+  }
+  console.log(`\n✓ npm authenticated as ${verify.stdout.trim() || "(default user)"}`);
+}
+
 function readPackage() {
   const packageJson = JSON.parse(fs.readFileSync(packagePath, "utf-8"));
   if (!packageJson.name || !packageJson.version) {
@@ -136,9 +185,9 @@ ensureMainBranch();
 run("git", ["fetch", "origin", "main"]);
 const initialRemote = readRemoteCounts();
 ensureSafeWorkingTree();
-// Only a real (non-dry) deploy publishes to npm, so only then require auth.
+// Only a real (non-dry) deploy publishes to npm, so only then ensure auth.
 // A dry run validates the toolchain without needing npm credentials.
-if (!isDryRun) runNpm(["whoami"]);
+if (!isDryRun) ensureAuthenticated();
 
 let packageJson = readPackage();
 let packageName = packageJson.name;

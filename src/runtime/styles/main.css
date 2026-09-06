@@ -1,4 +1,5 @@
 @import './themes.css';
+@import 'katex/dist/katex.min.css';
 
 /* ==========================================================================
    RESET & BASE
@@ -59,6 +60,66 @@ a {
 
 a:hover {
   color: var(--dmd-accent-hover);
+}
+
+/* ==========================================================================
+   SCROLLBARS — themed, family-aware
+   Replaces the default white system scrollbar that clashed with every dark
+   surface (see sidebar screenshot). Single token set drives Firefox
+   (scrollbar-color/width) and WebKit (::-webkit-scrollbar) so Atlas,
+   Blueprint, Terminal and Editorial – in both light and dark modes –
+   resolve to a native-feeling but never default-white control. Track stays
+   transparent so it blends with whatever surface owns the scroll container
+   (sidebar, TOC, search, code, tables, viewport). Thumb uses the family
+   border token at rest, blooms to text-muted on hover and accent on
+   active/drag. Radius follows --dmd-radius-sm so Terminal stays sharp
+   (0px), Blueprint squared (2px), Atlas soft (6px) and Editorial pillowed
+   (8px).
+   ========================================================================== */
+:root {
+  --dmd-scrollbar-size: 9px;
+  --dmd-scrollbar-track: transparent;
+  --dmd-scrollbar-thumb: var(--dmd-border-color);
+  --dmd-scrollbar-thumb-hover: var(--dmd-text-muted);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--dmd-scrollbar-thumb) var(--dmd-scrollbar-track);
+}
+
+*::-webkit-scrollbar {
+  width: var(--dmd-scrollbar-size);
+  height: var(--dmd-scrollbar-size);
+}
+
+*::-webkit-scrollbar-track {
+  background: var(--dmd-scrollbar-track);
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: var(--dmd-scrollbar-thumb);
+  border-radius: var(--dmd-radius-sm);
+  border: 2px solid var(--dmd-scrollbar-track);
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: var(--dmd-scrollbar-thumb-hover);
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:active {
+  background-color: var(--dmd-accent);
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+html {
+  scrollbar-gutter: stable;
 }
 
 /* ==========================================================================
@@ -1097,59 +1158,109 @@ a:hover {
   -webkit-overflow-scrolling: touch;
 }
 
+/* Prism token theme — dark-coded surfaces, visible in every family (code bg always dark) */
+.dmd-code-block-wrapper .token.comment,
+.dmd-code-block-wrapper .token.prolog,
+.dmd-code-block-wrapper .token.cdata { color: #6b7280; font-style: italic; }
+.dmd-code-block-wrapper .token.punctuation { color: #94a3b8; }
+.dmd-code-block-wrapper .token.property,
+.dmd-code-block-wrapper .token.tag,
+.dmd-code-block-wrapper .token.boolean,
+.dmd-code-block-wrapper .token.number,
+.dmd-code-block-wrapper .token.constant,
+.dmd-code-block-wrapper .token.symbol,
+.dmd-code-block-wrapper .token.deleted { color: #f472b6; }
+.dmd-code-block-wrapper .token.selector,
+.dmd-code-block-wrapper .token.attr-name,
+.dmd-code-block-wrapper .token.string,
+.dmd-code-block-wrapper .token.char,
+.dmd-code-block-wrapper .token.builtin,
+.dmd-code-block-wrapper .token.inserted { color: #34d399; }
+.dmd-code-block-wrapper .token.operator,
+.dmd-code-block-wrapper .token.entity,
+.dmd-code-block-wrapper .token.url,
+.dmd-code-block-wrapper .token.variable { color: #38bdf8; }
+.dmd-code-block-wrapper .token.atrule,
+.dmd-code-block-wrapper .token.attr-value,
+.dmd-code-block-wrapper .token.keyword { color: #a78bfa; }
+.dmd-code-block-wrapper .token.function,
+.dmd-code-block-wrapper .token.class-name { color: #fbbf24; }
+.dmd-code-block-wrapper .token.regex,
+.dmd-code-block-wrapper .token.important { color: #fb7185; }
+.dmd-code-block-wrapper .token.important { font-weight: 700; }
+.dmd-code-block-wrapper .token.bold { font-weight: 700; }
+.dmd-code-block-wrapper .token.italic { font-style: italic; }
+.dmd-code-block-wrapper .token.entity { cursor: help; }
+
+/* KaTeX — math rendered inline/block via katex.renderToString */
+.katex-display {
+  margin: 1.1rem 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.3rem 0;
+}
+.katex-display > .katex { display: inline-block; text-align: initial; }
+.katex { font-size: 1.02em; }
+
+/* Inline katex inside article keeps article line-height; block uses displayMode */
+.dmd-markdown-body .katex-display { background: var(--dmd-bg-secondary); border-radius: var(--dmd-radius-sm); padding: 0.7rem 1rem; border: 1px solid var(--dmd-border-subtle); }
+
 /* ==========================================================================
    CALLOUTS & ALERTS
    ========================================================================== */
 .dmd-callout {
+  --dmd-callout-color: #3b82f6;
   margin: 1.5rem 0;
-  padding: 1rem 1.25rem;
+  padding: 0.9rem 1.15rem;
   border-radius: var(--dmd-radius-md);
-  border-left: 4px solid;
-  background: var(--dmd-bg-secondary);
+  border: 1px solid color-mix(in srgb, var(--dmd-callout-color) 22%, transparent);
+  border-left: 4px solid var(--dmd-callout-color);
+  background: color-mix(in srgb, var(--dmd-callout-color) 7%, var(--dmd-bg-card));
+  box-shadow: 0 1px 10px -4px color-mix(in srgb, var(--dmd-callout-color) 40%, transparent);
+  color: var(--dmd-text-primary);
 }
 
 .dmd-callout-header {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.55rem;
   font-weight: 700;
   font-size: 0.92rem;
-  margin-bottom: 0.4rem;
+  letter-spacing: 0.01em;
+  color: var(--dmd-callout-color);
+  margin-bottom: 0.35rem;
 }
-
-.dmd-callout-body p:last-child {
+.dmd-callout-header:only-child {
   margin-bottom: 0;
 }
-
-.dmd-callout-note {
-  border-color: #3b82f6;
-  background: rgba(59, 130, 246, 0.08);
+.dmd-callout-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.7rem;
+  height: 1.7rem;
+  flex: 0 0 1.7rem;
+  border-radius: var(--dmd-radius-sm);
+  background: color-mix(in srgb, var(--dmd-callout-color) 16%, transparent);
+  color: var(--dmd-callout-color);
 }
-.dmd-callout-note .dmd-callout-header { color: #3b82f6; }
-
-.dmd-callout-tip {
-  border-color: #10b981;
-  background: rgba(16, 185, 129, 0.08);
+.dmd-callout-title {
+  margin: 0;
 }
-.dmd-callout-tip .dmd-callout-header { color: #10b981; }
 
-.dmd-callout-important {
-  border-color: #8b5cf6;
-  background: rgba(139, 92, 246, 0.08);
+.dmd-callout-body {
+  color: var(--dmd-text-secondary);
+  font-size: 0.94rem;
+  line-height: 1.7;
 }
-.dmd-callout-important .dmd-callout-header { color: #8b5cf6; }
+.dmd-callout-body > *:first-child { margin-top: 0; }
+.dmd-callout-body > *:last-child { margin-bottom: 0; }
 
-.dmd-callout-warning {
-  border-color: #f59e0b;
-  background: rgba(245, 158, 11, 0.08);
-}
-.dmd-callout-warning .dmd-callout-header { color: #f59e0b; }
-
-.dmd-callout-caution {
-  border-color: #ef4444;
-  background: rgba(239, 68, 68, 0.08);
-}
-.dmd-callout-caution .dmd-callout-header { color: #ef4444; }
+.dmd-callout-note      { --dmd-callout-color: #3b82f6; }
+.dmd-callout-tip       { --dmd-callout-color: #10b981; }
+.dmd-callout-important { --dmd-callout-color: #8b5cf6; }
+.dmd-callout-warning   { --dmd-callout-color: #f59e0b; }
+.dmd-callout-caution   { --dmd-callout-color: #ef4444; }
 
 /* ==========================================================================
    TABLES
@@ -1194,38 +1305,56 @@ a:hover {
   border-radius: var(--dmd-radius-md);
   overflow: hidden;
   background: var(--dmd-bg-card);
+  box-shadow: var(--dmd-shadow-sm);
 }
 
+/* Header bar — tab row scrolls horizontally when it overflows, but the
+   scrollbar itself is never shown. */
 .dmd-tabs-header {
   display: flex;
+  align-items: center;
   gap: 0.25rem;
   padding: 0.35rem 0.5rem;
   background: var(--dmd-bg-secondary);
   border-bottom: 1px solid var(--dmd-border-color);
   overflow-x: auto;
   overscroll-behavior-inline: contain;
-  scrollbar-width: thin;
+  scrollbar-width: none;
+}
+.dmd-tabs-header::-webkit-scrollbar {
+  height: 0;
+  display: none;
 }
 
 .dmd-tab-btn {
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  padding: 0.4rem 0.85rem;
+  padding: 0.45rem 0.9rem;
   font-size: 0.85rem;
   font-weight: 500;
+  letter-spacing: 0.01em;
   background: none;
   border: none;
   color: var(--dmd-text-secondary);
   border-radius: var(--dmd-radius-sm);
   cursor: pointer;
-  transition: all var(--dmd-transition);
+  white-space: nowrap;
+  transition:
+    color var(--dmd-transition),
+    background var(--dmd-transition),
+    border-color var(--dmd-transition);
   flex: 0 0 auto;
 }
 
 .dmd-tab-btn:hover {
   color: var(--dmd-text-primary);
   background: var(--dmd-bg-tertiary);
+}
+
+.dmd-tab-btn:focus-visible {
+  outline: 2px solid var(--dmd-accent);
+  outline-offset: 1px;
 }
 
 .dmd-tab-btn.active {
@@ -1235,8 +1364,164 @@ a:hover {
   box-shadow: var(--dmd-shadow-sm);
 }
 
+.dmd-tab-icon {
+  display: inline-flex;
+  align-items: center;
+  font-size: 1em;
+  line-height: 1;
+}
+
+.dmd-tab-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .dmd-tab-panel {
   padding: 1.25rem;
+}
+.dmd-tab-panel > *:first-child { margin-top: 0; }
+.dmd-tab-panel > *:last-child { margin-bottom: 0; }
+
+.dmd-tab-content > *:first-child { margin-top: 0; }
+.dmd-tab-content > *:last-child { margin-bottom: 0; }
+
+/* Underline variant — docs-style tabs with an animated accent indicator.
+   Inactive tabs preview a thin baseline on hover, the active tab gets a
+   thicker accent bar. */
+.dmd-tabs-underline .dmd-tabs-header {
+  background: var(--dmd-bg-card);
+  padding: 0 0.5rem;
+  gap: 0;
+  border-bottom: 1px solid var(--dmd-border-subtle);
+}
+.dmd-tabs-underline .dmd-tab-btn {
+  border-radius: 0;
+  padding: 0.7rem 1rem;
+  background: transparent;
+  box-shadow: none;
+  position: relative;
+  color: var(--dmd-text-muted);
+}
+.dmd-tabs-underline .dmd-tab-btn:hover {
+  color: var(--dmd-text-primary);
+  background: transparent;
+}
+.dmd-tabs-underline .dmd-tab-btn::after {
+  content: '';
+  position: absolute;
+  left: 0.6rem;
+  right: 0.6rem;
+  bottom: -1px;
+  height: 2px;
+  border-radius: 2px;
+  background: transparent;
+  transition: background var(--dmd-transition);
+}
+.dmd-tabs-underline .dmd-tab-btn:hover::after {
+  background: var(--dmd-border-color);
+}
+.dmd-tabs-underline .dmd-tab-btn.active {
+  background: transparent;
+  box-shadow: none;
+  color: var(--dmd-accent);
+  font-weight: 600;
+}
+.dmd-tabs-underline .dmd-tab-btn.active::after {
+  background: var(--dmd-accent);
+  height: 3px;
+}
+
+/* Pills variant — segmented control. The pills sit in a recessed tray; the
+   active pill is filled with the accent and casts a faint accent glow. The
+   text color adapts to the theme (bg-card) so it always contrasts with the
+   solid accent, in both light and dark modes. */
+.dmd-tabs-pills .dmd-tabs-header {
+  background: var(--dmd-bg-secondary);
+  border-bottom: 1px solid var(--dmd-border-color);
+  padding: 0.6rem 0.75rem;
+  gap: 0.5rem;
+}
+.dmd-tabs-pills .dmd-tab-btn {
+  border-radius: var(--dmd-radius-full);
+  border: 1px solid transparent;
+  background: transparent;
+  box-shadow: none;
+}
+.dmd-tabs-pills .dmd-tab-btn:hover {
+  border-color: var(--dmd-border-color);
+  color: var(--dmd-text-primary);
+  background: var(--dmd-bg-tertiary);
+}
+.dmd-tabs-pills .dmd-tab-btn.active {
+  background: var(--dmd-accent);
+  border-color: var(--dmd-accent-hover);
+  color: var(--dmd-bg-card);
+  box-shadow: 0 2px 12px -4px var(--dmd-accent-glow);
+}
+
+/* Recessed (default) — inset/recessed tab buttons sitting in a pressed tray.
+   Inactive tabs are recessed into the tray; the active tab pops up on top. */
+.dmd-tabs-recessed .dmd-tabs-header {
+  background: var(--dmd-bg-tertiary);
+  padding: 0.35rem;
+  gap: 0.25rem;
+}
+.dmd-tabs-recessed .dmd-tab-btn {
+  border-radius: var(--dmd-radius-sm);
+  background: transparent;
+  color: var(--dmd-text-secondary);
+  box-shadow: inset 0 1px 3px color-mix(in srgb, var(--dmd-border-color) 45%, transparent);
+}
+.dmd-tabs-recessed .dmd-tab-btn:hover {
+  color: var(--dmd-text-primary);
+  background: var(--dmd-bg-card);
+  box-shadow: var(--dmd-shadow-sm);
+}
+.dmd-tabs-recessed .dmd-tab-btn.active {
+  background: var(--dmd-bg-card);
+  color: var(--dmd-accent);
+  font-weight: 600;
+  box-shadow: 0 1px 4px -1px var(--dmd-border-color);
+}
+
+/* Post-It — sticky-note tabs: slightly rotated, tinted tabs that straighten
+   and lift on hover; the active tab reads as a stuck-on note. */
+.dmd-tabs-postit .dmd-tabs-header {
+  background: transparent;
+  padding: 0.45rem 0.45rem 0;
+  gap: 0;
+  align-items: flex-end;
+  border-bottom: 1px solid var(--dmd-border-subtle);
+}
+.dmd-tabs-postit .dmd-tab-btn {
+  position: relative;
+  margin: 0 0.15rem;
+  border-radius: var(--dmd-radius-sm) var(--dmd-radius-sm) 0 0;
+  background: var(--dmd-bg-tertiary);
+  color: var(--dmd-text-secondary);
+  border: 1px solid var(--dmd-border-color);
+  border-bottom: none;
+  transform: rotate(-0.8deg) translateY(2px);
+}
+.dmd-tabs-postit .dmd-tab-btn:hover {
+  background: var(--dmd-bg-secondary);
+  color: var(--dmd-text-primary);
+  transform: rotate(0deg) translateY(0);
+}
+.dmd-tabs-postit .dmd-tab-btn.active {
+  background: var(--dmd-accent-subtle);
+  color: var(--dmd-accent);
+  font-weight: 600;
+  transform: rotate(0deg);
+  box-shadow: 0 -3px 10px -5px var(--dmd-accent-glow);
+}
+
+/* Icon-only tab (no label) — square-ish hit target. */
+.dmd-tab-btn-icon {
+  padding-left: 0.55rem;
+  padding-right: 0.55rem;
+  justify-content: center;
 }
 
 /* Cards & CardGrid */
@@ -1257,6 +1542,8 @@ a:hover {
 }
 
 .dmd-card {
+  display: flex;
+  flex-direction: column;
   padding: 1.25rem;
   background: var(--dmd-bg-card);
   border: 1px solid var(--dmd-border-color);
@@ -1271,9 +1558,54 @@ a:hover {
   box-shadow: var(--dmd-shadow-md);
 }
 
+/* Card color accents — named variants + free CSS colors via --dmd-card-accent.
+   Each variant tints the icon tile and hover ring; the body stays theme-aware. */
+.dmd-card-blue { --dmd-card-accent: #3b82f6; }
+.dmd-card-green { --dmd-card-accent: #22c55e; }
+.dmd-card-violet { --dmd-card-accent: #8b5cf6; }
+.dmd-card-amber { --dmd-card-accent: #f59e0b; }
+.dmd-card-red { --dmd-card-accent: #ef4444; }
+.dmd-card-neutral { --dmd-card-accent: var(--dmd-text-muted); }
+
+.dmd-card-blue, .dmd-card-green, .dmd-card-violet,
+.dmd-card-amber, .dmd-card-red, .dmd-card-neutral, .dmd-card-accent {
+  border-top: 3px solid var(--dmd-card-accent, var(--dmd-border-color));
+}
+
+.dmd-card-accent .dmd-card-icon,
+.dmd-card-blue .dmd-card-icon,
+.dmd-card-green .dmd-card-icon,
+.dmd-card-violet .dmd-card-icon,
+.dmd-card-amber .dmd-card-icon,
+.dmd-card-red .dmd-card-icon,
+.dmd-card-neutral .dmd-card-icon {
+  color: var(--dmd-card-accent);
+  background: color-mix(in srgb, var(--dmd-card-accent) 12%, transparent);
+}
+
+.dmd-card-link:hover .dmd-card-blue,
+.dmd-card-link:hover .dmd-card-green,
+.dmd-card-link:hover .dmd-card-violet,
+.dmd-card-link:hover .dmd-card-amber,
+.dmd-card-link:hover .dmd-card-red,
+.dmd-card-link:hover .dmd-card-neutral,
+.dmd-card-link:hover .dmd-card-accent {
+  border-color: var(--dmd-card-accent);
+}
+
+/* Container-style cards: Markdown bodies inside .dmd-card-body keep normal
+   document flow (headings, lists, tables, code) without extra chrome. */
+.dmd-card-body h2,
+.dmd-card-body h3,
+.dmd-card-body h4 {
+  margin-top: 0.25rem;
+  font-size: 1rem;
+  color: var(--dmd-text-primary);
+}
+
 .dmd-card-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 0.75rem;
   margin-bottom: 0.5rem;
 }
@@ -1281,55 +1613,374 @@ a:hover {
 .dmd-card-title {
   font-size: 1.05rem;
   font-weight: 600;
+  line-height: 1.3;
   color: var(--dmd-text-primary);
 }
+/* Beat the document heading rule (.dmd-markdown-body h3 = 0,1,1) so the card
+   title never inherits section margins that push it down. */
+.dmd-card .dmd-card-title {
+  margin: 0;
+}
 
-.dmd-card-desc {
+.dmd-card-desc,
+.dmd-card-subtitle {
+  margin: 0;
   font-size: 0.88rem;
+  line-height: 1.45;
   color: var(--dmd-text-secondary);
-  margin-bottom: 0;
+}
+
+.dmd-card-media {
+  margin: -1.25rem -1.25rem 1rem;
+  overflow: hidden;
+  border-radius: var(--dmd-radius-md) var(--dmd-radius-md) 0 0;
+  background: var(--dmd-bg-secondary);
+}
+
+.dmd-card-media img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+}
+
+.dmd-card-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  flex: 0 0 2.25rem;
+  border-radius: var(--dmd-radius-sm);
+  background: var(--dmd-accent-subtle);
+  color: var(--dmd-accent);
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.dmd-card-header-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.dmd-card-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.dmd-card-body {
+  margin-top: 0.75rem;
+  flex: 1 1 auto;
+  color: var(--dmd-text-secondary);
+  font-size: 0.9rem;
+}
+.dmd-card-body > *:first-child { margin-top: 0; }
+.dmd-card-body > *:last-child { margin-bottom: 0; }
+
+.dmd-card-footer {
+  margin-top: auto;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--dmd-border-subtle);
+  color: var(--dmd-text-muted);
+  font-size: 0.82rem;
+}
+.dmd-card-footer > *:first-child { margin-top: 0; }
+.dmd-card-footer > *:last-child { margin-bottom: 0; }
+
+@media (max-width: 900px) {
+  .dmd-card-grid-2, .dmd-card-grid-3, .dmd-card-grid-4 { grid-template-columns: 1fr; }
+}
+@media (max-width: 1280px) and (min-width: 901px) {
+  .dmd-card-grid-3, .dmd-card-grid-4 { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* Card shadow variants — on by default, opt out with shadow={false}.
+   The default uses the stronger elevation token (--dmd-shadow-md) so a
+   drop shadow is actually visible on light surfaces; Blueprint/Terminal map
+   it to a ring outline by design, which reads as depth on those flat themes.
+   The accent (--dmd-card-accent) tints a directional drop shadow BELOW the
+   card (a downward offset, not a symmetric 0 0 halo) so colored cards cast a
+   clean glow in their own hue without a "glow all around" haze. Plain cards
+   fall back to transparent, keeping a neutral shadow. */
+.dmd-card-shadow {
+  box-shadow:
+    var(--dmd-shadow-md),
+    0 6px 16px -6px color-mix(in srgb, var(--dmd-card-accent, transparent) 45%, transparent);
+}
+.dmd-card-link:hover .dmd-card-shadow {
+  box-shadow:
+    var(--dmd-shadow-lg),
+    0 12px 26px -8px color-mix(in srgb, var(--dmd-card-accent, transparent) 55%, transparent);
+}
+.dmd-card-flat,
+.dmd-card-link:hover .dmd-card-flat {
+  box-shadow: none;
+}
+
+/* CardGrid carousel — activates when cards outnumber columns.
+   Native scroll-snap track; slides are flex items sized to the viewport so
+   the track overflows horizontally. Clone zones (leading/trailing) make the
+   last → first transition gliding instead of a jump. */
+.dmd-card-carousel {
+  margin: 1.5rem 0;
+  --dmd-carousel-gap: 1rem;
+}
+
+.dmd-carousel-viewport {
+  position: relative;
+  overflow-x: auto;
+  /* overflow-x:auto forces overflow-y to a clipped box, which would slice off
+     the cards' drop/shadow glow along the bottom edge. Bottom padding gives
+     the accent shadow room to paint inside the scroll container. */
+  padding-bottom: 1.5rem;
+  scroll-snap-type: x mandatory;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  /* read by the JS slideStep() so next/prev scroll by exactly one slot */
+  gap: var(--dmd-carousel-gap);
+}
+.dmd-carousel-viewport::-webkit-scrollbar {
+  display: none;
+}
+
+.dmd-carousel-track {
+  display: flex;
+  align-items: stretch;
+  gap: var(--dmd-carousel-gap);
+  /* NOT width:max-content — a percentage flex-basis on each slide resolves
+     against this track's content box (= the viewport width), which is what
+     lets N equal slides fill the viewport and overflow it. */
+}
+
+.dmd-carousel-slide {
+  flex: 0 0 calc((100% - (var(--dmd-carousel-per-view, 1) - 1) * var(--dmd-carousel-gap)) / var(--dmd-carousel-per-view, 1));
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+  min-width: 0;
+}
+.dmd-carousel-slide > .dmd-card,
+.dmd-carousel-slide > .dmd-card-link {
+  height: 100%;
+}
+.dmd-carousel-slide > .dmd-card-link .dmd-card {
+  height: 100%;
+}
+
+.dmd-carousel-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-top: 0.85rem;
+}
+.dmd-carousel-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  flex: 0 0 2rem;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid var(--dmd-border-color);
+  background: var(--dmd-bg-card);
+  color: var(--dmd-text-secondary);
+  cursor: pointer;
+  font-size: 1.1rem;
+  line-height: 1;
+  transition: all var(--dmd-transition);
+}
+.dmd-carousel-btn:hover {
+  border-color: var(--dmd-accent);
+  color: var(--dmd-accent);
+  background: var(--dmd-accent-subtle);
+}
+.dmd-carousel-btn:focus-visible {
+  outline: 2px solid var(--dmd-accent);
+  outline-offset: 2px;
+}
+.dmd-carousel-dots {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.dmd-carousel-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--dmd-border-color);
+  cursor: pointer;
+  transition: all var(--dmd-transition);
+}
+.dmd-carousel-dot:hover {
+  background: var(--dmd-text-muted);
+}
+.dmd-carousel-dot.active {
+  background: var(--dmd-accent);
+  transform: scale(1.2);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dmd-carousel-viewport {
+    scroll-behavior: auto;
+  }
+}
+
+/* Custom Component Mountpoint Wrapper */
+.dmd-custom-component-wrapper {
+  display: contents;
 }
 
 /* Badges */
 .dmd-badge {
   display: inline-flex;
   align-items: center;
+  gap: 0.4rem;
   font-size: 0.72rem;
   font-weight: 700;
-  padding: 0.1rem 0.45rem;
+  line-height: 1;
+  padding: 0.15rem 0.5rem;
   border-radius: var(--dmd-radius-full);
   text-transform: uppercase;
   letter-spacing: 0.03em;
+  vertical-align: middle;
+  white-space: nowrap;
+  border: 1px solid transparent;
 }
 
-.dmd-badge-info { background: rgba(59, 130, 246, 0.15); color: #3b82f6; }
-.dmd-badge-success { background: rgba(16, 185, 129, 0.15); color: #10b981; }
-.dmd-badge-warning { background: rgba(245, 158, 11, 0.15); color: #f59e0b; }
-.dmd-badge-danger { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
-.dmd-badge-new { background: var(--dmd-accent-subtle); color: var(--dmd-accent); }
+.dmd-badge + .dmd-badge,
+.dmd-custom-component-wrapper + .dmd-custom-component-wrapper > .dmd-badge {
+  margin-left: 0.35rem;
+}
 
-/* Steps */
+/* Semantic hues stay stable across themes, but the fill and glow are derived
+   from each hue via color-mix so they adapt to the family's color handling. */
+.dmd-badge-info    { --dmd-badge-color: #3b82f6; }
+.dmd-badge-success { --dmd-badge-color: #10b981; }
+.dmd-badge-warning { --dmd-badge-color: #f59e0b; }
+.dmd-badge-danger  { --dmd-badge-color: #ef4444; }
+
+.dmd-badge-info,
+.dmd-badge-success,
+.dmd-badge-warning,
+.dmd-badge-danger {
+  color: var(--dmd-badge-color);
+  background: color-mix(in srgb, var(--dmd-badge-color) 14%, transparent);
+  box-shadow: 0 1px 8px -2px color-mix(in srgb, var(--dmd-badge-color) 28%, transparent);
+}
+
+.dmd-badge-new {
+  color: var(--dmd-accent);
+  background: var(--dmd-accent-subtle);
+  box-shadow: 0 1px 8px -2px var(--dmd-accent-glow);
+}
+
+.dmd-badge-neutral {
+  color: var(--dmd-text-secondary);
+  background: var(--dmd-bg-tertiary);
+  box-shadow: none;
+}
+
+/* `pill` — a more prominent, bordered chip: an outline that hugs each semantic
+   hue (or the accent for `new`), with a soft matching glow. Distinct from the
+   default translucent label. */
+.dmd-badge-pill {
+  border: 1px solid currentColor;
+  background: color-mix(in srgb, currentColor 12%, var(--dmd-bg-card));
+  box-shadow: 0 2px 10px -3px color-mix(in srgb, currentColor 35%, transparent);
+}
+.dmd-badge-neutral.dmd-badge-pill {
+  box-shadow: none;
+}
+
+.dmd-badge-icon {
+  display: inline-flex;
+  align-items: center;
+  font-size: 1em;
+  line-height: 1;
+}
+
+.dmd-badge-label:empty { display: none; }
+
+/* Status dot — pulsing indicator. The core gets a subtle halo ring for
+   crispness; the outer ring pings outward. */
+.dmd-badge-dot {
+  gap: 0.45rem;
+  padding-left: 0.55rem;
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 600;
+}
+.dmd-badge-pulse {
+  position: relative;
+  display: inline-flex;
+  width: 0.55rem;
+  height: 0.55rem;
+  flex: 0 0 0.55rem;
+}
+.dmd-badge-pulse-core {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: var(--dmd-radius-full);
+  background: currentColor;
+  box-shadow: 0 0 0 1px color-mix(in srgb, currentColor 35%, transparent);
+}
+.dmd-badge-pulse-ring {
+  position: absolute;
+  inset: -4px;
+  border-radius: var(--dmd-radius-full);
+  border: 2px solid currentColor;
+  opacity: 0.45;
+  animation: dmd-badge-ping 1.8s ease-out infinite;
+}
+@keyframes dmd-badge-ping {
+  0% { transform: scale(0.55); opacity: 0.6; }
+  80%, 100% { transform: scale(1.15); opacity: 0; }
+}
+
+/* Steps — vertical numbered stepper. Each step has a filled accent marker
+   (adaptive text + glow), a gradient connector that starts at the accent and
+   fades into the border color, and a clean content column. Markers get a
+   gentle lift on hover. */
 .dmd-steps {
   margin: 1.5rem 0;
 }
 
 .dmd-step-item {
   display: flex;
+  align-items: flex-start;
   gap: 1rem;
   position: relative;
-  padding-bottom: 1.5rem;
+  padding-bottom: 1.75rem;
+  transition: color var(--dmd-transition);
+}
+.dmd-step-item:last-child {
+  padding-bottom: 0;
 }
 
+/* Connector line between markers — accent near the current marker, bleeding
+   into the neutral border color further down. */
 .dmd-step-item::after {
   content: '';
   position: absolute;
   left: 15px;
-  top: 32px;
+  top: 34px;
   bottom: 0;
   width: 2px;
-  background: var(--dmd-border-color);
+  border-radius: 2px;
+  background: linear-gradient(to bottom, var(--dmd-accent), var(--dmd-border-color));
+  opacity: 0.55;
 }
-
 .dmd-step-item:last-child::after {
   display: none;
 }
@@ -1337,27 +1988,548 @@ a:hover {
 .dmd-step-marker {
   width: 32px;
   height: 32px;
-  border-radius: 50%;
-  background: var(--dmd-accent-subtle);
-  color: var(--dmd-accent);
+  border-radius: var(--dmd-radius-full);
+  background: var(--dmd-accent);
+  color: var(--dmd-bg-card);
   font-weight: 700;
+  font-size: 0.9rem;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  border: 2px solid var(--dmd-accent);
+  border: none;
+  box-shadow: 0 2px 10px -3px var(--dmd-accent-glow);
+  transition:
+    transform var(--dmd-transition),
+    box-shadow var(--dmd-transition);
+}
+.dmd-step-item:hover .dmd-step-marker {
+  transform: scale(1.08);
+  box-shadow: 0 4px 16px -4px var(--dmd-accent-glow);
 }
 
 .dmd-step-content {
   flex: 1;
+  min-width: 0;
 }
 
 .dmd-step-title {
-  font-size: 1.05rem;
+  font-size: 1.02rem;
   font-weight: 600;
-  margin-top: 0.25rem;
-  margin-bottom: 0.4rem;
+  letter-spacing: 0.01em;
+  margin-top: 0.3rem;
+  margin-bottom: 0.3rem;
   color: var(--dmd-text-primary);
+  transition: color var(--dmd-transition);
+}
+.dmd-step-item:hover .dmd-step-title {
+  color: var(--dmd-accent);
+}
+
+.dmd-step-body {
+  color: var(--dmd-text-secondary);
+  font-size: 0.92rem;
+  line-height: 1.7;
+  max-width: 60ch;
+}
+.dmd-step-body > *:first-child { margin-top: 0; }
+.dmd-step-body > *:last-child { margin-bottom: 0; }
+
+/* ==========================================================================
+   EXTENDED BUILTIN COMPONENTS
+   Alert, Button, Kbd, Details, Accordion, Columns, Timeline
+   ========================================================================== */
+.dmd-alert {
+  --dmd-alert-color: #3b82f6;
+  margin: 1.5rem 0;
+  padding: 0.9rem 1.15rem;
+  border-radius: var(--dmd-radius-md);
+  border: 1px solid color-mix(in srgb, var(--dmd-alert-color) 22%, transparent);
+  border-left: 4px solid var(--dmd-alert-color);
+  background: color-mix(in srgb, var(--dmd-alert-color) 7%, var(--dmd-bg-card));
+  box-shadow: 0 1px 10px -4px color-mix(in srgb, var(--dmd-alert-color) 40%, transparent);
+  color: var(--dmd-text-primary);
+}
+
+/* Header row: icon chip coloured with the type hue + title. */
+.dmd-alert-head {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-weight: 700;
+  font-size: 0.92rem;
+  letter-spacing: 0.01em;
+  color: var(--dmd-alert-color);
+  margin-bottom: 0.35rem;
+}
+.dmd-alert-head:only-child {
+  margin-bottom: 0;
+}
+.dmd-alert-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.7rem;
+  height: 1.7rem;
+  flex: 0 0 1.7rem;
+  border-radius: var(--dmd-radius-sm);
+  background: color-mix(in srgb, var(--dmd-alert-color) 16%, transparent);
+  color: var(--dmd-alert-color);
+}
+.dmd-alert-title {
+  margin: 0;
+}
+
+.dmd-alert-body {
+  color: var(--dmd-text-secondary);
+  font-size: 0.94rem;
+  line-height: 1.7;
+}
+.dmd-alert-body > *:first-child { margin-top: 0; }
+.dmd-alert-body > *:last-child { margin-bottom: 0; }
+
+.dmd-alert-note   { --dmd-alert-color: #3b82f6; }
+.dmd-alert-info   { --dmd-alert-color: #38bdf8; }
+.dmd-alert-tip,
+.dmd-alert-success { --dmd-alert-color: #10b981; }
+.dmd-alert-important { --dmd-alert-color: #8b5cf6; }
+.dmd-alert-warning { --dmd-alert-color: #f59e0b; }
+.dmd-alert-caution,
+.dmd-alert-danger { --dmd-alert-color: #ef4444; }
+
+/* Buttons */
+.dmd-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  text-decoration: none;
+  cursor: pointer;
+  border-radius: var(--dmd-radius-md);
+  border: 1px solid transparent;
+  line-height: 1.2;
+  vertical-align: middle;
+  white-space: nowrap;
+  transition:
+    color var(--dmd-transition),
+    background var(--dmd-transition),
+    border-color var(--dmd-transition),
+    box-shadow var(--dmd-transition),
+    transform var(--dmd-transition);
+}
+/* Press feedback — a gentle downward lift. */
+.dmd-btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.dmd-btn + .dmd-btn,
+a.dmd-btn + a.dmd-btn,
+button.dmd-btn + a.dmd-btn,
+a.dmd-btn + button.dmd-btn,
+button.dmd-btn + button.dmd-btn,
+.dmd-custom-component-wrapper + .dmd-custom-component-wrapper > .dmd-btn {
+  margin-left: 0.5rem;
+}
+.dmd-btn-sm { padding: 0.35rem 0.8rem; font-size: 0.82rem; }
+.dmd-btn-md { padding: 0.55rem 1.15rem; font-size: 0.92rem; }
+.dmd-btn-lg { padding: 0.75rem 1.5rem; font-size: 1rem; }
+.dmd-btn-block { display: flex; width: 100%; }
+
+.dmd-btn-primary {
+  background: var(--dmd-accent);
+  color: var(--dmd-bg-card);
+  box-shadow: 0 2px 12px -4px var(--dmd-accent-glow);
+}
+.dmd-btn-primary:hover {
+  background: var(--dmd-accent-hover);
+  color: var(--dmd-bg-card);
+  box-shadow: 0 4px 18px -4px var(--dmd-accent-glow);
+}
+
+.dmd-btn-secondary {
+  background: var(--dmd-bg-tertiary);
+  color: var(--dmd-text-primary);
+  border-color: var(--dmd-border-color);
+}
+.dmd-btn-secondary:hover {
+  border-color: var(--dmd-accent);
+  color: var(--dmd-accent);
+  background: var(--dmd-bg-tertiary);
+}
+
+.dmd-btn-outline {
+  background: transparent;
+  color: var(--dmd-accent);
+  border-color: var(--dmd-accent);
+}
+.dmd-btn-outline:hover {
+  background: var(--dmd-accent-subtle);
+  border-color: var(--dmd-accent-hover);
+}
+
+.dmd-btn-ghost {
+  background: transparent;
+  color: var(--dmd-text-secondary);
+}
+.dmd-btn-ghost:hover {
+  color: var(--dmd-accent);
+  background: var(--dmd-accent-subtle);
+}
+
+.dmd-btn-danger {
+  background: color-mix(in srgb, #dc2626 88%, var(--dmd-bg-card));
+  color: var(--dmd-bg-card);
+  box-shadow: 0 2px 12px -4px rgba(220, 38, 38, 0.4);
+}
+.dmd-btn-danger:hover {
+  background: #b91c1c;
+  color: var(--dmd-bg-card);
+  box-shadow: 0 4px 18px -4px rgba(220, 38, 38, 0.5);
+}
+
+.dmd-btn-icon {
+  display: inline-flex;
+  align-items: center;
+  font-size: 1.05em;
+  line-height: 1;
+}
+.dmd-btn-label:empty { display: none; }
+
+.dmd-btn-loading { cursor: progress; opacity: 0.85; }
+.dmd-btn-spinner {
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+}
+.dmd-btn-spinner svg { animation: dmd-btn-spin 0.9s linear infinite; }
+@keyframes dmd-btn-spin { to { transform: rotate(360deg); } }
+
+.dmd-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+  transform: none;
+  box-shadow: none;
+}
+a.dmd-btn { display: inline-flex; }
+
+.dmd-btn-icon-only {
+  padding-left: 0.65rem;
+  padding-right: 0.65rem;
+}
+.dmd-btn-icon-only.dmd-btn-lg { padding-left: 0.8rem; padding-right: 0.8rem; }
+.dmd-btn-icon-only .dmd-btn-icon { font-size: 1.15em; }
+
+/* Standalone kbd pills inside markdown body */
+.dmd-markdown-body kbd.dmd-kbd { display: inline-block; margin: 0 0.1rem; }
+
+.dmd-kbd-group {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+}
+.dmd-kbd-chord {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+.dmd-kbd-plus {
+  color: var(--dmd-text-muted);
+  font-size: 0.8em;
+  user-select: none;
+}
+
+/* Details / Disclosure */
+.dmd-details {
+  margin: 1.5rem 0;
+  border: 1px solid var(--dmd-border-color);
+  border-radius: var(--dmd-radius-md);
+  background: var(--dmd-bg-card);
+  overflow: hidden;
+}
+
+.dmd-details-summary {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.1rem;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--dmd-text-primary);
+  list-style: none;
+  user-select: none;
+}
+.dmd-details-summary::-webkit-details-marker { display: none; }
+.dmd-details-summary::before {
+  content: '▸';
+  color: var(--dmd-accent);
+  transition: transform var(--dmd-transition);
+}
+.dmd-details[open] .dmd-details-summary::before { transform: rotate(90deg); }
+.dmd-details-summary:hover { background: var(--dmd-bg-secondary); }
+
+.dmd-details-body {
+  padding: 0.25rem 1.1rem 1rem;
+  color: var(--dmd-text-secondary);
+  border-top: 1px solid var(--dmd-border-subtle);
+}
+.dmd-details-body p:last-child { margin-bottom: 0; }
+
+/* Accordion */
+.dmd-accordion {
+  margin: 1.5rem 0;
+  border: 1px solid var(--dmd-border-color);
+  border-radius: var(--dmd-radius-md);
+  background: var(--dmd-bg-card);
+  overflow: hidden;
+  box-shadow: var(--dmd-shadow-sm);
+}
+
+.dmd-accordion-item + .dmd-accordion-item { border-top: 1px solid var(--dmd-border-color); }
+
+.dmd-accordion-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.9rem 1.1rem;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.95rem;
+  letter-spacing: 0.01em;
+  color: var(--dmd-text-primary);
+  text-align: left;
+  transition:
+    background var(--dmd-transition),
+    color var(--dmd-transition);
+}
+.dmd-accordion-trigger:hover {
+  background: var(--dmd-bg-secondary);
+  color: var(--dmd-text-primary);
+}
+.dmd-accordion-trigger:focus-visible {
+  outline: 2px solid var(--dmd-accent);
+  outline-offset: -2px;
+}
+/* The open trigger tints to the accent, signaling the active section. */
+.dmd-accordion-item.open .dmd-accordion-trigger {
+  color: var(--dmd-accent);
+  background: var(--dmd-accent-subtle);
+}
+
+.dmd-accordion-label {
+  transition: color var(--dmd-transition);
+}
+
+.dmd-accordion-chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.6rem;
+  height: 1.6rem;
+  flex: 0 0 1.6rem;
+  border-radius: var(--dmd-radius-full);
+  color: var(--dmd-accent);
+  background: color-mix(in srgb, var(--dmd-accent) 12%, transparent);
+  transition: transform var(--dmd-transition);
+}
+.dmd-accordion-item.open .dmd-accordion-chevron {
+  transform: rotate(180deg);
+}
+
+/* Panel: kept mounted and animated via max-height + opacity so open/close
+   slides smoothly instead of popping. Reduced-motion users skip the height
+   animation (scroll-behavior/height are instant) but keep the state toggle. */
+.dmd-accordion-panel {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  padding: 0 1.1rem;
+  color: var(--dmd-text-secondary);
+  transition:
+    max-height var(--dmd-transition),
+    opacity var(--dmd-transition),
+    padding var(--dmd-transition);
+}
+.dmd-accordion-panel.open {
+  max-height: 1000px;
+  opacity: 1;
+  padding: 0.5rem 1.1rem 1rem;
+}
+.dmd-accordion-panel > *:first-child { margin-top: 0; }
+.dmd-accordion-panel p:last-child { margin-bottom: 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  .dmd-accordion-panel {
+    transition: none;
+  }
+}
+
+/* Columns — responsive grid with selectable column treatments. The layout
+   collapses to fewer columns as the viewport narrows so multi-column grids
+   never get squeezed into unreadable slivers on small screens. */
+.dmd-columns {
+  display: grid;
+  gap: 1.25rem;
+  margin: 1.5rem 0;
+}
+.dmd-columns-2 { grid-template-columns: repeat(2, 1fr); }
+.dmd-columns-3 { grid-template-columns: repeat(3, 1fr); }
+.dmd-columns-4 { grid-template-columns: repeat(4, 1fr); }
+
+/* Column base — `normal` (default) is borderless + flush: just content flow,
+   no card chrome. The typographic reset applies to every variant. */
+.dmd-column {
+  padding: 1rem;
+}
+.dmd-column > *:first-child { margin-top: 0; }
+.dmd-column > *:last-child { margin-bottom: 0; }
+
+/* `card` — elevated panel, matching the Card component's look. */
+.dmd-columns-card .dmd-column {
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--dmd-border-color);
+  border-radius: var(--dmd-radius-md);
+  background: var(--dmd-bg-card);
+  box-shadow: var(--dmd-shadow-sm);
+  transition:
+    border-color var(--dmd-transition),
+    box-shadow var(--dmd-transition),
+    transform var(--dmd-transition);
+}
+.dmd-columns-card .dmd-column:hover {
+  border-color: color-mix(in srgb, var(--dmd-accent) 40%, var(--dmd-border-color));
+  box-shadow: var(--dmd-shadow-md);
+  transform: translateY(-1px);
+}
+
+/* `recessed` — inset tray: sits *below* the page surface rather than above it. */
+.dmd-columns-recessed .dmd-column {
+  border-radius: var(--dmd-radius-md);
+  background: var(--dmd-bg-secondary);
+  box-shadow: inset 0 2px 8px color-mix(in srgb, var(--dmd-border-color) 35%, transparent);
+}
+
+/* `neon` — accent outline + glow: the accent bleeds through the border and a
+   soft matching halo. */
+.dmd-columns-neon .dmd-column {
+  border: 1px solid var(--dmd-accent);
+  border-radius: var(--dmd-radius-md);
+  background: color-mix(in srgb, var(--dmd-accent) 6%, var(--dmd-bg-card));
+  box-shadow:
+    0 0 0 1px var(--dmd-accent),
+    0 0 16px -4px var(--dmd-accent-glow);
+}
+
+/* Responsive collapse — blur 4-across into 3, then 2, then 1 as space tightens. */
+@media (max-width: 1100px) {
+  .dmd-columns-4 { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 900px) {
+  .dmd-columns-3, .dmd-columns-4 { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 560px) {
+  .dmd-columns-2, .dmd-columns-3, .dmd-columns-4 { grid-template-columns: 1fr; }
+}
+
+/* Timeline — vertical event flow. Each item has a filled accent dot (with a
+   soft glow and adaptive center), a gradient connector that starts at the
+   accent and fades to the border color, and a clean content column. The row
+   nudges the dot/title on hover, matching Steps. */
+.dmd-timeline {
+  margin: 1.75rem 0;
+  padding-left: 0.25rem;
+  position: relative;
+}
+
+.dmd-timeline-item {
+  position: relative;
+  display: flex;
+  gap: 1rem;
+  padding-bottom: 1.5rem;
+}
+.dmd-timeline-item:last-child { padding-bottom: 0; }
+
+/* Connector between dots — accent near the current node, bleeding to neutral. */
+.dmd-timeline-item::before {
+  content: '';
+  position: absolute;
+  left: 7px;
+  top: 22px;
+  bottom: 0;
+  width: 2px;
+  border-radius: 2px;
+  background: linear-gradient(to bottom, var(--dmd-accent), var(--dmd-border-color));
+  opacity: 0.45;
+}
+.dmd-timeline-item:last-child::before { display: none; }
+
+.dmd-timeline-dot {
+  width: 16px;
+  height: 16px;
+  margin-top: 4px;
+  border-radius: var(--dmd-radius-full);
+  background: var(--dmd-accent);
+  border: 2px solid var(--dmd-bg-card);
+  box-shadow: 0 0 0 1px var(--dmd-accent), 0 2px 8px -2px var(--dmd-accent-glow);
+  flex-shrink: 0;
+  z-index: 1;
+  transition:
+    transform var(--dmd-transition),
+    box-shadow var(--dmd-transition);
+}
+.dmd-timeline-item:hover .dmd-timeline-dot {
+  transform: scale(1.15);
+  box-shadow: 0 0 0 1px var(--dmd-accent), 0 0 12px -2px var(--dmd-accent-glow);
+}
+
+.dmd-timeline-content {
+  min-width: 0;
+  flex: 1;
+}
+
+.dmd-timeline-title {
+  font-weight: 600;
+  font-size: 1.02rem;
+  letter-spacing: 0.01em;
+  color: var(--dmd-text-primary);
+  transition: color var(--dmd-transition);
+}
+.dmd-timeline-item:hover .dmd-timeline-title {
+  color: var(--dmd-accent);
+}
+
+.dmd-timeline-subtitle {
+  font-family: var(--dmd-font-mono);
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--dmd-accent);
+  background: var(--dmd-accent-subtle);
+  display: inline-flex;
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--dmd-radius-full);
+  margin-top: 0.2rem;
+  margin-bottom: 0.4rem;
+}
+
+.dmd-timeline-body {
+  color: var(--dmd-text-secondary);
+  font-size: 0.92rem;
+  line-height: 1.7;
+  max-width: 60ch;
+}
+.dmd-timeline-body > *:first-child { margin-top: 0; }
+.dmd-timeline-body p:last-child { margin-bottom: 0; }
+
+@media (max-width: 900px) {
+  .dmd-columns-2, .dmd-columns-3, .dmd-columns-4 { grid-template-columns: 1fr; }
 }
 
 /* ==========================================================================
@@ -1596,12 +2768,25 @@ a:hover {
 .dmd-kbd {
   font-family: var(--dmd-font-mono);
   font-size: 0.72rem;
-  padding: 0.15rem 0.4rem;
+  font-weight: 600;
+  line-height: 1.2;
+  padding: 0.18rem 0.45rem;
   border-radius: var(--dmd-radius-sm);
-  background: var(--dmd-bg-tertiary);
+  background: linear-gradient(to bottom, var(--dmd-bg-card), var(--dmd-bg-tertiary));
   border: 1px solid var(--dmd-border-color);
-  color: var(--dmd-text-muted);
+  /* Two-tone keycap: a darker bottom edge + a subtle top inner highlight. */
+  border-bottom-width: 2px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 1px 2px var(--dmd-shadow-sm);
+  color: var(--dmd-text-secondary);
   white-space: nowrap;
+  vertical-align: middle;
+}
+/* Key-press feel: the bottom edge collapses and the key dips. */
+.dmd-kbd:active {
+  border-bottom-width: 1px;
+  transform: translateY(1px);
 }
 
 .dmd-search-results {

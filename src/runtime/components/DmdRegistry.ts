@@ -13,6 +13,18 @@ export class ComponentRegistry {
     Badge: Builtins.Badge,
     Steps: Builtins.Steps,
     Step: Builtins.Step,
+    Alert: Builtins.Alert,
+    Callout: Builtins.Callout,
+    Button: Builtins.Button,
+    Kbd: Builtins.Kbd,
+    Details: Builtins.Details,
+    Accordion: Builtins.Accordion,
+    AccordionItem: Builtins.AccordionItem,
+    Columns: Builtins.Columns,
+    Column: Builtins.Column,
+    Timeline: Builtins.Timeline,
+    TimelineItem: Builtins.TimelineItem,
+    Item: Builtins.Item,
   };
 
   private constructor() {

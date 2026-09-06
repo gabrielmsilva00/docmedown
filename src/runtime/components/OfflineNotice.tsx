@@ -110,8 +110,13 @@ export const OfflineNotice: React.FC = () => {
                   Links to other documentation files are disabled because nested sites were not embedded in this copy.
                 </li>
               )}
-              <li>Links to the internet, such as repository or social links, still require a connection.</li>
-              <li>This copy never checks for updates. Rebuild the documentation to refresh its content.</li>
+              <li>
+                Links to the internet, such as repository or social links, still require a connection and may not always
+                work as intended.
+              </li>
+              <li>
+                This copy never checks for updates. It is required to rebuild the documentation to refresh its content.
+              </li>
             </ul>
             <div className="dmd-offline-modal-footer">
               <button type="button" className="dmd-btn-primary" onClick={() => setModalOpen(false)}>

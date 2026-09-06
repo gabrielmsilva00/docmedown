@@ -62,6 +62,13 @@ DocMeDown comes with built-in interactive components ready to use:
 
 ### Feature Card Grid
 
+Cards can be fully prop-driven (self-closing) or container-style with arbitrary
+Markdown/HTML bodies. `title` is optional; `color` accepts a named variant
+(`blue`, `green`, `violet`, `amber`, `red`, `neutral`) or any CSS color, and
+`shadow={false}` opts out of the default drop shadow. Grids containing more
+cards than columns automatically become a carousel with prev/next controls,
+position dots, and wrap-around cycling.
+
 ```html
 <CardGrid cols={2}>
   <Card
@@ -77,4 +84,17 @@ DocMeDown comes with built-in interactive components ready to use:
     badgeType="new"
   />
 </CardGrid>
+```
+
+Container-style card with a Markdown body:
+
+```html
+<Card color="blue" title="Quick start">
+  Install with **npm**, then write Markdown:
+
+  - zero config
+  - hot reload
+
+  <Badge type="success">STABLE</Badge>
+</Card>
 ```

@@ -43,9 +43,35 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({
   const FAMILY_VALUES: ThemeFamily[] = ["atlas", "blueprint", "terminal", "editorial"];
   const DENSITY_VALUES: ThemeDensity[] = ["comfortable", "compact"];
 
+  // localStorage is unavailable under opaque origins (blob: URLs produced by
+  // openEmbeddedNestedSite, sandboxed iframes, or privacy modes). Reading
+  // window.localStorage itself throws a SecurityError there, so every
+  // access is guarded — a crash here took down the entire nested offline
+  // document (see blob:null SecurityError report).
+  const safeGet = (key: string): string | null => {
+    try {
+      if (typeof window === "undefined") return null;
+      // Access via window to avoid ReferenceError in non-browser bundles.
+      const storage: Storage | undefined = (window as unknown as { localStorage?: Storage }).localStorage;
+      if (!storage) return null;
+      return storage.getItem(key);
+    } catch {
+      return null;
+    }
+  };
+
+  const safeSet = (key: string, value: string): void => {
+    try {
+      if (typeof window === "undefined") return;
+      const storage: Storage | undefined = (window as unknown as { localStorage?: Storage }).localStorage;
+      storage?.setItem(key, value);
+    } catch {
+      // storage blocked (opaque origin / quota) — persist is best-effort only.
+    }
+  };
+
   const readSavedPreference = <T extends string>(key: string, allowed: T[]): T | null => {
-    if (typeof window === "undefined") return null;
-    const saved = localStorage.getItem(key) as T | null;
+    const saved = safeGet(key) as T | null;
     // Discard invalid saved values (e.g. from older runtimes) instead of
     // letting them break attribute-driven styling downstream.
     return saved && allowed.includes(saved) ? saved : null;
@@ -64,18 +90,32 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({
   );
 
   const [systemDark, setSystemDark] = useState<boolean>(() => {
-    if (typeof window !== "undefined" && window.matchMedia) {
-      return window.matchMedia("(prefers-color-scheme: dark)").matches;
+    try {
+      if (typeof window !== "undefined" && window.matchMedia) {
+        return window.matchMedia("(prefers-color-scheme: dark)").matches;
+      }
+    } catch {
+      // matchMedia may also be restricted in opaque origins
     }
     return false;
   });
 
   useEffect(() => {
-    if (typeof window === "undefined" || !window.matchMedia) return;
-    const media = window.matchMedia("(prefers-color-scheme: dark)");
-    const handler = (e: MediaQueryListEvent) => setSystemDark(e.matches);
-    media.addEventListener("change", handler);
-    return () => media.removeEventListener("change", handler);
+    try {
+      if (typeof window === "undefined" || !window.matchMedia) return;
+      const media = window.matchMedia("(prefers-color-scheme: dark)");
+      const handler = (e: MediaQueryListEvent) => setSystemDark(e.matches);
+      media.addEventListener("change", handler);
+      return () => {
+        try {
+          media.removeEventListener("change", handler);
+        } catch {
+          // ignore opaque-origin cleanup
+        }
+      };
+    } catch {
+      return undefined;
+    }
   }, []);
 
   const resolvedMode: "light" | "dark" = mode === "auto" ? (systemDark ? "dark" : "light") : mode;
@@ -105,23 +145,17 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({
 
   const setMode = (newMode: ColorMode) => {
     setModeState(newMode);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("dmd-color-mode", newMode);
-    }
+    safeSet("dmd-color-mode", newMode);
   };
 
   const setFamily = (newFamily: ThemeFamily) => {
     setFamilyState(newFamily);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("dmd-theme-family", newFamily);
-    }
+    safeSet("dmd-theme-family", newFamily);
   };
 
   const setDensity = (newDensity: ThemeDensity) => {
     setDensityState(newDensity);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("dmd-theme-density", newDensity);
-    }
+    safeSet("dmd-theme-density", newDensity);
   };
 
   const toggleMode = () => {

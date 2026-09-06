@@ -162,13 +162,22 @@ export function collectNestedOfflineSites(targetDir: string): Record<string, Off
 
 export function shouldWatchDocumentationSource(rootDir: string, changedPath: string): boolean {
   const relativePath = path.relative(rootDir, changedPath).replace(/\\/g, "/");
-  const firstSegment = relativePath.split("/")[0];
+  const segments = relativePath.split("/");
+  const firstSegment = segments[0];
+  const baseName = segments[segments.length - 1];
   const isCustomComponentModule = /(^|\/)\.dmd\/(components|index)\.js$/i.test(relativePath);
+
+  // Build outputs can be written at any depth (e.g. `.nojekyll` inside nested
+  // documentation roots), so generated artifacts are matched by basename to
+  // avoid watcher -> rebuild -> watcher feedback loops.
+  const isGeneratedOutput =
+    baseName === ".nojekyll" || GENERATED_DOC_OUTPUTS.includes(baseName) || segments.includes(".dist");
 
   return (
     Boolean(relativePath) &&
     !relativePath.startsWith("..") &&
     (!relativePath.startsWith(".") || isCustomComponentModule) &&
+    !isGeneratedOutput &&
     !GENERATED_DOC_OUTPUTS.includes(relativePath) &&
     firstSegment !== "node_modules" &&
     firstSegment !== "dist"
@@ -326,10 +335,11 @@ export async function watchBuildCommand(targetDirArg: string = "./docs", options
 
   const watcher = chokidar.watch(targetDir, {
     ignored: [
-      "**/node_modules/**",
-      "**/.git/**",
       "**/dist/**",
       "**/.dist/**",
+      "**/node_modules/**",
+      "**/.git/**",
+      "**/.nojekyll",
       "**/_manifest.json",
       "**/_docs.js",
       "**/docmedown.iife.js",

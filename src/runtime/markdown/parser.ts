@@ -1,6 +1,12 @@
 import { marked } from "marked";
 import type { DocFrontmatter, DocHeading } from "../types";
 import { processAlerts } from "./callouts";
+import {
+  expandSelfClosingComponents,
+  processComponentBodies,
+  restoreFencePlaceholders,
+  unwrapBlockComponents,
+} from "./component-body";
 import { renderCodeBlock } from "./highlighter";
 import { inlineHeadingToPlainText } from "./inline-text";
 import { renderMath } from "./katex";
@@ -82,6 +88,17 @@ export function parseMarkdown(rawContent: string, currentSlug: string = ""): Par
 
   // 2. Process callouts / alerts
   processed = processAlerts(processed);
+
+  // 3. Parse Markdown bodies inside PascalCase component regions *before*
+  // marked runs. marked treats `<Tabs>…</Tabs>` as opaque HTML and would
+  // leave inner `**markdown**` literal. processComponentBodies only touches
+  // text gaps inside matched regions (fences + inline code stay opaque), and
+  // the default inner renderer is block-aware so raw HTML/code blocks pass
+  // through while bold, links, tables, lists, and code spans parse normally.
+  // Fences inside component bodies render immediately and come back as
+  // placeholder tokens — restore them after marked.parse below.
+  const componentBodies = processComponentBodies(processed);
+  processed = componentBodies.html;
 
   const headings: DocHeading[] = [];
   const headingCounts: Record<string, number> = {};
@@ -193,9 +210,15 @@ export function parseMarkdown(rawContent: string, currentSlug: string = ""): Par
     breaks: false,
   }) as string;
 
+  // PascalCase self-closers (`<CounterWidget />`) must survive marked as
+  // explicit open/close pairs so the DOM keeps component siblings separate.
+  const withFencesRestored = restoreFencePlaceholders(html, componentBodies.fences);
+  const withExpandedComponents = expandSelfClosingComponents(withFencesRestored);
+  const unwrapBlocks = unwrapBlockComponents(withExpandedComponents);
+
   return {
     frontmatter,
-    html,
+    html: unwrapBlocks,
     headings,
     readingTimeMinutes,
   };

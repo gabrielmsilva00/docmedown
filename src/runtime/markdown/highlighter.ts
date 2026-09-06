@@ -1,6 +1,6 @@
 import Prism from "prismjs";
 
-// Import core languages
+// Import core languages — expanded set for showcase (+ aliases below)
 import "prismjs/components/prism-clike";
 import "prismjs/components/prism-javascript";
 import "prismjs/components/prism-typescript";
@@ -17,6 +17,22 @@ import "prismjs/components/prism-go";
 import "prismjs/components/prism-sql";
 import "prismjs/components/prism-docker";
 import "prismjs/components/prism-diff";
+import "prismjs/components/prism-c";
+import "prismjs/components/prism-cpp";
+import "prismjs/components/prism-csharp";
+import "prismjs/components/prism-java";
+import "prismjs/components/prism-kotlin";
+import "prismjs/components/prism-swift";
+import "prismjs/components/prism-markup-templating";
+import "prismjs/components/prism-php";
+import "prismjs/components/prism-ruby";
+import "prismjs/components/prism-toml";
+import "prismjs/components/prism-ini";
+import "prismjs/components/prism-nginx";
+import "prismjs/components/prism-graphql";
+import "prismjs/components/prism-http";
+import "prismjs/components/prism-dart";
+import "prismjs/components/prism-scala";
 
 import { encodeDiagramSource } from "./mermaid";
 
@@ -29,17 +45,51 @@ function diagramPlaceholder(code: string): string {
   return `<div class="dmd-diagram-host" data-dmd-diagram="${encodeDiagramSource(code)}"></div>`;
 }
 
+// Common aliases → canonical Prism language ids
+const LANG_ALIASES: Record<string, string> = {
+  js: "javascript",
+  ts: "typescript",
+  py: "python",
+  sh: "bash",
+  shell: "bash",
+  zsh: "bash",
+  yml: "yaml",
+  md: "markdown",
+  rs: "rust",
+  golang: "go",
+  kt: "kotlin",
+  rb: "ruby",
+  cs: "csharp",
+  "c++": "cpp",
+  "c#": "csharp",
+  gql: "graphql",
+};
+
+export function normalizeLanguage(lang: string): string {
+  const clean = lang.trim().toLowerCase();
+  return LANG_ALIASES[clean] || clean;
+}
+
+export function registerLanguage(name: string, definition: Record<string, unknown>): void {
+  Prism.languages[name] = definition as never;
+}
+
 export function highlightCode(code: string, lang: string = ""): string {
-  const cleanLang = lang.trim().toLowerCase();
+  const cleanLang = normalizeLanguage(lang);
 
   if (cleanLang === "mermaid") {
     return diagramPlaceholder(code);
   }
 
-  const grammar = Prism.languages[cleanLang] || Prism.languages.javascript;
-  const highlighted = grammar ? Prism.highlight(code, grammar, cleanLang || "javascript") : escapeHtml(code);
+  // Empty or unknown language → no false highlighting, just escape
+  if (!cleanLang || cleanLang === "text" || cleanLang === "plain" || cleanLang === "txt") {
+    return escapeHtml(code);
+  }
 
-  return highlighted;
+  const grammar = Prism.languages[cleanLang];
+  if (!grammar) return escapeHtml(code);
+
+  return Prism.highlight(code, grammar, cleanLang);
 }
 
 export function escapeHtml(str: string): string {
@@ -52,9 +102,10 @@ export function escapeHtml(str: string): string {
 }
 
 export function renderCodeBlock(code: string, infoString: string = ""): string {
-  // Parse infoString like: tsx title="App.tsx" {1,3-5}
+  // Parse infoString like: tsx title="App.tsx" {1,3-5} — first token is the language
   const parts = infoString.trim().split(/\s+/);
-  const lang = parts[0] || "text";
+  const rawLang = parts[0] || "text";
+  const lang = normalizeLanguage(rawLang) || "text";
 
   let title = "";
   const titleMatch = infoString.match(/title=["']([^"']+)["']/);

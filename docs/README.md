@@ -81,5 +81,6 @@ Below are live custom components loaded from `docs/.dmd/components.js`. The firs
 - 📦 **[Offline Single-File Bundler](./guides/offline-mode.md)**: Build single-file offline HTML bundles.
 - ⚛️ **[Custom Components Guide](./guides/custom-components.md)**: Learn how to use `.dmd` React widgets.
 - 📝 **[Markdown & Math Features](./guides/markdown-features.md)**: Alerts, Prism syntax highlighting, Mermaid, and KaTeX.
+- 🎛️ **[Markdown & Component Showcase](./showcase.md)**: Every Markdown feature and all 12+ built-in components — source next to live renders.
 - ⚙️ **[Configuration Reference](./configuration.md)**: Detailed `docs.json` options.
 - 🧪 **[Runnable Examples](./examples.md)**: Open independent nested documentation sites for local, remote, and offline workflows.

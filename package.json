@@ -1,6 +1,6 @@
 {
   "name": "docmedown",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "The simplest MarkDown documenter yet. CLI & Web Script React SPA documentation engine.",
   "main": "./dist/docmedown.cjs",
   "module": "./dist/docmedown.mjs",
@@ -49,6 +49,7 @@
     "test": "npx tsx --test tests/parser.test.ts tests/scanner.test.ts tests/theme-schema.test.ts tests/runtime-integration.test.ts tests/package-smoke.test.ts tests/hosting.test.ts tests/deploy.test.ts tests/home.test.ts",
     "test:artifacts": "npx tsx --test tests/offline-artifact.test.ts",
     "test:release": "npm run typecheck && npm run lint && npm run test && npm run build && npm run build:docs && npm run test:artifacts && npm pack --dry-run",
+    "login": "npm login",
     "deploy": "node ./scripts/deploy.mjs",
     "deploy:dry-run": "npm run deploy -- --dry-run",
     "prepublishOnly": "npm run test:release"

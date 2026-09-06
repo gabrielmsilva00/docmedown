@@ -136,7 +136,9 @@ ensureMainBranch();
 run("git", ["fetch", "origin", "main"]);
 const initialRemote = readRemoteCounts();
 ensureSafeWorkingTree();
-runNpm(["whoami"]);
+// Only a real (non-dry) deploy publishes to npm, so only then require auth.
+// A dry run validates the toolchain without needing npm credentials.
+if (!isDryRun) runNpm(["whoami"]);
 
 let packageJson = readPackage();
 let packageName = packageJson.name;

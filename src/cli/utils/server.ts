@@ -151,6 +151,7 @@ export function startDevServer(
         "**/.git/**",
         "**/dist/**",
         "**/.dist/**",
+        "**/.nojekyll",
         "**/_manifest.json",
         "**/_docs.js",
         "**/docmedown.iife.js",

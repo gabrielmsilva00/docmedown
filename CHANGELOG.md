@@ -6,6 +6,25 @@ All notable changes to DocMeDown are documented here.
 
 ---
 
+## 0.1.8 - 2026-09-06
+
+### Added
+
+- Extended built-in component library: `Alert`/`Callout` (eight semantic types), `Button` (five variants, three sizes, icons, loading and disabled states, link mode), `Kbd` (single keys and `+`-joined chords), `Details`, `Accordion`/`AccordionItem`, `Columns`/`Column`, and `Timeline`/`TimelineItem`. Everything stays zero-dependency and themed through `--dmd-*` tokens so all four theme families match.
+- `Tabs` accepts `variant="underline" | "pills"` and `defaultIndex`; `Card` supports `image`, `imageAlt`, `footer`, and `danger`/`neutral` badge types; `Badge` supports `pill`, `dot` (pulsing status dot), and `icon` props.
+- `Card` gains a `color` accent prop (named variants or any CSS color), an optional `title`, container-style Markdown/HTML bodies, and a `shadow` prop (default `true`) to toggle the drop shadow. `CardGrid` turns into a wrap-around carousel with prev/next buttons, position dots, and arrow-key cycling whenever it holds more cards than columns.
+- `Steps` now auto-numbers steps (the `step` prop is optional), and both `Tabs` and `Steps` received a visual refresh — accent glow and adaptive-contrast markers/pills plus a gradient step connector, matching the `Card` treatment across every theme.
+- `Badge` got a visual refresh: semantic types now derive their tint and a matching soft glow from a per-type color via `color-mix`, `pill` is now a real, distinct **outlined** chip variant (it was previously a no-op), and the pulsing `dot` core gained a crisp halo ring.
+- `Alert` (and its `Callout` alias) now renders a colored icon chip + title header and a tinted, softly-glowing panel in the type's hue; GitHub-style `> [!NOTE]` callouts were styled to match, with per-type `--dmd-alert-color` / `--dmd-callout-color` tokens driving the accent, fill and glow.
+- `Button` got the same polish: targeted transitions, a gentle press (`:active`) lift, theme-adaptive solid-button text (`var(--dmd-bg-card)` instead of hardcoded white, so it contrasts in dark themes), accent-glow shadows on primary, a color-mixed `danger` fill, and the `outline` hover clearing to a slightly deeper accent border.
+- `Kbd` now renders as a proper keycap — a two-tone gradient face with a darker bottom edge, subtle inner highlight and shadow, plus a key-press (`:active`) dip where the bottom edge collapses and the key nudges down.
+- `Accordion`/`AccordionItem` were enhanced: the panel stays mounted and slides open/closed via a `max-height`+`opacity` transition (with a `prefers-reduced-motion` fallback), the open trigger tints to the accent, and the chevron is now a subtle accent chip that rotates on toggle.
+- `Columns`/`Column` are now responsive — grids collapse from N columns down to 3 → 2 → 1 as the viewport narrows — and gain a `type` prop with four treatments: `normal` (default, borderless/flush), `card` (elevated panel + hover lift), `recessed` (inset tray), and `neon` (accent outline + glow).
+- `Timeline`/`TimelineItem` were refreshed to match Steps: filled accent dots with an adaptive center ring and soft glow (which scale up on hover), a gradient accent→border connector, the title tinting to the accent on hover, and the subtitle rendered as a compact accent-tinted pill.
+- New universal **`<Item>`** child resolves to a container's designated child (Timeline→TimelineItem, Accordion→AccordionItem, Columns→Column, Steps→Step, CardGrid→Card, **Tabs→Tab**), inheriting all props; it travels upward to the nearest container even through intermediate wrappers, escalates to `<Cards>` inside `<CardGrid>`, is auto-numbered inside `<Steps>`, and falls back to an `<li>` when no container is present.
+- `Tabs` gains a `type` prop (`recessed` default, plus `underline`, `pills`, `postit`) with `variant` kept as a legacy alias; `Tab` `label` is now optional so tabs can be icon-only (with an accessible derived name).
+- The Markdown Syntax & Component Showcase now pairs every built-in component with a copy-paste source block directly above its live render, including a custom `.dmd/components.js` live widget demo and runtime language registration.
+
 ## 0.1.7 - 2026-08-30
 
 ### Added

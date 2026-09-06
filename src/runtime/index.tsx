@@ -4,6 +4,7 @@ import { DocMeDownApp } from "./app";
 import * as Builtins from "./components/Builtins";
 import { ComponentRegistry } from "./components/DmdRegistry";
 import { loadDocConfig, normalizeConfig } from "./config";
+import { registerLanguage } from "./markdown/highlighter";
 import type { DocMeDownInitOptions, DocMeDownInstance } from "./types";
 
 export { DocMeDownApp } from "./app";
@@ -86,6 +87,8 @@ if (typeof window !== "undefined") {
       ComponentRegistry.getInstance().register(name, comp),
     registerComponents: (map: Record<string, React.ComponentType<any>>) =>
       ComponentRegistry.getInstance().registerMultiple(map),
+    /** Register a custom Prism grammar at runtime, e.g. from `.dmd/components.js`. */
+    registerLanguage,
     components: Builtins,
   };
 

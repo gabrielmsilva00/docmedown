@@ -7,7 +7,7 @@ import { docConfigSchema, docThemeConfigSchema } from "../src/runtime/config-sch
 
 const packageRoot = path.resolve(__dirname, "..");
 
-test("legacy accent presets resolve to their designated theme families", () => {
+test("theme family normalization, presets mapping, and validation contracts", () => {
   const mappings: Array<[string, string]> = [
     ["indigo", "atlas"],
     ["emerald", "atlas"],
@@ -21,19 +21,16 @@ test("legacy accent presets resolve to their designated theme families", () => {
   for (const [preset, expectedFamily] of mappings) {
     const config = normalizeConfig({ theme: { preset } });
     assert.equal(config.theme?.family, expectedFamily, `preset "${preset}" should map to "${expectedFamily}"`);
-    // The deprecated field must never leak into effective runtime config.
     assert.equal((config.theme as Record<string, unknown>).preset, undefined);
   }
-});
 
-test("explicit family configuration wins over legacy presets and defaults to atlas density", () => {
+  // Explicit family configuration wins over legacy presets and defaults
   const config = normalizeConfig({ theme: { preset: "cyberpunk", family: "editorial" } });
   assert.equal(config.theme?.family, "editorial");
   assert.equal(config.theme?.density, "comfortable");
   assert.equal(config.theme?.defaultMode, "auto");
-});
 
-test("unknown families, densities, or modes are rejected with a precise path", () => {
+  // Unknown families, densities, or modes are rejected with a precise path
   for (const invalidTheme of [{ family: "neon" }, { density: "roomy" }, { defaultMode: "dim" }]) {
     assert.throws(
       () => normalizeConfig({ theme: invalidTheme }),
@@ -41,44 +38,40 @@ test("unknown families, densities, or modes are rejected with a precise path", (
       `expected ${JSON.stringify(invalidTheme)} to fail with a themed path`,
     );
   }
+
+  // Template docs.json uses family contract
+  const templatePath = path.join(packageRoot, "templates", "docs.json");
+  const template = JSON.parse(fs.readFileSync(templatePath, "utf-8"));
+  assert.equal(template.theme.preset, undefined);
+  assert.equal(docConfigSchema.safeParse(template).success, true);
 });
 
-test("family schema and JSON Schema stay aligned", () => {
+test("theme schema alignment across Zod, JSON schema, and docs", () => {
   const jsonSchemaPath = path.join(packageRoot, "schemas", "docs.schema.json");
   const jsonSchema = JSON.parse(fs.readFileSync(jsonSchemaPath, "utf-8"));
-  const zodValues = docThemeConfigSchema.shape.family.unwrap().options;
-  const jsonFamily = jsonSchema.$defs.theme.properties.family;
-
-  assert.ok(jsonFamily, "docs.schema.json must declare theme.family");
-  assert.deepEqual([...jsonFamily.enum], [...zodValues]);
-  assert.equal(jsonSchema.$defs.theme.properties.preset.deprecated, true);
-});
-
-test("all documented theme enums match the executable and portable schemas", () => {
-  const jsonSchema = JSON.parse(fs.readFileSync(path.join(packageRoot, "schemas", "docs.schema.json"), "utf-8"));
   const themeShape = docThemeConfigSchema.shape;
   const properties = jsonSchema.$defs.theme.properties;
 
+  // Family enum and deprecated preset
+  const zodValues = themeShape.family.unwrap().options;
+  const jsonFamily = properties.family;
+  assert.ok(jsonFamily, "docs.schema.json must declare theme.family");
+  assert.deepEqual([...jsonFamily.enum], [...zodValues]);
+  assert.equal(properties.preset.deprecated, true);
+
+  // Density, defaultMode, codeTheme
   assert.deepEqual(properties.density.enum, themeShape.density.unwrap().options);
   assert.deepEqual(properties.defaultMode.enum, themeShape.defaultMode.unwrap().options);
   assert.deepEqual(properties.codeTheme.enum, themeShape.codeTheme.unwrap().options);
 
+  // Configuration guide documentation consistency
   const configurationGuide = fs.readFileSync(path.join(packageRoot, "docs", "configuration.md"), "utf-8");
   for (const value of properties.codeTheme.enum) assert.match(configurationGuide, new RegExp(`\\b${value}\\b`));
   assert.doesNotMatch(configurationGuide, /\bnord\b/);
 });
 
-test("template docs.json uses the family contract without legacy presets", () => {
-  const templatePath = path.join(packageRoot, "templates", "docs.json");
-  const template = JSON.parse(fs.readFileSync(templatePath, "utf-8"));
-
-  assert.equal(template.theme.preset, undefined);
-  assert.equal(docConfigSchema.safeParse(template).success, true);
-});
-
-test("every theme family defines light and dark token layers", () => {
+test("CSS token architecture, responsive shell layout, and navbar typography", () => {
   const themesCss = fs.readFileSync(path.join(packageRoot, "src/runtime/styles/themes.css"), "utf-8");
-
   for (const family of ["atlas", "blueprint", "terminal", "editorial"]) {
     assert.match(themesCss, new RegExp(`data-dmd-theme='${family}'`), `light layer missing for ${family}`);
     assert.match(
@@ -87,39 +80,27 @@ test("every theme family defines light and dark token layers", () => {
       `dark layer missing for ${family}`,
     );
   }
-
   assert.match(themesCss, /data-dmd-density='compact'/);
   assert.doesNotMatch(themesCss, /data-preset=/);
-});
 
-test("shell layout consumes density tokens instead of hardcoded chrome sizes", () => {
   const mainCss = fs.readFileSync(path.join(packageRoot, "src/runtime/styles/main.css"), "utf-8");
-
+  // Density tokens
   assert.match(mainCss, /\.dmd-navbar\s*\{[^}]*height:\s*var\(--dmd-nav-height\)/s);
   assert.match(mainCss, /\.dmd-sidebar\s*\{[^}]*width:\s*var\(--dmd-sidebar-width\)/s);
   assert.match(mainCss, /\.dmd-toc\s*\{[^}]*width:\s*var\(--dmd-toc-width\)/s);
-});
 
-test("responsive shell transitions without a sidebar and page-map breakpoint gap", () => {
-  const mainCss = fs.readFileSync(path.join(packageRoot, "src/runtime/styles/main.css"), "utf-8");
-
+  // Responsive breakpoints
   assert.match(mainCss, /@media \(max-width: 1280px\)[\s\S]*?\.dmd-main-wrapper\s*\{[\s\S]*?flex-direction:\s*column/);
   assert.match(mainCss, /@media \(max-width: 1280px\)[\s\S]*?\.dmd-toc\s*\{[\s\S]*?width:\s*100%/);
   assert.match(mainCss, /@media \(max-width: 1024px\)[\s\S]*?\.dmd-sidebar\s*\{[\s\S]*?position:\s*fixed/);
   assert.doesNotMatch(mainCss, /@media \(max-width: 960px\)/);
-});
 
-test("responsive shell includes touch and short-viewport adaptations", () => {
-  const mainCss = fs.readFileSync(path.join(packageRoot, "src/runtime/styles/main.css"), "utf-8");
-
+  // Touch and short-viewport adaptations
   assert.match(mainCss, /@media \(hover: none\), \(pointer: coarse\)/);
   assert.match(mainCss, /@media \(max-height: 600px\)/);
   assert.match(mainCss, /\.dmd-sidebar-link,[\s\S]*?\.dmd-toc-link[\s\S]*?min-height:\s*44px/);
-});
 
-test("navbar enforces a single-line policy for every element", () => {
-  const mainCss = fs.readFileSync(path.join(packageRoot, "src/runtime/styles/main.css"), "utf-8");
-
+  // Navbar single-line policy
   assert.match(mainCss, /\.dmd-navbar\s*\{[^}]*white-space:\s*nowrap/);
   assert.match(mainCss, /\.dmd-brand-title\s*\{[^}]*text-overflow:\s*ellipsis/);
   assert.match(mainCss, /\.dmd-brand-version\s*\{[^}]*white-space:\s*nowrap/);
@@ -136,16 +117,13 @@ test("navbar enforces a single-line policy for every element", () => {
   assert.match(mainCss, /\.dmd-nav-link\s*\{[^}]*white-space:\s*nowrap/);
   assert.match(mainCss, /\.dmd-offline-download-btn\s*\{[^}]*white-space:\s*nowrap/);
   assert.match(mainCss, /\.dmd-appearance-trigger\s*\{[^}]*white-space:\s*nowrap/);
-
-  // Dropdown panels rendered from the navbar restore normal text flow.
   assert.match(mainCss, /\.dmd-appearance-panel\s*\{[^}]*white-space:\s*normal/);
   assert.match(mainCss, /\.dmd-offline-download-error\s*\{[^}]*white-space:\s*normal/);
 });
 
-test("Mermaid viewer uses a square clipped viewport with pan-only navigation", () => {
+test("runtime mounting and diagram interactivity contracts", () => {
   const mainCss = fs.readFileSync(path.resolve(__dirname, "../src/runtime/styles/main.css"), "utf-8");
   const stageRule = mainCss.match(/\.dmd-diagram-stage\s*\{([\s\S]*?)\n\}/)?.[1] || "";
-
   assert.match(stageRule, /aspect-ratio:\s*1/);
   assert.match(stageRule, /overflow:\s*hidden/);
   assert.match(stageRule, /overscroll-behavior:\s*none/);
@@ -153,21 +131,12 @@ test("Mermaid viewer uses a square clipped viewport with pan-only navigation", (
   assert.doesNotMatch(stageRule, /overflow:\s*auto/);
   assert.doesNotMatch(stageRule, /overflow-y:\s*(?:auto|scroll)/);
   assert.doesNotMatch(stageRule, /scrollbar/);
-});
 
-test("Mermaid wheel panning uses a non-passive native listener", () => {
   const component = fs.readFileSync(path.resolve(__dirname, "../src/ui/components/MermaidDiagram.svelte"), "utf-8");
-
   assert.match(component, /addEventListener\("wheel",\s*handleWheel,\s*\{\s*passive:\s*false\s*\}\)/);
   assert.match(component, /removeEventListener\("wheel",\s*handleWheel\)/);
   assert.doesNotMatch(component, /onWheel=\{handleWheel\}/);
-});
 
-test("DocMeDown clears the mount container before mounting the Svelte app", () => {
-  // Svelte's mount() does not replace existing target children the way React's
-  // createRoot().render() did. The offline shell's bootstrap placeholder
-  // ("Opening offline documentation…") and prerendered shell articles would
-  // otherwise remain visible above the reader.
   const entry = fs.readFileSync(path.resolve(__dirname, "../src/ui/index.ts"), "utf-8");
   const clearAt = entry.indexOf('container.innerHTML = ""');
   const mountAt = entry.indexOf("mount(App, { target: container })");

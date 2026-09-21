@@ -24,23 +24,20 @@ function installEmbeddedCorpus(docs: Record<string, string>): void {
   (globalThis as any).document = { getElementById: () => null };
 }
 
-test("peekDocContent resolves embedded documents synchronously", () => {
+test("LocalDocLoader caching, synchronous embedded document peek, and HTTP cache warming", async () => {
+  // Synchronous peek for embedded documents and miss handling
   installEmbeddedCorpus({ "guides/intro.md": "# Intro", "README.md": "# Home" });
   const loader = new LocalDocLoader();
 
   assert.equal(loader.peekDocContent("guides/intro"), "# Intro");
   assert.equal(loader.peekDocContent("guides/intro.md"), "# Intro");
   assert.equal(loader.peekDocContent("README"), "# Home");
-});
-
-test("peekDocContent reports a miss when a network fetch is still required", () => {
-  installEmbeddedCorpus({ "README.md": "# Home" });
-  const loader = new LocalDocLoader();
-
   assert.equal(loader.peekDocContent("not-embedded"), undefined);
-});
 
-test("a document fetched over HTTP is cached, so the next visit is synchronous", async () => {
+  // Corpus exposition for warming parse cache
+  assert.deepEqual(loader.embeddedDocSources(), { "guides/intro": "# Intro", README: "# Home" });
+
+  // HTTP fetching and caching on revisit
   (globalThis as any).window = { location: { protocol: "https:" } };
   (globalThis as any).document = { getElementById: () => null };
 
@@ -52,20 +49,13 @@ test("a document fetched over HTTP is cached, so the next visit is synchronous",
       : new Response("Not found", { status: 404 });
   }) as typeof fetch;
 
-  const loader = new LocalDocLoader();
-  assert.equal(loader.peekDocContent("guide"), undefined);
+  const httpLoader = new LocalDocLoader();
+  assert.equal(httpLoader.peekDocContent("guide"), undefined);
 
-  assert.equal(await loader.fetchDocContent("guide"), "# Guide");
+  assert.equal(await httpLoader.fetchDocContent("guide"), "# Guide");
   assert.equal(calls, 1);
 
-  // Revisiting the page needs no request and no await.
-  assert.equal(loader.peekDocContent("guide"), "# Guide");
+  // Revisiting the page needs no request and no await
+  assert.equal(httpLoader.peekDocContent("guide"), "# Guide");
   assert.equal(calls, 1);
-});
-
-test("embeddedDocSources exposes the corpus so the parse cache can be warmed", () => {
-  installEmbeddedCorpus({ "a.md": "A", "b.md": "B" });
-  const loader = new LocalDocLoader();
-
-  assert.deepEqual(loader.embeddedDocSources(), { a: "A", b: "B" });
 });

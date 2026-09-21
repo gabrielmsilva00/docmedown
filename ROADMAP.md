@@ -131,26 +131,29 @@ v0.3.0a ──────► v0.3.1-v0.3.x ──────► v0.4.0 ──�
 
 ---
 
-### v0.3.x — Svelte Builtins & Complete Lit Eviction
+### v0.3.1 — Svelte Builtins & Complete Lit Eviction (Released)
 **Goal:** Migrate all in-house Markdown components to Svelte 5 and remove Lit from dependencies.
 
-- [ ] **Convert 18 built-in components from Lit to Svelte 5**:
-  - [ ] `Alert.svelte` (note, info, tip, warning, caution, success, danger)
-  - [ ] `Card.svelte` (title, description, footer, inferred Markdown heading chrome)
-  - [ ] `CardGrid.svelte` & `carousel.svelte` (wrapping loop window, clone slides, swipe gestures)
-  - [ ] `Tabs.svelte` & `Tab.svelte` (recessed, underline, pills, post-it notes, sync group IDs)
-  - [ ] `Badge.svelte` & `Button.svelte`
-  - [ ] `Columns.svelte` & `Details.svelte`
-  - [ ] `Accordion.svelte` & `Item.svelte`
-  - [ ] `Timeline.svelte` & `Step.svelte` / `Steps.svelte`
-  - [ ] `Kbd.svelte`
-- [ ] **Component Mounting Strategy**:
-  - [ ] Leverage Svelte 5 custom element compilation (`<svelte:options customElement=... shadow="none" />`) or direct Svelte `mount()` in Markdown renderer.
-  - [ ] Preserve light-DOM theme styling and slot projection.
-- [ ] **Evict Lit from package**:
-  - [ ] Remove `lit` from `package.json` dependencies.
-  - [ ] Eliminate Lit styles and decorators.
-  - [ ] Verify bundle size reduction in `tests/bundle-size.test.ts`.
+- [x] **Convert 19 built-in components from Lit to Svelte 5**:
+  - [x] `Alert.svelte` & `Callout.svelte` (note, info, tip, warning, caution, success, danger)
+  - [x] `Card.svelte` (title, description, footer, inferred Markdown heading chrome)
+  - [x] `CardGrid.svelte` & `carousel.ts` (wrapping loop window, clone slides, swipe gestures)
+  - [x] `Tabs.svelte` & `Tab.svelte` (recessed, underline, pills, post-it notes, sync group IDs)
+  - [x] `Badge.svelte` & `Button.svelte`
+  - [x] `Columns.svelte` & `Column.svelte`
+  - [x] `Details.svelte`
+  - [x] `Accordion.svelte` & `AccordionItem.svelte` & `Item.svelte`
+  - [x] `Timeline.svelte` & `TimelineItem.svelte` & `Step.svelte` / `Steps.svelte`
+  - [x] `Kbd.svelte`
+- [x] **Component Mounting Strategy**:
+  - [x] Leverage Svelte 5 custom element compilation (`<svelte:options customElement={{ tag: "dmd-..." }} />`) with shadow root style adoption via `adoptSharedStyles`.
+  - [x] Preserve theme styling and slot projection across variants.
+- [x] **Evict Lit from package**:
+  - [x] Remove `lit` from `package.json` dependencies.
+  - [x] Eliminate Lit styles and decorators.
+  - [x] Verify bundle size reduction in `tests/bundle-size.test.ts`.
+- [x] **Test suite optimization**:
+  - [x] Consolidated bloated micro-tests across built-ins, splash, theme schema, and loaders into 106 high-signal tests.
 
 ---
 

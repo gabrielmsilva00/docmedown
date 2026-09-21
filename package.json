@@ -1,6 +1,6 @@
 {
   "name": "docmedown",
-  "version": "0.3.0-alpha.0",
+  "version": "0.3.1",
   "description": "The simplest MarkDown documenter yet. CLI, web script, and static-site compiler with AI-native distribution.",
   "main": "./dist/docmedown.cjs",
   "module": "./dist/docmedown.mjs",
@@ -96,7 +96,6 @@
     "commander": "^12.1.0",
     "esbuild": "^0.28.2",
     "gray-matter": "^4.0.3",
-    "lit": "^3.3.3",
     "mime-types": "^2.1.35",
     "open": "^10.1.0",
     "prompts": "^2.4.2",

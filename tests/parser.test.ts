@@ -426,39 +426,35 @@ test("buildWrapClones duplicates exactly the cards a wrapped window needs", () =
 });
 
 test("card grid carousel renders real slide wrappers (broken-carousel guard)", () => {
-  const cardGridSrc = fs.readFileSync(path.resolve(__dirname, "../src/ui/builtins/CardGrid.ts"), "utf-8");
+  const cardGridSrc = fs.readFileSync(path.resolve(__dirname, "../src/ui/builtins/CardGrid.svelte"), "utf-8");
   // The flex track's items must be .dmd-carousel-slide wrappers with named
   // slots. The card hosts render `display: contents` and have no box to size
   // or snap; a bare slot made every card an unstyled flex item and the
   // carousel had zero horizontal overflow.
-  assert.match(cardGridSrc, /class="dmd-carousel-slide"/);
-  assert.match(cardGridSrc, /slot name="dmd-carousel-\$\{i\}"/);
+  assert.match(cardGridSrc, /className = "dmd-carousel-slide"/);
+  assert.match(cardGridSrc, /slot\.name = `dmd-carousel-\$\{i\}`/);
   // Each card is assigned onto its named slide slot when slotchange fires.
   assert.match(cardGridSrc, /setAttribute\("slot", `dmd-carousel-\$\{i\}`\)/);
   // Offsets are measured from the slides, not the boxless card hosts.
   assert.match(cardGridSrc, /querySelectorAll<HTMLElement>\("\.dmd-carousel-slide"\)/);
   // Prev/next scroll the viewport to the cached offset (scrollIntoView on a
   // display:contents host has no box to align).
-  assert.match(cardGridSrc, /_viewport\.scrollTo\(\{ left: offset, behavior \}\)/);
+  assert.match(cardGridSrc, /viewport\.scrollTo\(\{ left: offset, behavior \}\)/);
   // Named-slot re-fires after render are ignored so cardCount never resets.
   assert.match(cardGridSrc, /if \(slot\.name\) return;/);
-  // The viewport must be tracked with the ref DIRECTIVE — the call form
-  // `${ref(this._viewportRef)}`, not the attribute form `ref=...` (a plain
-  // `ref` attribute receives the Ref object as a string and nothing gates the
-  // offsets/scroll/snap paths). Bundle-wise the import must also carry `ref`.
-  assert.match(cardGridSrc, /\$\{ref\(this\._viewportRef\)\}/);
-  assert.match(cardGridSrc, /import \{ createRef, ref \} from "lit\/directives\/ref\.js";/);
+  // The viewport must be bound in Svelte.
+  assert.match(cardGridSrc, /bind:this=\{viewport\}/);
   // The loop closes with duplicated slides: the wrapped window (five-one) needs
   // the first cards again after the real ones, so they are cloned onto clone
   // slides and kept out of the tab order / accessibility tree.
-  assert.match(cardGridSrc, /buildWrapClones\(this\._cardCount, this\._perView\)/);
-  assert.match(cardGridSrc, /slot name="dmd-carousel-clone-\$\{k\}"/);
+  assert.match(cardGridSrc, /buildWrapClones\(cardCount, perView\)/);
+  assert.match(cardGridSrc, /slot\.name = `dmd-carousel-clone-\$\{k\}`/);
   assert.match(cardGridSrc, /setAttribute\("slot", `dmd-carousel-clone-\$\{slotIndex\}`\)/);
   assert.match(cardGridSrc, /clone\.setAttribute\("inert", ""\)/);
   assert.match(cardGridSrc, /clone\.setAttribute\("aria-hidden", "true"\)/);
   // The duplicates are never counted as slides or scrolled to.
-  assert.match(cardGridSrc, /slice\(0, this\._cardCount\)\.map\(\(slide\) => slide\.offsetLeft\)/);
-  assert.match(cardGridSrc, /this\._clearClones\(\);/);
+  assert.match(cardGridSrc, /slice\(0, cardCount\)\.map\(\(slide\) => slide\.offsetLeft\)/);
+  assert.match(cardGridSrc, /clearClones\(\);/);
 });
 
 test("block-level custom components are not wrapped in <p> tags", () => {

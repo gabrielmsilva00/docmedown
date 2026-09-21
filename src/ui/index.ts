@@ -9,22 +9,26 @@ import type { DocMeDownInitOptions, DocMeDownInstance } from "../runtime/types";
 import { doc } from "./doc-context.svelte";
 import { ComponentRegistry, defineDmd, dmdTag } from "./registry";
 import { theme } from "./theme.svelte";
-// Lit builtin custom elements: self-register on import (customElements.define).
-import "./builtins/Accordion.ts"; // also defines dmd-accordion-item
-import "./builtins/Alert.ts"; // also defines dmd-callout
-import "./builtins/Badge.ts";
-import "./builtins/Button.ts";
-import "./builtins/Card.ts";
-import "./builtins/CardGrid.ts";
-import "./builtins/Columns.ts"; // also defines dmd-column
-import "./builtins/Details.ts";
-import "./builtins/Item.ts";
-import "./builtins/Kbd.ts";
-import "./builtins/Step.ts";
-import "./builtins/Steps.ts";
-import "./builtins/Tab.ts";
-import "./builtins/Tabs.ts";
-import "./builtins/Timeline.ts"; // also defines dmd-timeline-item
+// Svelte builtin custom elements: self-register on import (<svelte:options customElement>).
+import "./builtins/Accordion.svelte";
+import "./builtins/AccordionItem.svelte";
+import "./builtins/Alert.svelte";
+import "./builtins/Callout.svelte";
+import "./builtins/Badge.svelte";
+import "./builtins/Button.svelte";
+import "./builtins/Card.svelte";
+import "./builtins/CardGrid.svelte";
+import "./builtins/Columns.svelte";
+import "./builtins/Column.svelte";
+import "./builtins/Details.svelte";
+import "./builtins/Item.svelte";
+import "./builtins/Kbd.svelte";
+import "./builtins/Step.svelte";
+import "./builtins/Steps.svelte";
+import "./builtins/Tab.svelte";
+import "./builtins/Tabs.svelte";
+import "./builtins/Timeline.svelte";
+import "./builtins/TimelineItem.svelte";
 
 export { loadDocConfig, normalizeConfig } from "../runtime/config";
 export {

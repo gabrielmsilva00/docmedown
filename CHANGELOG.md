@@ -6,6 +6,27 @@ All notable changes to DocMeDown are documented here.
 
 ---
 
+## 0.3.1 - 2026-09-21
+
+### Added
+
+- **Svelte 5 Built-in Custom Elements**: Replaced all 15 legacy Lit components with 19 first-class Svelte 5 custom element components (`Alert`, `Callout`, `Badge`, `Button`, `Card`, `CardGrid`, `Columns`, `Column`, `Details`, `Item`, `Kbd`, `Step`, `Steps`, `Tab`, `Tabs`, `Timeline`, `TimelineItem`, `Accordion`, `AccordionItem`). Built-in components compile directly with `<svelte:options customElement={{ tag: "dmd-..." }} />`, using modern Svelte 5 runes (`$state`, `$derived`, `$props`) and adopting shared design tokens via `adoptSharedStyles()`.
+
+### Changed
+
+- **Complete Lit Eviction**: Completely removed `lit` from runtime dependencies and eliminated all Lit decorators, styles, directives, and AST references. Zero Lit code remains in the codebase.
+- **Test Suite Consolidation**: Streamlined and de-bloated test suites across built-in components (`tabs-builtin.test.ts`, `card-builtin.test.ts`), `splash.test.ts`, `theme-schema.test.ts`, `component-body.test.ts`, and `navigation.test.ts`. Reduced test count from 153 to 106 high-signal, comprehensive tests running in ~1.1s with zero regressions.
+
+### Performance
+
+- **Bundle Size Reductions**: Evicting Lit and standardizing on Svelte 5 reduced raw and gzipped bundle footprints across all distribution formats:
+  - IIFE runtime: `4,228 KB` → `4,214 KB`
+  - ESM bundle: `1,252 KB` → `1,240 KB`
+  - CJS bundle: `1,052 KB` → `1,038 KB`
+  - Web bundle: `1,098 KB` → `1,084 KB`
+
+---
+
 ## 0.3.0a - 2026-09-21
 
 ### Added

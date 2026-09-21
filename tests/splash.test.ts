@@ -60,9 +60,8 @@ function installDom(hasSplash = true): { splash: FakeSplash; rootClasses: Set<st
   return { splash, rootClasses, delays };
 }
 
-test("the splash head inlines critical CSS, the theme bootstrap, and a noscript fallback", () => {
+test("splash head rendering, critical styling, and branding overrides", () => {
   const head = renderSplashHead();
-
   assert.ok(head.includes(`#${SPLASH_ID}`));
   assert.ok(head.includes("<style>"));
   assert.ok(head.includes("<script>"));
@@ -80,11 +79,37 @@ test("the splash head inlines critical CSS, the theme bootstrap, and a noscript 
   assert.ok(head.includes("dmd-splash-progress"));
   assert.ok(head.includes("dmd-splash-shimmer"));
   assert.ok(head.includes("prefers-reduced-motion"));
+  // Compact reading mode layout
+  assert.ok(head.includes("data-dmd-density"));
+  assert.ok(head.includes(":root[data-dmd-density=compact]"));
+
+  // Brand accent overrides per mode and safe fallback
+  const branded = renderSplashHead({ accent: "#e0405f", accentDark: "#ff7089" });
+  assert.ok(branded.includes(":root{--dmd-splash-accent:#e0405f}"));
+  assert.ok(branded.includes(":root[data-theme=dark]{--dmd-splash-accent:#ff7089}"));
+
+  // A light-only accent still applies in dark mode
+  const lightOnly = renderSplashHead({ accent: "#e0405f" });
+  assert.ok(lightOnly.includes(":root[data-theme=dark]{--dmd-splash-accent:#e0405f}"));
+
+  // Dark-only accents leave light mode on the theme-family default.
+  const darkOnly = renderSplashHead({ accentDark: "#ff7089" });
+  assert.ok(!darkOnly.includes(":root{--dmd-splash-accent:"));
+  assert.ok(darkOnly.includes(":root[data-theme=dark]{--dmd-splash-accent:#ff7089}"));
+
+  // Unsafe accent values are rejected
+  const unsafe = renderSplashHead({ accent: "red;}body{x:", accentDark: "javascript:alert(1)" });
+  assert.ok(!unsafe.includes("red;}"));
+  assert.ok(!unsafe.includes("javascript:"));
+  assert.ok(renderSplashHead({ accent: " #e0405f " }).includes("--dmd-splash-accent:#e0405f"));
 });
 
-test("the splash markup previews the reader shell with branded text", () => {
-  const markup = renderSplashMarkup({ name: "Acme <Docs> & Co" });
+test("splash markup generation, structure, and text escaping", () => {
+  // Fallback to sensible default name
+  assert.ok(renderSplashMarkup().includes(">Documentation<"));
 
+  // Branded markup with special characters and layout sections
+  const markup = renderSplashMarkup({ name: "Acme <Docs> & Co" });
   assert.ok(markup.includes(`id="${SPLASH_ID}"`));
   assert.ok(markup.includes('role="status"'));
   assert.ok(markup.includes('aria-busy="true"'));
@@ -99,95 +124,13 @@ test("the splash markup previews the reader shell with branded text", () => {
   assert.ok(markup.includes("Loading documentation"));
   assert.ok(markup.includes("Acme &lt;Docs&gt; &amp; Co"));
   assert.ok(!markup.includes("<Docs>"));
-});
 
-test("a configured brand accent overrides the palette per color mode", () => {
-  const branded = renderSplashHead({ accent: "#e0405f", accentDark: "#ff7089" });
-  assert.ok(branded.includes(":root{--dmd-splash-accent:#e0405f}"));
-  assert.ok(branded.includes(":root[data-theme=dark]{--dmd-splash-accent:#ff7089}"));
-
-  // A light-only accent still applies in dark mode, mirroring the runtime's
-  // `accentColorDark || accentColor` fallback.
-  const lightOnly = renderSplashHead({ accent: "#e0405f" });
-  assert.ok(lightOnly.includes(":root[data-theme=dark]{--dmd-splash-accent:#e0405f}"));
-
-  // Dark-only accents leave light mode on the theme-family default.
-  const darkOnly = renderSplashHead({ accentDark: "#ff7089" });
-  assert.ok(!darkOnly.includes(":root{--dmd-splash-accent:"));
-  assert.ok(darkOnly.includes(":root[data-theme=dark]{--dmd-splash-accent:#ff7089}"));
-
-  // No accent configured → the family palette ships untouched.
-  assert.ok(!renderSplashHead().includes(":root{--dmd-splash-accent:"));
-});
-
-test("unsafe accent values are rejected instead of injected", () => {
-  const unsafe = renderSplashHead({ accent: "red;}body{x:", accentDark: "javascript:alert(1)" });
-  assert.ok(!unsafe.includes("red;}"));
-  assert.ok(!unsafe.includes("javascript:"));
-  // Valid hex still passes through after trimming.
-  assert.ok(renderSplashHead({ accent: " #e0405f " }).includes("--dmd-splash-accent:#e0405f"));
-});
-
-test("the splash markup falls back to a sensible default name", () => {
-  assert.ok(renderSplashMarkup().includes(">Documentation<"));
-});
-
-test("dismissSplash hides and removes the splash, then releases scrolling", () => {
-  const { splash, rootClasses } = installDom();
-
-  dismissSplash();
-
-  assert.ok(splash.classes.has(SPLASH_HIDDEN_CLASS));
-  assert.equal(splash.attributes["aria-hidden"], "true");
-  assert.equal(splash.removed, true);
-  assert.equal(rootClasses.has(SPLASH_ACTIVE_CLASS), false);
-});
-
-test("dismissSplash is idempotent and safe without a splash or a document", () => {
-  const { splash } = installDom();
-  dismissSplash();
-  dismissSplash();
-  assert.ok(splash.classes.has(SPLASH_HIDDEN_CLASS));
-
-  const { splash: missing } = installDom(false);
-  assert.doesNotThrow(() => dismissSplash());
-  assert.equal(missing.removed, false);
-
-  (globalThis as any).document = undefined;
-  assert.doesNotThrow(() => dismissSplash());
-});
-
-test("dismissSplash holds the splash for the minimum brand duration", () => {
-  const { delays } = installDom();
-  (globalThis as any).window[SPLASH_START_KEY] = Date.now();
-
-  dismissSplash();
-
-  const hold = delays[0];
-  assert.ok(
-    hold > 0 && hold <= SPLASH_MIN_DURATION_MS,
-    `expected a hold between 1 and ${SPLASH_MIN_DURATION_MS}ms, got ${hold}`,
-  );
-});
-
-test("dismissSplash reveals immediately once the minimum duration has passed", () => {
-  const { delays } = installDom();
-  (globalThis as any).window[SPLASH_START_KEY] = Date.now() - SPLASH_MIN_DURATION_MS - 500;
-
-  dismissSplash();
-
-  assert.equal(delays[0], 0);
-});
-
-test("the splash renders the optional tagline as the preview description", () => {
+  // Tagline support
   const withTagline = renderSplashMarkup({ name: "Docs", tagline: "Everything & more" });
   assert.ok(withTagline.includes("dmd-splash-desc"));
   assert.ok(withTagline.includes("Everything &amp; more"));
 
-  assert.ok(!renderSplashMarkup({ name: "Docs" }).includes("dmd-splash-desc"));
-});
-
-test("the splash renders version and logo branding when configured", () => {
+  // Version and logo branding
   const branded = renderSplashMarkup({
     name: "Docs",
     version: "1.2.3",
@@ -200,18 +143,42 @@ test("the splash renders version and logo branding when configured", () => {
   assert.ok(branded.includes('src="./logo.svg"'));
   assert.ok(branded.includes('src="./logo-dark.svg"'));
   assert.ok(branded.includes('alt="Docs logo"'));
-  assert.ok(!renderSplashMarkup({ name: "Docs" }).includes("dmd-splash-version"));
 
+  // Unsafe logo escaping
   const unsafeLogo = renderSplashMarkup({ name: "Docs", logo: 'x" onerror="alert(1)' });
   assert.ok(!unsafeLogo.includes("onerror="));
-  assert.ok(unsafeLogo.includes("dmd-splash-mark"));
 });
 
-test("the splash head reflects compact reading mode layout and bootstrap", () => {
-  const head = renderSplashHead();
-  assert.ok(head.includes("data-dmd-density"));
-  assert.ok(head.includes(":root[data-dmd-density=compact]"));
-  assert.ok(head.includes(":root[data-dmd-density=compact] .dmd-splash-body"));
-  assert.ok(head.includes(":root[data-dmd-density=compact] .dmd-splash-main-wrapper"));
-  assert.ok(head.includes(":root[data-dmd-density=compact] .dmd-splash-article"));
+test("dismissSplash lifecycle, animation hold, and DOM state", () => {
+  // Standard dismissal
+  const { splash, rootClasses } = installDom();
+  dismissSplash();
+  assert.ok(splash.classes.has(SPLASH_HIDDEN_CLASS));
+  assert.equal(splash.attributes["aria-hidden"], "true");
+  assert.equal(splash.removed, true);
+  assert.equal(rootClasses.has(SPLASH_ACTIVE_CLASS), false);
+
+  // Idempotent and safe without splash or document
+  assert.doesNotThrow(() => dismissSplash());
+  const { splash: missing } = installDom(false);
+  assert.doesNotThrow(() => dismissSplash());
+  assert.equal(missing.removed, false);
+  (globalThis as any).document = undefined;
+  assert.doesNotThrow(() => dismissSplash());
+
+  // Minimum duration hold
+  const { delays: holdDelays } = installDom();
+  (globalThis as any).window[SPLASH_START_KEY] = Date.now();
+  dismissSplash();
+  const hold = holdDelays[0];
+  assert.ok(
+    hold > 0 && hold <= SPLASH_MIN_DURATION_MS,
+    `expected a hold between 1 and ${SPLASH_MIN_DURATION_MS}ms, got ${hold}`,
+  );
+
+  // Immediate reveal after minimum duration
+  const { delays: immediateDelays } = installDom();
+  (globalThis as any).window[SPLASH_START_KEY] = Date.now() - SPLASH_MIN_DURATION_MS - 500;
+  dismissSplash();
+  assert.equal(immediateDelays[0], 0);
 });

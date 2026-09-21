@@ -635,18 +635,32 @@ Author first-class Svelte 5 components as `.svelte` files under `.dmd/` — comp
 
 ### Custom Syntax-Highlighting Languages
 
-Register a Prism grammar at runtime for languages that are not bundled:
+Register a custom Prism grammar at build time and runtime for languages that are not bundled by default using `.dmd/setup.js`:
 
-```js title=".dmd/components.js"
+```js title=".dmd/setup.js"
 window.DocMeDown.registerLanguage("mylang", {
   comment: /#.*/,
   string: /"(?:[^"\\]|\\.)*"/,
-  keyword: /\b(?:draw|plot|render)\b/,
-  number: /\b\d+(?:\.\d+)?\b/,
-});
+  keyword: /\b(?:pipeline|draw|plot|render|at|transform|scale|rotate)\b/,
+  boolean: /\b(?:true|false)\b/,
+  number: /-?\b\d+(?:\.\d+)?\b/,
+  operator: /[+\-*/=<>!:]+/,
+  punctuation: /[{}[\];(),.]/,
+}, "#06b6d4");
 ```
 
-Then use it with `mylang` fenced code blocks anywhere in your documentation.
+Use it with `mylang` fenced code blocks anywhere in your documentation. DocMeDown automatically tints the language pill or filename badge and syntax-highlights every token:
+
+```mylang title="pipeline.mylang" {2,4}
+# Custom graphics pipeline in mylang
+pipeline "RaymarchRenderer" {
+  draw "Sphere" at (0.0, 1.5, -3.0)
+  transform scale: 1.25, rotate: 45
+  plot 120.5
+  render "VectorField"
+}
+```
+
 
 ---
 

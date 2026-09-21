@@ -3,7 +3,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { test } from "node:test";
 import { processAlerts } from "../src/runtime/markdown/callouts";
-import { parseActiveLines, renderCodeBlock } from "../src/runtime/markdown/highlighter";
+import { parseActiveLines, registerLanguage, renderCodeBlock } from "../src/runtime/markdown/highlighter";
+
 import { renderMath } from "../src/runtime/markdown/katex";
 import {
   buildMermaidConfig,
@@ -626,4 +627,25 @@ test("inline custom components remain inline inside paragraphs", () => {
   const parsed = parseMarkdown(inlineBadge, "test");
   // Inline badges authored together stay inside paragraph markup
   assert.match(parsed.html, /<p><Badge type="info">INFO<\/Badge> <Badge type="success">STABLE<\/Badge><\/p>/);
+});
+
+test("custom language registration with custom color and code block rendering", () => {
+  registerLanguage(
+    "testdsl",
+    {
+      comment: /#.*/,
+      string: /"(?:[^"\\]|\\.)*"/,
+      keyword: /\b(?:draw|render)\b/,
+      number: /\b\d+\b/,
+    },
+    "#06b6d4",
+  );
+
+  const md = '```testdsl title="scene.testdsl" {2}\n# Comment\ndraw "Sphere"\n```';
+  const parsed = parseMarkdown(md, "test");
+  assert.ok(parsed.html.includes('class="token comment"'));
+  assert.ok(parsed.html.includes('class="token keyword"'));
+  assert.ok(parsed.html.includes('class="token string"'));
+  assert.ok(parsed.html.includes("color:#06b6d4"));
+  assert.ok(parsed.html.includes("scene.testdsl"));
 });

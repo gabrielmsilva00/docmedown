@@ -185,3 +185,47 @@ test("scanner never ingests generated AI context files as source documents", () 
   assert.deepEqual(files, ["README.md", "guides/intro.md"]);
   assert.ok(!files.includes("SKILL.md"));
 });
+
+test("build-time setup loads .dmd/setup.js and prerenders custom language tokens in static site", () => {
+  const { root, config } = createFixture();
+  const dmdDir = path.join(root, ".dmd");
+  fs.mkdirSync(dmdDir, { recursive: true });
+  fs.writeFileSync(
+    path.join(dmdDir, "setup.js"),
+    `
+    if (typeof window !== "undefined" && window.DocMeDown?.registerLanguage) {
+      window.DocMeDown.registerLanguage("testbuildlang", {
+        keyword: /\\b(?:render|compute)\\b/,
+        number: /\\b\\d+\\b/,
+      }, "#ec4899");
+    }
+    `,
+    "utf-8",
+  );
+
+  const testDoc = [
+    "# Build-time custom grammar",
+    "",
+    '```testbuildlang title="compute.testbuildlang"',
+    "compute 100",
+    "render 200",
+    "```",
+    "",
+  ].join("\n");
+
+  fs.writeFileSync(path.join(root, "guides", "custom.md"), testDoc, "utf-8");
+
+  const manifest = generateManifest(root, config);
+  const docsMap = {
+    README: fs.readFileSync(path.join(root, "README.md"), "utf-8"),
+    "guides/intro": fs.readFileSync(path.join(root, "guides", "intro.md"), "utf-8"),
+    "guides/custom": testDoc,
+  };
+
+  emitStaticSite(root, manifest, docsMap, config);
+
+  const staticPage = fs.readFileSync(path.join(root, "guides", "custom", "index.html"), "utf-8");
+  assert.ok(staticPage.includes('class="token keyword">compute</span>'));
+  assert.ok(staticPage.includes('class="token number">100</span>'));
+  assert.ok(staticPage.includes("compute.testbuildlang"));
+});

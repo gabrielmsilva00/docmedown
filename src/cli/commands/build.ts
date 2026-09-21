@@ -7,6 +7,7 @@ import chokidar from "chokidar";
 import { buildSync } from "esbuild";
 import { compile } from "svelte/compiler";
 import { normalizeConfig, parseDocConfigJson } from "../../runtime/config";
+
 import {
   createCompressedOfflineHtml,
   OFFLINE_FORMAT_VERSION,
@@ -50,6 +51,10 @@ export function encodeCompressedOfflineEnvelope(envelope: OfflineEnvelope): stri
 export function escapeInlineScriptContent(value: string): string {
   return value.replace(/<\/script/gi, "<\\/script");
 }
+
+import { loadBuildTimeCustomSetup } from "../utils/custom-setup";
+
+export { loadBuildTimeCustomSetup };
 
 /**
  * Resolves and bundles custom components for embedding in `_docs.js` or single-file bundles.
@@ -117,6 +122,12 @@ export function bundleCustomComponents(targetPath: string): string | undefined {
           entryExports.push(`${JSON.stringify(baseName)}: ${JSON.stringify(tag)}`);
         }
 
+        for (const setupFile of ["setup.js", "setup.mjs", "setup.ts", "languages.js", "languages.ts"]) {
+          if (fs.existsSync(path.join(tempDir, setupFile))) {
+            entryImports.push(`import "./${setupFile}";`);
+          }
+        }
+
         let defaultExportExpr = `{ ${entryExports.join(", ")} }`;
         if (fs.existsSync(path.join(tempDir, "components.js"))) {
           entryImports.push(`import legacyComponents from "./components.js";`);
@@ -157,10 +168,16 @@ export function bundleCustomComponents(targetPath: string): string | undefined {
     }
   }
 
-  // Fallback to legacy components.js / index.js if present
+  // Fallback to setup.js / languages.js / components.js / index.js if present
   const candidate =
     (legacyFile && fs.existsSync(legacyFile) && !fs.statSync(legacyFile).isDirectory() ? legacyFile : undefined) ||
-    (dmdDir && [path.join(dmdDir, "components.js"), path.join(dmdDir, "index.js")].find((p) => fs.existsSync(p)));
+    (dmdDir &&
+      [
+        path.join(dmdDir, "setup.js"),
+        path.join(dmdDir, "languages.js"),
+        path.join(dmdDir, "components.js"),
+        path.join(dmdDir, "index.js"),
+      ].find((p) => fs.existsSync(p)));
 
   if (!candidate || !fs.existsSync(candidate)) return undefined;
 
@@ -278,11 +295,13 @@ export function collectNestedOfflineSites(targetDir: string): Record<string, Off
       nestedDocs[file] = raw;
     }
 
+    const nestedComponentsPath = path.join(nestedRoot, ".dmd");
+    loadBuildTimeCustomSetup(nestedComponentsPath);
     sites[key] = {
       name: nestedConfig.name || key,
       manifest: generateManifest(nestedRoot, nestedConfig),
       docs: nestedDocs,
-      componentsSource: bundleCustomComponents(path.join(nestedRoot, ".dmd")),
+      componentsSource: bundleCustomComponents(nestedComponentsPath),
     };
   }
 
@@ -369,6 +388,7 @@ export async function buildCommand(targetDirArg: string = "./docs", options: Bui
   }
 
   const componentsPath = path.join(targetDir, ".dmd");
+  loadBuildTimeCustomSetup(componentsPath);
   const componentsSource = bundleCustomComponents(componentsPath);
 
   // 2. Generate _docs.js for precompiled local and file:/// documentation data.

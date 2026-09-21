@@ -116,8 +116,13 @@ export function normalizeLanguage(lang: string): string {
   return LANG_ALIASES[clean] || clean;
 }
 
-export function registerLanguage(name: string, definition: Record<string, unknown>): void {
-  Prism.languages[name] = definition as never;
+export function registerLanguage(name: string, definition: Record<string, unknown>, color?: string): void {
+  const clean = normalizeLanguage(name);
+  Prism.languages[clean] = definition as never;
+  if (color) {
+    LANG_COLORS[clean] = color;
+    EXT_COLORS[clean] = color;
+  }
 }
 
 export function highlightCode(code: string, lang: string = ""): string {

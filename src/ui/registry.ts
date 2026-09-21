@@ -133,20 +133,25 @@ export class ComponentRegistry {
       }
     }
 
-    // Legacy fallback for .dmd/components.js or .dmd/index.js
-    for (const url of [`${prefix}/components.js`, `${prefix}/index.js`]) {
+    // Fallback for .dmd/setup.js, .dmd/languages.js, .dmd/components.js, or .dmd/index.js
+    for (const url of [
+      `${prefix}/setup.js`,
+      `${prefix}/languages.js`,
+      `${prefix}/components.js`,
+      `${prefix}/index.js`,
+    ]) {
       try {
         const mod = await import(/* @vite-ignore */ url);
         if (mod) {
           const comps = mod.default || mod;
-          if (typeof comps === "object") {
+          if (comps && typeof comps === "object" && Object.keys(comps).length > 0) {
             this.registerMultiple(comps as Record<string, DmdElementClass | string>);
             console.log("[DocMeDown] Loaded custom .dmd components:", Object.keys(comps));
             return;
           }
         }
       } catch {
-        // .dmd components not present, continue
+        // file not present, continue
       }
     }
   }

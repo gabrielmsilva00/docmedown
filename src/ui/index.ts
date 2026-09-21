@@ -149,11 +149,11 @@ export async function initDocMeDown(options: DocMeDownInitOptions = {}): Promise
     accentColor: finalConfig.theme?.accentColor,
     accentColorDark: finalConfig.theme?.accentColorDark,
   });
-  void doc.init(finalConfig, options.basePath || "");
-
-  // User components register before the first render so markdown custom
-  // elements upgrade together with the builtins.
+  // User components and setup register before the first render so markdown
+  // custom elements upgrade together with the builtins and custom grammars
+  // are active before initial document parsing.
   await ComponentRegistry.getInstance().loadDmdDirectory(options.basePath || "");
+  await doc.init(finalConfig, options.basePath || "");
 
   mountedInstances.get(container)?.destroy();
 

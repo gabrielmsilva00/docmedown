@@ -4,6 +4,7 @@ import chalk from "chalk";
 import { parseMarkdown } from "../runtime/markdown/parser";
 import { renderSplashHead, renderSplashMarkup, type SplashOptions } from "../runtime/splash";
 import type { DocConfig, DocFileItem, DocManifest } from "../runtime/types";
+import { loadBuildTimeCustomSetup } from "./utils/custom-setup";
 
 const DESCRIPTION_MAX_LENGTH = 160;
 
@@ -265,6 +266,7 @@ export function emitStaticSite(
 ): StaticSiteEmitResult {
   const written: string[] = [];
   let homeSkipped = false;
+  loadBuildTimeCustomSetup(path.join(targetDir, ".dmd"));
 
   for (const doc of manifest.docs) {
     if (doc.frontmatter?.hidden === true) continue;

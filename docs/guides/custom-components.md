@@ -75,6 +75,18 @@ DocMeDown gives you the best of both worlds:
 4. **Legacy Compatibility**:
    If you still have existing custom element classes in `.dmd/components.js` or `.dmd/index.js`, DocMeDown continues to bundle and register them seamlessly alongside Svelte components.
 
+5. **Custom Syntax Highlighting (`.dmd/setup.js`)**:
+   Register custom Prism grammars for unbundled languages or custom DSLs. DocMeDown executes `.dmd/setup.js` at build-time to prerender syntax tokens in static HTML and in the browser runtime for dynamic navigation:
+   ```js title=".dmd/setup.js"
+   window.DocMeDown.registerLanguage("mylang", {
+     comment: /#.*/,
+     string: /"(?:[^"\\]|\\.)*"/,
+     keyword: /\b(?:pipeline|draw|plot|render)\b/,
+     number: /-?\b\d+(?:\.\d+)?\b/,
+   }, "#06b6d4");
+   ```
+
+
 ---
 
 ## 2. Ready-to-Use Built-in Components

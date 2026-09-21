@@ -28,7 +28,7 @@ sequenceDiagram
     Browser->>Browser: Auto-generates sidebar & navigation tree
     Browser->>GitHub: Fetches active markdown content (raw.githubusercontent.com)
     GitHub-->>Browser: Returns latest markdown file
-    Browser->>User: Renders interactive React documentation site
+    Browser->>User: Renders interactive Svelte documentation site
 ```
 
 Whenever you push commits to your remote GitHub repository, anyone reloading your documentation site **instantly sees the updated documentation** — with zero CI builds or redeployments required!

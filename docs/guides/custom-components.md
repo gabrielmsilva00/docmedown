@@ -237,6 +237,14 @@ directly. Inside `<Steps>` it is auto-numbered like `<Step>`.
 
 ---
 
-## 3. Full Library & Live Showcase
+## 3. Pure Svelte 5 Built-in Architecture
 
-DocMeDown ships 12+ built-in components — `Tabs`, `CardGrid`/`Card`, `Steps`/`Step`, `Badge`, `Alert`/`Callout`, `Button`, `Kbd`, `Details`, `Accordion`/`AccordionItem`, `Columns`/`Column`, and `Timeline`/`TimelineItem` — every one documented with copy-paste sources next to live renders in the **[Markdown Syntax & Component Showcase](../showcase.md)**.
+As of **v0.3.1**, DocMeDown has completely evicted Lit in favor of a pure **Svelte 5** architecture. All 19 built-in elements (`Tabs`, `Tab`, `CardGrid`, `Card`, `Steps`, `Step`, `Badge`, `Alert`, `Callout`, `Button`, `Kbd`, `Details`, `Accordion`, `AccordionItem`, `Columns`, `Column`, `Timeline`, `TimelineItem`, and `Item`) are compiled natively with `<svelte:options customElement={{ tag: "dmd-..." }} />` using modern runes (`$state`, `$derived`, `$props`).
+
+Built-ins automatically adopt global CSS variables and theme tokens via `adoptSharedStyles()`, ensuring pixel-perfect contrast, instant transitions across Atlas/Blueprint/Terminal/Editorial theme families, and zero dual-framework overhead.
+
+---
+
+## 4. Full Library & Live Showcase
+
+DocMeDown ships 19 built-in components — `Tabs`/`Tab`, `CardGrid`/`Card`, `Steps`/`Step`, `Badge`, `Alert`/`Callout`, `Button`, `Kbd`, `Details`, `Accordion`/`AccordionItem`, `Columns`/`Column`, `Timeline`/`TimelineItem`, and `Item` — every one documented with copy-paste sources next to live renders in the **[Markdown Syntax & Component Showcase](../showcase.md)**.

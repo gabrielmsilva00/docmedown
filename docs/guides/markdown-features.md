@@ -41,7 +41,7 @@ Use standard GitHub alert blockquotes:
 > Open **Appearance** in the top navigation to switch theme family, automatic/light/dark mode, and reading density.
 
 > [!IMPORTANT]
-> Use `.md` or `.mdx` filenames for discovery. DocMeDown parses both as Markdown; `.mdx` does not invoke an MDX compiler—use `.dmd/components.js` for React components.
+> Use `.md` or `.mdx` filenames for discovery. DocMeDown parses both as Markdown; `.mdx` does not invoke an MDX compiler—use `.dmd/components.js` for custom components.
 
 > [!WARNING]
 > Do not commit private API tokens in public repositories.

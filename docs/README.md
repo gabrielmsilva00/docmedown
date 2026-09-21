@@ -13,6 +13,9 @@ tags: [overview, philosophy, features]
 > [!TIP]
 > **Zero Configuration Out of the Box**: DocMeDown automatically crawls all your Markdown files and subfolders, creating navigation trees, route links, and instant fuzzy search with zero manual setup.
 
+> [!NOTE]
+> **v0.3.1 Pure Svelte 5 Architecture**: DocMeDown is now powered end-to-end by Svelte 5 and runes. All 19 built-in components are first-class Svelte custom elements with zero Lit runtime dependencies, delivering instant page navigation, pruned font formats, on-demand Mermaid engine loading, and minimal bundle sizes.
+
 ---
 
 ## 🏗️ Architecture Overview

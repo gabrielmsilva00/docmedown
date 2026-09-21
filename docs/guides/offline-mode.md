@@ -19,7 +19,7 @@ Most modern documentation engines (Docusaurus, VitePress, etc.) produce hundreds
 
 ## ⚡ The DocMeDown Single-File Solution
 
-DocMeDown can bundle your entire documentation website, complete with all Markdown documents, configuration, styles, and interactive React runtime into **a single `index.html` file**:
+DocMeDown can bundle your entire documentation website, complete with all Markdown documents, configuration, styles, and interactive Svelte 5 runtime into **a single `index.html` file**:
 
 ```bash
 npx docmedown build ./docs
@@ -29,7 +29,7 @@ npx docmedown build ./docs
 1. **Manifest Inlining**: Scans all `.md` files and extracts headings and metadata.
 2. **Compact Serialization**: Serializes the manifest and Markdown corpus as compact JSON instead of development-formatted output.
 3. **Component Bundling**: Bundles `.dmd/components.js` and its relative JavaScript imports before inlining, so custom components remain available from a `file:///` URL.
-4. **Gzip Compression**: Compresses the complete corpus, custom-component module, production React runtime, Mermaid renderer, and CSS into one base64-encoded gzip envelope.
+4. **Gzip Compression**: Compresses the complete corpus, custom-component module, production Svelte runtime, Mermaid renderer, and CSS into one base64-encoded gzip envelope.
 5. **Minified Self-Extractor**: Adds a small inline bootstrap that uses the browser's native `DecompressionStream` to restore and start DocMeDown locally.
 
 Mermaid support still accounts for most of the uncompressed runtime because every diagram renderer is available offline. Gzip removes most of that repetition while retaining the no-network guarantee: no chart, component, font, or syntax-rendering behavior depends on a request when the bundle is opened from `file:///`.

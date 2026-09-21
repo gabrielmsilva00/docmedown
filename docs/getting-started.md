@@ -24,7 +24,7 @@ npx docmedown ./docs
 
 This single command:
 1. Creates `index.html`, `docs.json`, and starter Markdown files (`README.md`, `getting-started.md`, `guides/`).
-2. Creates the `.dmd/` custom React component folder.
+2. Creates the `.dmd/` custom component folder.
 3. Automatically launches the local dev server on `http://localhost:3000` with **hot live-reloading**!
 
 ---
@@ -97,7 +97,7 @@ Before serving, DocMeDown builds the live documentation assets and `./docs/.dist
 
 ## 🚢 Deployment
 
-Since DocMeDown runs as a client-side React SPA, deploying your documentation is as simple as hosting static files:
+Since DocMeDown runs as a lightweight Svelte 5 application with static prerendering, deploying your documentation is as simple as hosting static files:
 
 - **GitHub Pages**: Use the repository's GitHub Actions workflow, which runs `npm ci`, `npm run build`, and `npm run build:docs` before publishing the complete `./docs` artifact. Direct `/docs` branch hosting also requires the generated `_docs.js`, `_manifest.json`, and `docmedown.web.js` files to be present (plus `docmedown-mermaid.js` for sites with diagrams), plus the generated `.nojekyll` marker.
 - **Vercel / Netlify / Cloudflare Pages**: Point the build output to `./docs` (no build command needed).

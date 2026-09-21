@@ -15,6 +15,10 @@ export interface CompiledSvelteResult {
   tag: string;
 }
 
+function toDestructuring(specifiers: string): string {
+  return specifiers.replace(/\b([A-Za-z0-9_$]+)\s+as\s+([A-Za-z0-9_$]+)\b/g, "$1: $2");
+}
+
 /**
  * Rewrites bare `svelte` and `svelte/internal/client` ESM imports to use the
  * globally exposed Svelte 5 runtime primitives when evaluated as a Blob module.
@@ -22,31 +26,33 @@ export interface CompiledSvelteResult {
 export function linkSveltePrimitives(jsCode: string): string {
   let linked = jsCode;
 
-  // Strip disclose-version import
-  linked = linked.replace(/import\s*['"]svelte\/internal\/disclose-version['"];?/g, "// svelte disclose-version");
+  // 1. Strip disclose-version import safely without commenting out subsequent code
+  linked = linked.replace(/import\s*['"]svelte\/internal\/disclose-version['"];?/g, "/* svelte disclose-version */\n");
 
-  // Rewrite import * as $ from 'svelte/internal/client'
+  // 2. Rewrite import * as $ from 'svelte/internal/client'
   linked = linked.replace(
     /import\s*\*\s*as\s+(\w+)\s*from\s*['"]svelte\/internal\/client['"];?/g,
-    "const $1 = ((typeof window !== 'undefined' && window.__DOCMEDOWN_SVELTE__?.client) || (typeof globalThis !== 'undefined' && globalThis.__DOCMEDOWN_SVELTE__?.client));",
+    "const $1 = ((typeof window !== 'undefined' && window.__DOCMEDOWN_SVELTE__?.client) || (typeof globalThis !== 'undefined' && globalThis.__DOCMEDOWN_SVELTE__?.client));\n",
   );
 
-  // Rewrite named imports from 'svelte/internal/client'
+  // 3. Rewrite named imports from 'svelte/internal/client' (converting 'as' to ':')
   linked = linked.replace(
     /import\s*\{([^}]+)\}\s*from\s*['"]svelte\/internal\/client['"];?/g,
-    "const { $1 } = ((typeof window !== 'undefined' && window.__DOCMEDOWN_SVELTE__?.client) || (typeof globalThis !== 'undefined' && globalThis.__DOCMEDOWN_SVELTE__?.client));",
+    (_, specifiers) =>
+      `const { ${toDestructuring(specifiers)} } = ((typeof window !== 'undefined' && window.__DOCMEDOWN_SVELTE__?.client) || (typeof globalThis !== 'undefined' && globalThis.__DOCMEDOWN_SVELTE__?.client));\n`,
   );
 
-  // Rewrite named imports from 'svelte'
+  // 4. Rewrite named imports from 'svelte' (converting 'as' to ':')
   linked = linked.replace(
     /import\s*\{([^}]+)\}\s*from\s*['"]svelte['"];?/g,
-    "const { $1 } = ((typeof window !== 'undefined' && window.__DOCMEDOWN_SVELTE__) || (typeof globalThis !== 'undefined' && globalThis.__DOCMEDOWN_SVELTE__));",
+    (_, specifiers) =>
+      `const { ${toDestructuring(specifiers)} } = ((typeof window !== 'undefined' && window.__DOCMEDOWN_SVELTE__) || (typeof globalThis !== 'undefined' && globalThis.__DOCMEDOWN_SVELTE__));\n`,
   );
 
-  // Rewrite import * as X from 'svelte'
+  // 5. Rewrite import * as X from 'svelte'
   linked = linked.replace(
     /import\s*\*\s*as\s+(\w+)\s*from\s*['"]svelte['"];?/g,
-    "const $1 = ((typeof window !== 'undefined' && window.__DOCMEDOWN_SVELTE__) || (typeof globalThis !== 'undefined' && globalThis.__DOCMEDOWN_SVELTE__));",
+    "const $1 = ((typeof window !== 'undefined' && window.__DOCMEDOWN_SVELTE__) || (typeof globalThis !== 'undefined' && globalThis.__DOCMEDOWN_SVELTE__));\n",
   );
 
   return linked;

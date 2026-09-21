@@ -42,6 +42,9 @@
 </div>
 
 <style>
+  :host {
+    display: block;
+  }
   .dmd-custom-panel {
     margin: 1.25rem 0;
     padding: 1rem;

@@ -11,6 +11,9 @@
 </div>
 
 <style>
+  :host {
+    display: block;
+  }
   .dmd-counter-panel {
     margin: 1rem 0;
   }

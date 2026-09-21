@@ -111,7 +111,10 @@ export function startDevServer(
       // Check if requesting a bundled runtime asset (the served runtime or its
       // on-demand engine bundles) that has not been copied into the docs yet.
       const requestedAsset = path.basename(reqPath);
-      if (["docmedown.web.js", "docmedown-mermaid.js"].includes(requestedAsset) && !fs.existsSync(filePath)) {
+      if (
+        ["docmedown.web.js", "docmedown-mermaid.js", "docmedown-compiler.js"].includes(requestedAsset) &&
+        !fs.existsSync(filePath)
+      ) {
         const bundleCandidates = [
           path.resolve(__dirname, requestedAsset),
           path.resolve(__dirname, "../dist", requestedAsset),
@@ -129,7 +132,9 @@ export function startDevServer(
           filePath = path.join(filePath, "index.html");
         }
 
-        const mimeType = mime.lookup(filePath) || "application/octet-stream";
+        const mimeType = filePath.endsWith(".svelte")
+          ? "text/plain; charset=utf-8"
+          : mime.lookup(filePath) || "application/octet-stream";
         res.setHeader("Content-Type", mimeType);
 
         if (mimeType.includes("html")) {

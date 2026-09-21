@@ -12,3 +12,10 @@
 >
   {label}: {count}
 </button>
+
+<style>
+  :host {
+    display: inline-block;
+  }
+</style>
+

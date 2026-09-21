@@ -93,8 +93,15 @@ export class ComponentRegistry {
       });
       const componentModuleUrl = URL.createObjectURL(componentModule);
       runtimeWindow.__DOCMEDOWN_COMPONENTS_READY__ = import(/* @vite-ignore */ componentModuleUrl)
-        .then((module) => module.default || module)
-        .finally(() => URL.revokeObjectURL(componentModuleUrl));
+        .then((module) => {
+          setTimeout(() => URL.revokeObjectURL(componentModuleUrl), 5000);
+          return module.default || module;
+        })
+        .catch((err) => {
+          setTimeout(() => URL.revokeObjectURL(componentModuleUrl), 5000);
+          console.error("[DocMeDown] Error evaluating custom components module:", err);
+          throw err;
+        });
     }
 
     const embeddedComponents = runtimeWindow.__DOCMEDOWN_COMPONENTS_READY__;

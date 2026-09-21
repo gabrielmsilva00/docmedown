@@ -53,7 +53,7 @@ Use standard GitHub alert blockquotes:
 
 ## 2. Code Blocks with Titles & Copy Toolbar
 
-Add syntax highlighting, titles, and line headers:
+Add syntax highlighting, titles, line numbers, and highlighted line ranges:
 
 ````markdown
 ```typescript title="src/router.ts"
@@ -67,14 +67,42 @@ export class HashRouter {
 ```
 ````
 
-```typescript title="src/router.ts"
-export class HashRouter {
-  constructor(public defaultDoc: string) {}
+Every block ships with a line-number gutter (purely visual — numbers are never
+copied with the code), a working copy button that flips to a checkmark on
+success, and **word-wrap** so long lines never overflow the container.  Leading
+whitespace is visualised with small grey dots (spaces) or arrows (tabs) so you
+can see the indentation style at a glance — these indicators are painted as
+non-selectable overlays and never appear in selections or copies.
 
-  public navigate(slug: string) {
-    window.location.hash = `#/${slug}`;
-  }
-}
+To draw attention to specific lines, append a `{n, n-m}` range to the info
+string.  Highlighted lines get a full-bleed accent tint, a left accent bar,
+and a dedicated smaller copy button in the header that copies only those lines:
+
+````markdown
+```js {2,5-6} title="example.js"
+```
+````
+
+```js {2,4-5} title="example.js"
+const first = "this line is highlighted";
+const plain = "this one is not";
+const also = "plain again";
+const range = "every line in the range";
+const isLit = "highlights too";
+```
+
+### Path-aware filenames
+
+Titles can be full relative paths — directories are dimmed and only the
+filename is color-coded by its extension:
+
+````markdown
+```ts title="./src/app/router.ts"
+```
+````
+
+```ts title="./src/app/router.ts"
+// Directories appear in grey, the filename in TypeScript blue.
 ```
 
 ---

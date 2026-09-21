@@ -11,7 +11,7 @@ test("package metadata exposes stable CommonJS, ESM, type, and browser entry poi
   assert.match(packageJson.version, /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/);
   assert.equal(packageJson.main, "./dist/docmedown.cjs");
   assert.equal(packageJson.module, "./dist/docmedown.mjs");
-  assert.equal(packageJson.types, "./dist/types/runtime/index.d.ts");
+  assert.equal(packageJson.types, "./dist/types/ui/index.d.ts");
   assert.equal(packageJson.exports["."].require, "./dist/docmedown.cjs");
   assert.equal(packageJson.exports["."].import, "./dist/docmedown.mjs");
   assert.equal(packageJson.exports["./iife"], "./dist/docmedown.iife.js");

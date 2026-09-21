@@ -226,12 +226,70 @@ export function expandSelfClosingComponents(html: string): string {
 
 const INLINE_TAGS = new Set(["badge", "button", "kbd"]);
 
+/** A paragraph that opens straight into a block component. */
+const COMPONENT_PARAGRAPH = /<p>\s*<([A-Z][A-Za-z0-9]*)\b/g;
+
+const PARAGRAPH_TAG = /<p\b|<\/p>/g;
+
+/**
+ * Index of the `</p>` closing the paragraph whose opening tag sits before
+ * `from`, or `-1` when the markup never closes it. Nested paragraphs are counted
+ * instead of assumed, so the `</p>` of a paragraph *inside* the component body
+ * is never mistaken for the orphan. Depth starts at 1: the opener is already
+ * accounted for by the caller.
+ */
+function findParagraphClose(html: string, from: number): number {
+  PARAGRAPH_TAG.lastIndex = from;
+  let depth = 1;
+  let match: RegExpExecArray | null = PARAGRAPH_TAG.exec(html);
+  while (match) {
+    depth += match[0] === "</p>" ? -1 : 1;
+    if (depth === 0) return match.index;
+    match = PARAGRAPH_TAG.exec(html);
+  }
+  return -1;
+}
+
+/**
+ * An inline component opened as the first thing in a paragraph keeps that
+ * paragraph: `<p><Badge>new</Badge></p>` is prose with an inline widget in it.
+ * Dropping the wrapper for those would unparent the sentence around them.
+ */
+function unwrapComponentParagraphs(html: string): string {
+  let out = "";
+  let cursor = 0;
+  COMPONENT_PARAGRAPH.lastIndex = 0;
+  let match: RegExpExecArray | null = COMPONENT_PARAGRAPH.exec(html);
+
+  while (match) {
+    if (INLINE_TAGS.has(match[1].toLowerCase())) {
+      match = COMPONENT_PARAGRAPH.exec(html);
+      continue;
+    }
+
+    const contentStart = match.index + match[0].length;
+    const close = findParagraphClose(html, contentStart);
+    // The whitespace that would run into `</p>` goes with it, matching the
+    // `</Tag></p>` rewrite that handles the closing-tag side below.
+    let contentEnd = close;
+    while (contentEnd > contentStart && /\s/.test(html[contentEnd - 1])) contentEnd--;
+
+    out += html.slice(cursor, match.index) + match[0].slice(match[0].length - match[1].length - 1);
+    if (close === -1) {
+      out += html.slice(contentStart);
+      return out;
+    }
+    out += html.slice(contentStart, contentEnd);
+    cursor = close + "</p>".length;
+    match = COMPONENT_PARAGRAPH.exec(html);
+  }
+
+  return out + html.slice(cursor);
+}
+
 export function unwrapBlockComponents(html: string): string {
   if (!html?.includes("<")) return html;
-  let out = html.replace(/<p>\s*(<([A-Z][A-Za-z0-9]*)\b)/g, (match, fullTag, tagName) => {
-    if (INLINE_TAGS.has(tagName.toLowerCase())) return match;
-    return fullTag;
-  });
+  let out = unwrapComponentParagraphs(html);
   out = out.replace(/(<\/([A-Z][A-Za-z0-9]*)\s*>)\s*<\/p>/g, (match, fullClose, tagName) => {
     if (INLINE_TAGS.has(tagName.toLowerCase())) return match;
     return fullClose;

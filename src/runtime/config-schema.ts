@@ -137,6 +137,8 @@ export const docConfigSchema = z
     name: nonEmptyString.optional(),
     tagline: z.string().optional(),
     description: z.string().optional(),
+    /** Canonical site origin, e.g. https://docs.example.com — enables canonical URLs, sitemap.xml, and robots.txt. */
+    url: z.string().url("Must be an absolute URL.").optional(),
     version: z.string().optional(),
     rootDoc: nonEmptyString.optional(),
     home: nonEmptyString.optional(),

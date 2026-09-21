@@ -1,5 +1,11 @@
 import katex from "katex";
 
+/**
+ * KaTeX is imported statically for now (lazy-loading planned for a follow-up).
+ * The katex package is ~500KB raw / ~150KB gzip — smaller than Mermaid but
+ * still a candidate for dynamic import once parseMarkdown is made async.
+ */
+
 export function renderMath(content: string): string {
   // Protect fenced code blocks and inline code so `$` inside them is never
   // interpreted as math. Restored verbatim after math rendering.

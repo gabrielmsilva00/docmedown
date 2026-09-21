@@ -151,29 +151,22 @@ graph LR
 
 Every component below is registered automatically — no imports, no configuration. Use them directly in any `.md` file.
 
-### 1. `<Tabs>` + `<Tab>` (types, synced groups, icon-only)
+### 1. `<Tabs>` + `<Tab>` — four treatments, synced groups, icon-only
 
 Tabs support keyboard navigation (arrows / Home / End), `defaultIndex`, `groupId` syncing,
-and a `type` prop: `recessed` (default, inset buttons in a pressed tray), `underline`,
-`pills`, or `postit` (rotated sticky-note tabs). `label` is optional — a tab can be
-icon-only, and the universal `<Item>` resolves to a `<Tab>` inside `<Tabs>`.
+and a `type` prop with four visually distinct looks: `recessed` (default — a pressed-in
+well with a raised chip), `underline` (chromeless uppercase micro-labels with a
+sliding accent bar), `pills` (a centered floating segmented control), and `postit`
+(amber-tinted tilted folder tabs that dock into the panel). `label` is optional — a tab
+can be icon-only, and the universal `<Item>` resolves to a `<Tab>` inside `<Tabs>`.
+
+#### Recessed — the default tray
 
 ```html
 <Tabs type="recessed">
   <Tab label="npm">npm install docmedown</Tab>
   <Tab label="yarn">yarn add docmedown</Tab>
   <Tab label="pnpm">pnpm add docmedown</Tab>
-</Tabs>
-
-<Tabs type="postit">
-  <Tab label="API" icon="🔌">REST + GraphQL</Tab>
-  <Tab label="CLI" icon="💻">Zero-config commands.</Tab>
-  <Tab icon="⚙️">Icon-only, no label.</Tab>
-</Tabs>
-
-<Tabs groupId="pkg">
-  <Item label="npm">npm install docmedown</Item>
-  <Item label="yarn">yarn add docmedown</Item>
 </Tabs>
 ```
 
@@ -183,16 +176,85 @@ icon-only, and the universal `<Item>` resolves to a `<Tab>` inside `<Tabs>`.
   <Tab label="pnpm">pnpm add docmedown</Tab>
 </Tabs>
 
+#### Underline — chromeless editorial micro-labels
+
+```html
+<Tabs type="underline" defaultIndex={1}>
+  <Tab label="Overview">One screen. Zero build step. Drop Markdown, get docs.</Tab>
+  <Tab label="Offline">Every doc ships as a single self-contained HTML file.</Tab>
+  <Tab label="AI-Native">llms.txt, SKILL.md, and an MCP server out of the box.</Tab>
+</Tabs>
+```
+
+<Tabs type="underline" defaultIndex={1}>
+  <Tab label="Overview">One screen. Zero build step. Drop Markdown, get docs.</Tab>
+  <Tab label="Offline">Every doc ships as a single self-contained HTML file.</Tab>
+  <Tab label="AI-Native">llms.txt, SKILL.md, and an MCP server out of the box.</Tab>
+</Tabs>
+
+#### Pills — centered floating segmented control
+
+```html
+<Tabs type="pills">
+  <Tab label="API" icon="🔌">REST + GraphQL endpoints.</Tab>
+  <Tab label="CLI" icon="💻">Zero-config commands.</Tab>
+  <Tab label="MCP" icon="🤖">Searchable by agents, too.</Tab>
+</Tabs>
+```
+
+<Tabs type="pills">
+  <Tab label="API" icon="🔌">REST + GraphQL endpoints.</Tab>
+  <Tab label="CLI" icon="💻">Zero-config commands.</Tab>
+  <Tab label="MCP" icon="🤖">Searchable by agents, too.</Tab>
+</Tabs>
+
+#### Post-it — warm folder tabs that dock into the panel
+
+```html
+<Tabs type="postit">
+  <Tab label="API" icon="🔌">REST + GraphQL</Tab>
+  <Tab label="CLI" icon="💻">Zero-config commands.</Tab>
+  <Tab icon="⚙️">Icon-only, no label.</Tab>
+</Tabs>
+```
+
 <Tabs type="postit">
   <Tab label="API" icon="🔌">REST + GraphQL</Tab>
   <Tab label="CLI" icon="💻">Zero-config commands.</Tab>
   <Tab icon="⚙️">Icon-only, no label.</Tab>
 </Tabs>
 
+#### Synced groups — one selection, everywhere
+
+Tabs sharing a `groupId` switch together (and remember their choice in
+`localStorage`) — useful for keeping install-command variants in lockstep:
+
+```html
 <Tabs groupId="pkg">
   <Item label="npm">npm install docmedown</Item>
   <Item label="yarn">yarn add docmedown</Item>
+  <Item label="pnpm">pnpm add docmedown</Item>
 </Tabs>
+
+<Tabs groupId="pkg">
+  <Item label="npm">Runs on Node 20.19+.</Item>
+  <Item label="yarn">Works with Yarn Berry.</Item>
+  <Item label="pnpm">Fastest with pnpm 9+.</Item>
+</Tabs>
+```
+
+<Tabs groupId="pkg">
+  <Item label="npm">npm install docmedown</Item>
+  <Item label="yarn">yarn add docmedown</Item>
+  <Item label="pnpm">pnpm add docmedown</Item>
+</Tabs>
+
+<Tabs groupId="pkg">
+  <Item label="npm">Runs on Node 20.19+.</Item>
+  <Item label="yarn">Works with Yarn Berry.</Item>
+  <Item label="pnpm">Fastest with pnpm 9+.</Item>
+</Tabs>
+
 
 ### 2. `<CardGrid>` + `<Card>` (icons, media, badges, footers, free-form bodies, carousel)
 
@@ -204,7 +266,10 @@ or any CSS color (`#ff6600`, `var(--dmd-accent)`, …) applied as the card accen
 `shadow={false}` opts a card out of its default drop shadow. `description` renders as
 a muted subtitle directly under the title; the card body comes only from the element's
 children (text, lists, or nothing at all). A card's footer is always pinned to the
-bottom edge, even when siblings in the same grid row are taller.
+bottom edge, even when siblings in the same grid row are taller. A heading-led
+body can also name the card itself: with no props, the first heading above `###`
+becomes the title, the deeper heading right after it the subtitle, and a trailing
+blockquote the footer — an explicit prop always wins for its own slot.
 
 ````html
 <CardGrid cols={2}>
@@ -217,17 +282,14 @@ bottom edge, even when siblings in the same grid row are taller.
     footer="Hot-reload included."
   />
   <Card color="blue" badge="New" badgeType="new">
-    ### Container-style card
-    The body is **plain Markdown**:
-
+    ## Container-style card
+    #### The body is **plain Markdown**:
     - Headings, lists, tables
     - Code fences and math
-
     ```sh
     npx docmedown init
     ```
-
-    <Badge type="info">Works offline</Badge>
+    > **Info**: This is a blockquote acting like a footer!
   </Card>
 </CardGrid>
 ````
@@ -243,12 +305,13 @@ bottom edge, even when siblings in the same grid row are taller.
   />
   <Card color="blue" badge="New" badgeType="new">
     ## Container-style card
-    The body is **plain Markdown**:
+    #### The body is **plain Markdown**:
     - Headings, lists, tables
     - Code fences and math
     ```sh
     npx docmedown init
     ```
+    > **Info**: This is a blockquote acting like a footer!
   </Card>
 </CardGrid>
 
@@ -278,9 +341,13 @@ A flat (shadow-free) card for dense layouts:
 
 **Carousel mode:** when a grid contains **more cards than columns**, it becomes a
 native scroll-snap carousel. Swipe on touch, or use the prev/next buttons and dots.
-Cards slide one at a time with wrap-around — the last card glides to the first
-seamlessly (both are on screen mid-transition, no jump). `carouselCols` caps how many
-cards are visible at once (defaults to `cols`) and auto-shrinks on narrow screens.
+The window slides one card at a time and **loops through every card**: each card gets
+a turn at the front, and the last position wraps back to the first — five cards
+two-up walk `1-2`, `2-3`, `3-4`, `4-5`, `5-1`, so card 5 leads its own window and the
+trailing slide carries the loop round to the start (the wrap clones the cards it
+needs, so the window is never half empty and the last position is reachable at all).
+`carouselCols` caps how many cards are visible at once (defaults to `cols`) and
+auto-shrinks on narrow screens.
 
 ```html
 <CardGrid cols={2} carouselCols={2}>
@@ -541,14 +608,22 @@ it becomes a plain `<li>`. Here it drives a `Timeline`, a `Steps`, and an `Accor
 
 ## Part 3 — Your Own Components (`.dmd/`)
 
-Drop a browser module at `.dmd/components.js`; React is exposed as `window.React`. These two live widgets ship with this very site:
+Drop a browser module at `.dmd/components.js` exporting `HTMLElement` subclasses — no framework dependency. These two live widgets ship with this very site:
 
 ```js title=".dmd/components.js"
-const { createElement, useState } = window.React;
-
-export function CounterWidget({ title = "Counter" }) {
-  const [count, setCount] = useState(0);
-  return createElement("button", { onClick: () => setCount((v) => v + 1) }, `${title}: ${count}`);
+export class CounterWidget extends HTMLElement {
+  connectedCallback() {
+    const title = this.getAttribute("title") || "Counter";
+    let count = 0;
+    const button = document.createElement("button");
+    button.textContent = `${title}: 0`;
+    button.addEventListener("click", () => {
+      count += 1;
+      button.textContent = `${title}: ${count}`;
+    });
+    this.innerHTML = "";
+    this.appendChild(button);
+  }
 }
 
 export default { CounterWidget };
@@ -556,7 +631,7 @@ export default { CounterWidget };
 
 <InteractiveThemeDemo />
 
-<CounterWidget title="Live React state widget" />
+<CounterWidget title="Live state widget" />
 
 ### Custom Syntax-Highlighting Languages
 

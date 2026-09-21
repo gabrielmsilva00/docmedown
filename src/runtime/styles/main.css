@@ -1,5 +1,6 @@
 @import './themes.css';
-@import 'katex/dist/katex.min.css';
+/* KaTeX base styles are imported as a module from App.svelte (before this
+   file) so the build can prune their legacy woff/ttf font sources. */
 
 /* ==========================================================================
    RESET & BASE
@@ -26,6 +27,32 @@ body {
   background-color: var(--dmd-bg-primary);
   color: var(--dmd-text-primary);
   overflow-x: hidden;
+}
+
+/* Theme switches repaint the whole document once. Letting every link, chip, and
+   card animate its colors multiplies that single repaint by the transition
+   length (hundreds of elements × every frame = jank). During a switch only the
+   page canvas fades; descendant chrome adopts the new tokens on the next paint,
+   so the change reads as one smooth crossfade instead of a transition storm. */
+html,
+body {
+  transition: background-color var(--dmd-transition), color var(--dmd-transition);
+}
+
+/* While the inline splash is up, the app waits behind it and then fades in as
+   the splash fades out — one smooth hand-off with no blank frame between. */
+html.dmd-splash-active .dmd-root {
+  opacity: 0;
+}
+
+.dmd-root {
+  transition: opacity 0.55s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+html.dmd-theme-switching *:not(body),
+html.dmd-theme-switching *:not(body)::before,
+html.dmd-theme-switching *:not(body)::after {
+  transition: none !important;
 }
 
 button,
@@ -83,7 +110,9 @@ a:hover {
   --dmd-scrollbar-thumb-hover: var(--dmd-text-muted);
 }
 
-* {
+/* scrollbar-color/width are inherited, so declaring them once on the root
+   reaches every scroll container without a `*` rule in the restyle path. */
+html {
   scrollbar-width: thin;
   scrollbar-color: var(--dmd-scrollbar-thumb) var(--dmd-scrollbar-track);
 }
@@ -132,6 +161,41 @@ html {
   min-height: 100dvh;
 }
 
+/* Slim indeterminate bar shown while a network navigation is in flight. The
+   current article stays on screen, so the reader never loses context to a
+   skeleton on every click. */
+.dmd-nav-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  z-index: 1001;
+  overflow: hidden;
+  background: var(--dmd-accent-subtle);
+}
+
+.dmd-nav-progress::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 38%;
+  border-radius: 9999px;
+  background: var(--dmd-accent);
+  animation: dmd-nav-progress-slide 1.1s cubic-bezier(0.5, 0, 0.25, 1) infinite;
+}
+
+@keyframes dmd-nav-progress-slide {
+  0% { transform: translateX(-110%); }
+  100% { transform: translateX(290%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dmd-nav-progress::after { animation-duration: 2s; }
+}
+
 .dmd-progress-bar {
   position: fixed;
   top: 0;
@@ -162,11 +226,20 @@ html {
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--dmd-border-color);
-  transition: background-color var(--dmd-transition), border-color var(--dmd-transition);
+  transition: background-color var(--dmd-transition), border-color var(--dmd-transition), box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   gap: clamp(0.5rem, 1.5vw, 1.25rem);
   /* Single-line policy: every navbar element renders on one row; shrinkable
      text truncates with ellipsis instead of wrapping or growing the bar. */
   white-space: nowrap;
+}
+
+.dmd-navbar.dmd-navbar-scrolled {
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.08), 0 2px 6px -1px rgba(0, 0, 0, 0.04);
+  border-bottom-color: color-mix(in srgb, var(--dmd-border-color) 80%, transparent);
+}
+
+[data-theme="dark"] .dmd-navbar.dmd-navbar-scrolled {
+  box-shadow: 0 4px 24px -2px rgba(0, 0, 0, 0.45);
 }
 
 .dmd-navbar-left {
@@ -251,7 +324,7 @@ html {
   color: var(--dmd-text-muted);
   font-size: 0.875rem;
   cursor: pointer;
-  transition: all var(--dmd-transition);
+  transition: var(--dmd-transition-interactive);
   min-height: 38px;
   white-space: nowrap;
 }
@@ -297,7 +370,7 @@ html {
   color: var(--dmd-text-secondary);
   padding: 0.35rem 0.65rem;
   border-radius: var(--dmd-radius-sm);
-  transition: all var(--dmd-transition);
+  transition: var(--dmd-transition-interactive);
   white-space: nowrap;
 }
 
@@ -323,7 +396,7 @@ html {
   background: var(--dmd-bg-card);
   color: var(--dmd-text-secondary);
   cursor: pointer;
-  transition: all var(--dmd-transition);
+  transition: var(--dmd-transition-interactive);
 }
 
 .dmd-social-btn:hover, .dmd-theme-toggle-btn:hover {
@@ -351,7 +424,7 @@ html {
   font-size: 0.72rem;
   font-weight: 650;
   cursor: pointer;
-  transition: all var(--dmd-transition);
+  transition: var(--dmd-transition-interactive);
   white-space: nowrap;
 }
 
@@ -521,18 +594,21 @@ html {
   font-weight: 500;
   color: var(--dmd-text-secondary);
   border-radius: var(--dmd-radius-md);
-  transition: all var(--dmd-transition);
+  transition: var(--dmd-transition-interactive);
 }
 
 .dmd-sidebar-link:hover {
   color: var(--dmd-text-primary);
   background: var(--dmd-bg-tertiary);
+  transform: translateX(2px);
 }
 
 .dmd-sidebar-link.active {
   color: var(--dmd-accent);
   background: var(--dmd-accent-subtle);
-  font-weight: 600;
+  box-shadow: inset 3px 0 0 var(--dmd-accent);
+  transform: none;
+  /* Constant weight: a bump would resize/re-wrap the label on navigation. */
 }
 
 /* ==========================================================================
@@ -635,6 +711,18 @@ html {
   line-height: 1.8;
   color: var(--dmd-text-primary);
   overflow-wrap: anywhere;
+  animation: dmd-page-enter 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes dmd-page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .dmd-markdown-body h1 {
@@ -740,6 +828,21 @@ html {
   border: 1px solid var(--dmd-border-color);
 }
 
+/* Inline code, including Markdown adopted into card chrome: inferred
+   titles/subtitles/footers render inside the shadow template, where the
+   `.dmd-markdown-body` scope does not exist. */
+.dmd-card-title code,
+.dmd-card-subtitle code,
+.dmd-card-footer code {
+  font-family: var(--dmd-font-mono);
+  font-size: 0.875em;
+  padding: 0.15rem 0.35rem;
+  background: var(--dmd-inline-code-bg);
+  color: var(--dmd-inline-code-text);
+  border-radius: var(--dmd-radius-sm);
+  border: 1px solid var(--dmd-border-color);
+}
+
 /* Diagram viewers: data-driven placeholders mount an interactive
    MermaidDiagram React component (zoom, export, fullscreen, re-themed live). */
 .dmd-diagram-host,
@@ -786,7 +889,7 @@ html {
   border: 1px solid transparent;
   border-radius: var(--dmd-radius-sm);
   cursor: pointer;
-  transition: all var(--dmd-transition);
+  transition: var(--dmd-transition-interactive);
 }
 
 .dmd-diagram-btn:hover:not(:disabled) {
@@ -1070,19 +1173,29 @@ html {
 .dmd-code-block-wrapper {
   margin: 1.5rem 0;
   border-radius: var(--dmd-radius-md);
-  background: var(--dmd-code-bg);
-  border: 1px solid var(--dmd-border-color);
+  /* Layered surface: faint top light + ambient elevation on top of the code bg */
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0) 64px),
+    var(--dmd-code-bg);
+  border: 1px solid rgba(255, 255, 255, 0.07);
   overflow: hidden;
-  box-shadow: var(--dmd-shadow-md);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    var(--dmd-shadow-md);
+  counter-reset: dmd-line;
+  --dmd-code-pad-x: 1.25rem;
+  --dmd-gutter-width: 3.2rem;
 }
 
+/* Header ----------------------------------------------------------------- */
 .dmd-code-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 0.75rem;
   padding: 0.5rem 0.85rem;
-  background: var(--dmd-code-header-bg);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.015));
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   font-size: 0.8rem;
 }
 
@@ -1090,103 +1203,294 @@ html {
   display: flex;
   align-items: center;
   gap: 0.6rem;
-}
-
-.dmd-code-dots {
-  display: flex;
-  gap: 5px;
-}
-
-.dmd-code-dots .dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.2);
+  min-width: 0;
 }
 
 .dmd-code-title {
-  color: #94a3b8;
   font-family: var(--dmd-font-mono);
   font-size: 0.78rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dmd-code-path {
+  color: rgba(255, 255, 255, 0.34);
+  font-size: 0.75rem;
+}
+
+.dmd-code-filename {
+  font-weight: 600;
+  font-size: 0.78rem;
+}
+
+.dmd-code-file-icon {
+  display: inline-block;
+  margin-right: 0.34rem;
+  vertical-align: -1.5px;
 }
 
 .dmd-code-header-right {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
-}
-
-.dmd-code-lang {
-  color: #64748b;
-  font-weight: 700;
-  font-size: 0.7rem;
-}
-
-.dmd-copy-btn {
-  display: flex;
-  align-items: center;
   gap: 0.35rem;
-  padding: 0.25rem 0.5rem;
-  font-size: 0.75rem;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: #cbd5e1;
-  border-radius: var(--dmd-radius-sm);
+  flex-shrink: 0;
+}
+
+/* Language pill — subtly tinted by language (via --dmd-lang-color set in the
+   markup); neutral slate when the language has no palette entry. */
+.dmd-code-lang {
+  color: var(--dmd-lang-color, #8494a9);
+  font-weight: 600;
+  font-size: 0.64rem;
+  letter-spacing: 0.08em;
+  padding: 0.14rem 0.45rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--dmd-lang-color, #8494a9) 11%, transparent);
+  border: 1px solid color-mix(in srgb, var(--dmd-lang-color, #8494a9) 26%, transparent);
+}
+
+/* Copy buttons — icon-only, no background/card styling ------------------- */
+.dmd-copy-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: transparent;
+  border: none;
+  padding: 0.25rem;
+  color: rgba(255, 255, 255, 0.4);
   cursor: pointer;
-  transition: all var(--dmd-transition);
+  border-radius: var(--dmd-radius-sm);
+  transition:
+    color var(--dmd-transition),
+    background-color var(--dmd-transition),
+    transform var(--dmd-transition);
 }
 
 .dmd-copy-btn:hover {
-  background: rgba(255, 255, 255, 0.16);
   color: #ffffff;
+  background-color: rgba(255, 255, 255, 0.08);
+  transform: scale(1.06);
 }
 
+.dmd-copy-btn:active {
+  transform: scale(0.96);
+}
+
+.dmd-copy-btn:focus-visible {
+  outline: 2px solid var(--dmd-accent);
+  outline-offset: 2px;
+}
+
+.dmd-copy-btn .check-icon {
+  display: none;
+}
+
+/* Copied state: the button fills with a soft green tint while the checkmark
+   pops in — the swap reads as an event, not just a color change. */
 .dmd-copy-btn.copied {
-  background: rgba(16, 185, 129, 0.2);
   color: #34d399;
-  border-color: rgba(16, 185, 129, 0.4);
+  background-color: rgba(16, 185, 129, 0.16);
 }
 
+.dmd-copy-btn.copied .copy-icon {
+  display: none;
+}
+
+.dmd-copy-btn.copied .check-icon {
+  display: inline;
+  transform-origin: center;
+  animation: dmd-copy-pop 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes dmd-copy-pop {
+  0% {
+    transform: scale(0.35);
+    opacity: 0;
+  }
+  70% {
+    transform: scale(1.18);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dmd-copy-btn.copied .check-icon {
+    animation: none;
+  }
+}
+
+.dmd-copy-selected-btn {
+  opacity: 0.65;
+  transform: scale(0.85);
+}
+
+.dmd-copy-selected-btn:hover {
+  opacity: 1;
+  transform: scale(0.92);
+}
+
+/* Pre container — just a scrollable shell; line layout lives on spans ----- */
 .dmd-code-block-wrapper pre {
   margin: 0;
-  padding: 1rem 1.25rem;
+  padding: 0.75rem 0;
   overflow-x: auto;
   font-family: var(--dmd-font-mono);
   font-size: 0.88rem;
-  line-height: 1.6;
+  line-height: 1.65;
+  tab-size: 4;
   color: var(--dmd-code-text);
   -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
 }
 
-/* Prism token theme — dark-coded surfaces, visible in every family (code bg always dark) */
+.dmd-code-block-wrapper pre::-webkit-scrollbar {
+  height: 6px;
+}
+
+.dmd-code-block-wrapper pre::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.dmd-code-block-wrapper pre::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 999px;
+}
+
+.dmd-code-block-wrapper pre:focus-visible {
+  outline: 2px solid var(--dmd-accent);
+  outline-offset: -2px;
+}
+
+.dmd-code-block-wrapper pre ::selection {
+  background: color-mix(in srgb, var(--dmd-accent) 35%, transparent);
+}
+
+/* Per-line blocks — word-wrap enabled; gutter is absolute-positioned ------ */
+.dmd-code-line {
+  display: block;
+  position: relative;
+  padding: 0 var(--dmd-code-pad-x) 0 calc(var(--dmd-gutter-width) + var(--dmd-code-pad-x));
+  min-height: 1.65em;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  word-break: normal;
+}
+
+.dmd-code-line::before {
+  content: counter(dmd-line);
+  counter-increment: dmd-line;
+  position: absolute;
+  left: 0;
+  width: var(--dmd-gutter-width);
+  padding-right: 0.75rem;
+  text-align: right;
+  font-size: 0.76em;
+  font-variant-numeric: tabular-nums;
+  color: rgba(255, 255, 255, 0.22);
+  user-select: none;
+  pointer-events: none;
+}
+
+/* Hairline separating the gutter from the code — modern editor look. */
+.dmd-code-line::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(var(--dmd-gutter-width) - 0.45rem);
+  width: 1px;
+  background: rgba(255, 255, 255, 0.055);
+  pointer-events: none;
+}
+
+.dmd-code-line-active {
+  background: color-mix(in srgb, var(--dmd-accent) 8%, transparent);
+  box-shadow: inset 2px 0 0 var(--dmd-accent);
+  /* Full-bleed highlight: extend into gutter + right padding */
+  margin-left: calc(-1 * (var(--dmd-gutter-width) + var(--dmd-code-pad-x)));
+  margin-right: calc(-1 * var(--dmd-code-pad-x));
+  padding-left: calc(var(--dmd-gutter-width) + var(--dmd-code-pad-x));
+  padding-right: var(--dmd-code-pad-x);
+}
+
+/* Leading whitespace indicators ------------------------------------------
+   The span keeps the REAL whitespace character (invisible) so textContent,
+   the copy buttons, and manual selections stay byte-identical to the source.
+   The real whitespace must remain SELECTABLE (no user-select on the span):
+   browsers exclude user-select:none content from the selection, which would
+   strip indentation from manual Ctrl+C copies. Only the decorative ::before
+   glyph is unselectable. */
+.dmd-ws-space {
+  position: relative;
+  color: transparent;
+}
+
+.dmd-ws-space::before {
+  content: "\00b7";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 1em;
+  color: rgba(255, 255, 255, 0.2);
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.dmd-ws-tab {
+  position: relative;
+  color: transparent;
+}
+
+.dmd-ws-tab::before {
+  content: "\2192";
+  position: absolute;
+  left: 0.3ch;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.85em;
+  color: rgba(255, 255, 255, 0.2);
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Prism token theme — dark-coded surfaces, visible in every family (code bg always dark).
+   Modern muted palette (Tokyo Night inspired): soft violet keywords, green strings,
+   cyan functions, warm-orange numbers. */
 .dmd-code-block-wrapper .token.comment,
 .dmd-code-block-wrapper .token.prolog,
-.dmd-code-block-wrapper .token.cdata { color: #6b7280; font-style: italic; }
+.dmd-code-block-wrapper .token.cdata { color: #7d8799; font-style: italic; }
 .dmd-code-block-wrapper .token.punctuation { color: #94a3b8; }
 .dmd-code-block-wrapper .token.property,
 .dmd-code-block-wrapper .token.tag,
+.dmd-code-block-wrapper .token.deleted { color: #f7768e; }
 .dmd-code-block-wrapper .token.boolean,
 .dmd-code-block-wrapper .token.number,
 .dmd-code-block-wrapper .token.constant,
-.dmd-code-block-wrapper .token.symbol,
-.dmd-code-block-wrapper .token.deleted { color: #f472b6; }
+.dmd-code-block-wrapper .token.symbol { color: #ff9e64; }
 .dmd-code-block-wrapper .token.selector,
 .dmd-code-block-wrapper .token.attr-name,
 .dmd-code-block-wrapper .token.string,
 .dmd-code-block-wrapper .token.char,
 .dmd-code-block-wrapper .token.builtin,
-.dmd-code-block-wrapper .token.inserted { color: #34d399; }
+.dmd-code-block-wrapper .token.inserted { color: #9ece6a; }
 .dmd-code-block-wrapper .token.operator,
 .dmd-code-block-wrapper .token.entity,
-.dmd-code-block-wrapper .token.url,
-.dmd-code-block-wrapper .token.variable { color: #38bdf8; }
+.dmd-code-block-wrapper .token.url { color: #89ddff; }
+.dmd-code-block-wrapper .token.variable { color: #c0caf5; }
 .dmd-code-block-wrapper .token.atrule,
 .dmd-code-block-wrapper .token.attr-value,
-.dmd-code-block-wrapper .token.keyword { color: #a78bfa; }
+.dmd-code-block-wrapper .token.keyword { color: #bb9af7; }
 .dmd-code-block-wrapper .token.function,
-.dmd-code-block-wrapper .token.class-name { color: #fbbf24; }
+.dmd-code-block-wrapper .token.class-name { color: #7dcfff; }
 .dmd-code-block-wrapper .token.regex,
-.dmd-code-block-wrapper .token.important { color: #fb7185; }
+.dmd-code-block-wrapper .token.important { color: #f7768e; }
 .dmd-code-block-wrapper .token.important { font-weight: 700; }
 .dmd-code-block-wrapper .token.bold { font-weight: 700; }
 .dmd-code-block-wrapper .token.italic { font-style: italic; }
@@ -1253,8 +1557,10 @@ html {
   font-size: 0.94rem;
   line-height: 1.7;
 }
-.dmd-callout-body > *:first-child { margin-top: 0; }
-.dmd-callout-body > *:last-child { margin-bottom: 0; }
+.dmd-callout-body > *:first-child,
+.dmd-callout-body slot::slotted(*:first-child) { margin-top: 0; }
+.dmd-callout-body > *:last-child,
+.dmd-callout-body slot::slotted(*:last-child) { margin-bottom: 0; }
 
 .dmd-callout-note      { --dmd-callout-color: #3b82f6; }
 .dmd-callout-tip       { --dmd-callout-color: #10b981; }
@@ -1300,147 +1606,254 @@ html {
    BUILTIN INTERACTIVE COMPONENTS
    ========================================================================== */
 .dmd-tabs-wrapper {
-  margin: 1.5rem 0;
+  margin: 1.75rem 0;
   border: 1px solid var(--dmd-border-color);
-  border-radius: var(--dmd-radius-md);
+  border-radius: var(--dmd-radius-lg);
   overflow: hidden;
-  background: var(--dmd-bg-card);
-  box-shadow: var(--dmd-shadow-sm);
+  background:
+    linear-gradient(to bottom, color-mix(in srgb, var(--dmd-bg-card) 72%, transparent), transparent 9rem),
+    var(--dmd-bg-card);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    var(--dmd-shadow-md);
+  transition: border-color var(--dmd-transition), box-shadow var(--dmd-transition);
+}
+
+.dmd-tabs-wrapper:hover {
+  border-color: color-mix(in srgb, var(--dmd-border-color) 72%, var(--dmd-text-muted));
 }
 
 /* Header bar — tab row scrolls horizontally when it overflows, but the
-   scrollbar itself is never shown. */
+   scrollbar itself is never shown. `position: relative` makes it the
+   coordinate space for the sliding indicator (which scrolls with content,
+   so it stays glued to the active tab). */
 .dmd-tabs-header {
+  position: relative;
   display: flex;
-  align-items: center;
-  gap: 0.25rem;
-  padding: 0.35rem 0.5rem;
-  background: var(--dmd-bg-secondary);
+  align-items: stretch;
+  gap: 0.3rem;
+  padding: 0.45rem 0.65rem;
+  background:
+    linear-gradient(to bottom, color-mix(in srgb, var(--dmd-bg-card) 55%, transparent), transparent),
+    var(--dmd-bg-secondary);
   border-bottom: 1px solid var(--dmd-border-color);
   overflow-x: auto;
   overscroll-behavior-inline: contain;
   scrollbar-width: none;
+  scroll-padding-inline: 0.65rem;
 }
 .dmd-tabs-header::-webkit-scrollbar {
   height: 0;
   display: none;
 }
 
+/* Sliding indicator — one element per tab row, moved with transform/width
+   (GPU-only, no layout invalidation) against vars written by DmdTabs. */
+.dmd-tab-indicator {
+  position: absolute;
+  left: 0;
+  top: 0.45rem;
+  bottom: 0.45rem;
+  pointer-events: none;
+  border-radius: var(--dmd-radius-sm);
+  background: color-mix(in srgb, var(--dmd-accent) 12%, var(--dmd-bg-card));
+  border: 1px solid color-mix(in srgb, var(--dmd-accent) 30%, transparent);
+  transform: translateX(var(--dmd-tab-ind-x, 0px));
+  width: var(--dmd-tab-ind-w, 0px);
+  transition:
+    transform var(--dmd-transition),
+    width var(--dmd-transition),
+    background-color var(--dmd-transition),
+    box-shadow var(--dmd-transition),
+    opacity var(--dmd-transition);
+}
+@media (prefers-reduced-motion: reduce) {
+  .dmd-tab-indicator {
+    transition: none;
+  }
+}
+
 .dmd-tab-btn {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  padding: 0.45rem 0.9rem;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 0.55rem 1.05rem;
+  min-height: 2.35rem;
   font-size: 0.85rem;
-  font-weight: 500;
+  line-height: 1.25;
+  /* 600 across every state: the active tab used to bump 500 -> 600, resizing
+     the button and shifting its neighbors on every tab switch. */
+  font-weight: 600;
   letter-spacing: 0.01em;
-  background: none;
-  border: none;
+  background: transparent;
+  border: 1px solid transparent;
   color: var(--dmd-text-secondary);
   border-radius: var(--dmd-radius-sm);
   cursor: pointer;
   white-space: nowrap;
+  /* Paint above the absolute indicator so its fill never covers the label. */
+  position: relative;
+  z-index: 1;
   transition:
     color var(--dmd-transition),
     background var(--dmd-transition),
-    border-color var(--dmd-transition);
+    border-color var(--dmd-transition),
+    box-shadow var(--dmd-transition),
+    transform var(--dmd-transition);
   flex: 0 0 auto;
 }
 
 .dmd-tab-btn:hover {
   color: var(--dmd-text-primary);
-  background: var(--dmd-bg-tertiary);
+  background: color-mix(in srgb, var(--dmd-text-primary) 6%, transparent);
+  border-color: color-mix(in srgb, var(--dmd-border-color) 75%, transparent);
+}
+
+.dmd-tab-btn:active {
+  transform: translateY(1px);
 }
 
 .dmd-tab-btn:focus-visible {
   outline: 2px solid var(--dmd-accent);
-  outline-offset: 1px;
+  outline-offset: 2px;
 }
 
 .dmd-tab-btn.active {
   color: var(--dmd-accent);
-  background: var(--dmd-bg-card);
-  font-weight: 600;
-  box-shadow: var(--dmd-shadow-sm);
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
 }
 
 .dmd-tab-icon {
   display: inline-flex;
   align-items: center;
-  font-size: 1em;
+  justify-content: center;
+  flex: 0 0 auto;
+  font-size: 1.05em;
   line-height: 1;
+  transform: translateY(-0.01em);
 }
 
 .dmd-tab-label {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  min-width: 0;
 }
 
 .dmd-tab-panel {
-  padding: 1.25rem;
+  padding: 1.4rem 1.5rem 1.5rem;
+  background:
+    linear-gradient(to bottom, color-mix(in srgb, var(--dmd-text-primary) 2.5%, transparent), transparent 2.5rem);
 }
-.dmd-tab-panel > *:first-child { margin-top: 0; }
-.dmd-tab-panel > *:last-child { margin-bottom: 0; }
+.dmd-tab-panel > *:first-child,
+.dmd-tab-panel slot::slotted(*:first-child) { margin-top: 0; }
+.dmd-tab-panel > *:last-child,
+.dmd-tab-panel slot::slotted(*:last-child) { margin-bottom: 0; }
 
-.dmd-tab-content > *:first-child { margin-top: 0; }
-.dmd-tab-content > *:last-child { margin-bottom: 0; }
+.dmd-tab-content > *:first-child,
+.dmd-tab-content slot::slotted(*:first-child) { margin-top: 0; }
+.dmd-tab-content > *:last-child,
+.dmd-tab-content slot::slotted(*:last-child) { margin-bottom: 0; }
 
-/* Underline variant — docs-style tabs with an animated accent indicator.
-   Inactive tabs preview a thin baseline on hover, the active tab gets a
-   thicker accent bar. */
+/* Underline variant — chromeless editorial tabs. The wrapper itself drops
+   its card chrome so the block reads as plain text with a hairline, nothing
+   like the boxed recessed/pills/postit treatments. Uppercase micro-labels
+   and a thick sliding accent bar complete the flat look. */
+.dmd-tabs-underline {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  margin: 1.25rem 0;
+}
 .dmd-tabs-underline .dmd-tabs-header {
-  background: var(--dmd-bg-card);
-  padding: 0 0.5rem;
-  gap: 0;
-  border-bottom: 1px solid var(--dmd-border-subtle);
+  background: transparent;
+  padding: 0 0.25rem;
+  gap: 0.5rem;
+  align-items: flex-end;
+  border-bottom: 1.5px solid var(--dmd-border-subtle);
+}
+.dmd-tabs-underline .dmd-tab-indicator {
+  top: auto;
+  bottom: -1.5px;
+  height: 3px;
+  border: none;
+  border-radius: 999px;
+  background: var(--dmd-accent);
+  box-shadow: 0 1px 10px -1px var(--dmd-accent-glow);
 }
 .dmd-tabs-underline .dmd-tab-btn {
   border-radius: 0;
-  padding: 0.7rem 1rem;
+  padding: 0.7rem 0.9rem;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
   background: transparent;
-  box-shadow: none;
-  position: relative;
+  box-shadow: inset 0 -2.5px 0 transparent;
   color: var(--dmd-text-muted);
+  transition:
+    color var(--dmd-transition),
+    box-shadow var(--dmd-transition);
 }
 .dmd-tabs-underline .dmd-tab-btn:hover {
   color: var(--dmd-text-primary);
   background: transparent;
-}
-.dmd-tabs-underline .dmd-tab-btn::after {
-  content: '';
-  position: absolute;
-  left: 0.6rem;
-  right: 0.6rem;
-  bottom: -1px;
-  height: 2px;
-  border-radius: 2px;
-  background: transparent;
-  transition: background var(--dmd-transition);
-}
-.dmd-tabs-underline .dmd-tab-btn:hover::after {
-  background: var(--dmd-border-color);
+  box-shadow: inset 0 -2.5px 0 var(--dmd-border-color);
 }
 .dmd-tabs-underline .dmd-tab-btn.active {
   background: transparent;
   box-shadow: none;
   color: var(--dmd-accent);
-  font-weight: 600;
-}
-.dmd-tabs-underline .dmd-tab-btn.active::after {
-  background: var(--dmd-accent);
-  height: 3px;
 }
 
-/* Pills variant — segmented control. The pills sit in a recessed tray; the
-   active pill is filled with the accent and casts a faint accent glow. The
-   text color adapts to the theme (bg-card) so it always contrasts with the
-   solid accent, in both light and dark modes. */
+/* Pills variant — centered segmented control on a floating bar with a
+   sliding SOLID accent pill (the only variant that fills the indicator with
+   the accent color and flips the label to on-accent text). Centered and
+   detached from the panel so it can't be confused with the recessed well. */
 .dmd-tabs-pills .dmd-tabs-header {
-  background: var(--dmd-bg-secondary);
-  border-bottom: 1px solid var(--dmd-border-color);
-  padding: 0.6rem 0.75rem;
-  gap: 0.5rem;
+  background: color-mix(in srgb, var(--dmd-bg-secondary) 82%, var(--dmd-bg-card));
+  border-bottom: none;
+  border-radius: var(--dmd-radius-full);
+  margin: 0.75rem 0.75rem 0;
+  padding: 0.3rem;
+  gap: 0.15rem;
+  align-items: center;
+  /* Center the row with flex-start + ::before/::after spacers instead of
+     justify-content:center. The absolute indicator has an explicit left: 0,
+     so its translateX(offsetLeft) tracks the button 1:1 either way — but
+     WITHOUT an explicit inset a centered flex row gives the absolutely
+     positioned indicator a centered static position, and the JS offset is
+     added on top of that slack, parking the pill in empty space. */
+  justify-content: flex-start;
+  border: 1px solid var(--dmd-border-subtle);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+.dmd-tabs-pills .dmd-tabs-header::before,
+.dmd-tabs-pills .dmd-tabs-header::after {
+  content: "";
+  flex: 1 1 0;
+  min-width: 0;
+}
+.dmd-tabs-pills .dmd-tab-indicator {
+  /* Anchor to the header's padding-box left edge regardless of flex static
+     positioning: without this the abspos span is treated as a centered flex
+     item and starts hundreds of px in. NO align-self here: for an absolutely
+     positioned flex child a non-stretch align-self makes the browser resolve
+     the cross size as auto instead of stretching via the top/bottom insets,
+     collapsing the pill to 0 height. */
+  left: 0;
+  top: 0.3rem;
+  bottom: 0.3rem;
+  border: none;
+  border-radius: var(--dmd-radius-full);
+  background: var(--dmd-accent);
+  box-shadow:
+    0 2px 14px -3px var(--dmd-accent-glow),
+    0 0 0 1px color-mix(in srgb, var(--dmd-accent) 25%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--dmd-bg-card) 35%, transparent);
 }
 .dmd-tabs-pills .dmd-tab-btn {
   border-radius: var(--dmd-radius-full);
@@ -1449,72 +1862,175 @@ html {
   box-shadow: none;
 }
 .dmd-tabs-pills .dmd-tab-btn:hover {
-  border-color: var(--dmd-border-color);
+  border-color: color-mix(in srgb, var(--dmd-border-color) 80%, transparent);
   color: var(--dmd-text-primary);
-  background: var(--dmd-bg-tertiary);
+  background: color-mix(in srgb, var(--dmd-text-primary) 6%, transparent);
 }
 .dmd-tabs-pills .dmd-tab-btn.active {
-  background: var(--dmd-accent);
-  border-color: var(--dmd-accent-hover);
+  /* On-accent text: bg-card flips correctly per theme (light accents get
+     dark text, dark accents get light text) — same convention as buttons. */
   color: var(--dmd-bg-card);
-  box-shadow: 0 2px 12px -4px var(--dmd-accent-glow);
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
+}
+.dmd-tabs-pills .dmd-tab-btn:not(.active):hover {
+  box-shadow: none;
 }
 
-/* Recessed (default) — inset/recessed tab buttons sitting in a pressed tray.
-   Inactive tabs are recessed into the tray; the active tab pops up on top. */
+/* Recessed (default) — a pressed WELL: the whole header is inset from the
+   wrapper edges on a darker surface with a soft inner shadow, so the row
+   physically reads as sunken. The active tab is a raised card chip floating
+   above the well with an elevated drop shadow. */
 .dmd-tabs-recessed .dmd-tabs-header {
-  background: var(--dmd-bg-tertiary);
+  margin: 0.55rem;
+  margin-bottom: 0.65rem;
   padding: 0.35rem;
   gap: 0.25rem;
+  align-items: center;
+  background: var(--dmd-bg-secondary);
+  border: 1px solid var(--dmd-border-subtle);
+  border-radius: var(--dmd-radius-md);
+  box-shadow:
+    inset 0 2px 8px -3px rgba(0, 0, 0, 0.14),
+    inset 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+[data-theme='dark'] .dmd-tabs-recessed .dmd-tabs-header {
+  background: color-mix(in srgb, var(--dmd-bg-primary) 70%, var(--dmd-bg-secondary));
+  box-shadow:
+    inset 0 2px 8px -3px rgba(0, 0, 0, 0.5),
+    inset 0 1px 2px rgba(0, 0, 0, 0.25);
+}
+.dmd-tabs-recessed .dmd-tab-indicator {
+  top: 0.35rem;
+  bottom: 0.35rem;
+  border-radius: var(--dmd-radius-sm);
+  background: var(--dmd-bg-card);
+  border: 1px solid var(--dmd-border-color);
+  box-shadow:
+    0 1px 4px rgba(0, 0, 0, 0.08),
+    0 1px 2px rgba(0, 0, 0, 0.04);
+  opacity: 1;
+}
+[data-theme='dark'] .dmd-tabs-recessed .dmd-tab-indicator {
+  background: var(--dmd-bg-card);
+  border-color: color-mix(in srgb, var(--dmd-border-color) 85%, transparent);
+  box-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.45),
+    0 1px 2px rgba(0, 0, 0, 0.25);
 }
 .dmd-tabs-recessed .dmd-tab-btn {
+  padding: 0.45rem 0.95rem;
+  min-height: 2.15rem;
+  font-size: 0.85rem;
+  font-weight: 500;
   border-radius: var(--dmd-radius-sm);
   background: transparent;
   color: var(--dmd-text-secondary);
-  box-shadow: inset 0 1px 3px color-mix(in srgb, var(--dmd-border-color) 45%, transparent);
+  border: none;
+  box-shadow: none;
 }
 .dmd-tabs-recessed .dmd-tab-btn:hover {
   color: var(--dmd-text-primary);
-  background: var(--dmd-bg-card);
-  box-shadow: var(--dmd-shadow-sm);
+  background: color-mix(in srgb, var(--dmd-text-primary) 6%, transparent);
 }
 .dmd-tabs-recessed .dmd-tab-btn.active {
-  background: var(--dmd-bg-card);
+  background: transparent;
   color: var(--dmd-accent);
   font-weight: 600;
-  box-shadow: 0 1px 4px -1px var(--dmd-border-color);
+  box-shadow: none;
+}
+.dmd-tabs-recessed .dmd-tab-btn.active:hover {
+  background: transparent;
+}
+.dmd-tabs-recessed .dmd-tab-panel {
+  padding: 0.75rem 1.25rem 1.25rem;
+  background: transparent;
 }
 
-/* Post-It — sticky-note tabs: slightly rotated, tinted tabs that straighten
-   and lift on hover; the active tab reads as a stuck-on note. */
-.dmd-tabs-postit .dmd-tabs-header {
-  background: transparent;
-  padding: 0.45rem 0.45rem 0;
-  gap: 0;
-  align-items: flex-end;
-  border-bottom: 1px solid var(--dmd-border-subtle);
+/* Post-It — folder-style sticky tabs on a NEUTRAL desk pad. Each tab is its
+   own colored paper note: six pastel hues cycle per tab (`nth-of-type`), so a
+   row reads as a scattered stack of different notes instead of one amber strip.
+   The pad itself stays neutral; only the tabs carry color. Alternately tilted
+   tabs straighten and dock into the panel on hover/activate; the active tab
+   opens at its strongest hue so tab + panel read as one sheet. No sliding
+   indicator: each tab is its own physical object. */
+.dmd-tabs-postit .dmd-tab-indicator {
+  display: none;
 }
+.dmd-tabs-postit .dmd-tabs-header {
+  padding: 0.75rem 0.75rem 0;
+  gap: 0.25rem;
+  align-items: flex-end;
+  background:
+    linear-gradient(to bottom, color-mix(in srgb, var(--dmd-bg-card) 55%, transparent), transparent),
+    var(--dmd-bg-secondary);
+  border-bottom: 1px solid var(--dmd-border-color);
+  box-shadow: inset 0 -6px 12px -10px rgba(0, 0, 0, 0.35);
+}
+/* Six pastel hues, cycling per tab. `of-type` counts only buttons — the
+   indicator span is ignored. */
+.dmd-tabs-postit .dmd-tab-btn:nth-of-type(6n+1) { --dmd-postit: #fbbf24; }
+.dmd-tabs-postit .dmd-tab-btn:nth-of-type(6n+2) { --dmd-postit: #f472b6; }
+.dmd-tabs-postit .dmd-tab-btn:nth-of-type(6n+3) { --dmd-postit: #34d399; }
+.dmd-tabs-postit .dmd-tab-btn:nth-of-type(6n+4) { --dmd-postit: #38bdf8; }
+.dmd-tabs-postit .dmd-tab-btn:nth-of-type(6n+5) { --dmd-postit: #a78bfa; }
+.dmd-tabs-postit .dmd-tab-btn:nth-of-type(6n+6) { --dmd-postit: #fb923c; }
 .dmd-tabs-postit .dmd-tab-btn {
   position: relative;
-  margin: 0 0.15rem;
-  border-radius: var(--dmd-radius-sm) var(--dmd-radius-sm) 0 0;
-  background: var(--dmd-bg-tertiary);
-  color: var(--dmd-text-secondary);
-  border: 1px solid var(--dmd-border-color);
+  z-index: 1;
+  margin: 0 0.1rem -1px;
+  padding: 0.55rem 1.15rem 0.6rem;
+  border-radius: var(--dmd-radius-md) var(--dmd-radius-md) 0 0;
+  /* Paper surface: opaque pastel mixed into card — visibly colored in light
+     AND dark themes (unlike alpha washes, which vanish on dark surfaces). */
+  background: color-mix(in srgb, var(--dmd-postit, #fbbf24) 26%, var(--dmd-bg-card));
+  color: var(--dmd-text-primary);
+  border: 1px solid color-mix(in srgb, var(--dmd-postit, #fbbf24) 65%, var(--dmd-border-color));
   border-bottom: none;
-  transform: rotate(-0.8deg) translateY(2px);
+  transform-origin: bottom center;
+  transition:
+    color var(--dmd-transition),
+    background var(--dmd-transition),
+    border-color var(--dmd-transition),
+    transform var(--dmd-transition),
+    box-shadow var(--dmd-transition);
+}
+/* Alternate the static tilt per tab so the row reads as a scattered stack
+   of notes. `of-type` counts only buttons — the indicator span is ignored. */
+.dmd-tabs-postit .dmd-tab-btn:nth-of-type(odd) {
+  transform: rotate(-2.2deg);
+}
+.dmd-tabs-postit .dmd-tab-btn:nth-of-type(even) {
+  transform: rotate(1.8deg);
 }
 .dmd-tabs-postit .dmd-tab-btn:hover {
-  background: var(--dmd-bg-secondary);
+  background: color-mix(in srgb, var(--dmd-postit, #fbbf24) 46%, var(--dmd-bg-card));
   color: var(--dmd-text-primary);
-  transform: rotate(0deg) translateY(0);
+  transform: rotate(0deg) translateY(-3px);
+  box-shadow:
+    0 -4px 10px -6px rgba(0, 0, 0, 0.4),
+    0 0 0 1px color-mix(in srgb, var(--dmd-postit, #fbbf24) 45%, transparent);
 }
 .dmd-tabs-postit .dmd-tab-btn.active {
-  background: var(--dmd-accent-subtle);
-  color: var(--dmd-accent);
-  font-weight: 600;
+  /* The open note: strongest hue, straightened and docked into the panel so
+     the tab + panel read as one continuous sheet. */
+  background: color-mix(in srgb, var(--dmd-postit, #fbbf24) 55%, var(--dmd-bg-card));
+  color: var(--dmd-text-primary);
   transform: rotate(0deg);
-  box-shadow: 0 -3px 10px -5px var(--dmd-accent-glow);
+  z-index: 2;
+  border-color: color-mix(in srgb, var(--dmd-postit, #fbbf24) 80%, var(--dmd-border-color));
+  border-bottom: 1px solid color-mix(in srgb, var(--dmd-postit, #fbbf24) 55%, var(--dmd-bg-card));
+  box-shadow:
+    0 -6px 14px -8px color-mix(in srgb, var(--dmd-postit, #fbbf24) 70%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--dmd-postit, #fbbf24) 20%, transparent);
+}
+@media (prefers-reduced-motion: reduce) {
+  .dmd-tabs-postit .dmd-tab-btn:nth-of-type(odd),
+  .dmd-tabs-postit .dmd-tab-btn:nth-of-type(even) {
+    transform: none;
+  }
 }
 
 /* Icon-only tab (no label) — square-ish hit target. */
@@ -1548,7 +2064,7 @@ html {
   background: var(--dmd-bg-card);
   border: 1px solid var(--dmd-border-color);
   border-radius: var(--dmd-radius-md);
-  transition: all var(--dmd-transition);
+  transition: var(--dmd-transition-interactive);
   height: 100%;
 }
 
@@ -1594,10 +2110,16 @@ html {
 }
 
 /* Container-style cards: Markdown bodies inside .dmd-card-body keep normal
-   document flow (headings, lists, tables, code) without extra chrome. */
+   document flow (headings, lists, tables, code) without extra chrome.
+   A card body is slotted light DOM, so the host is what reaches it: the
+   `.dmd-card-body h2` form only matches shadow-root content and never matched
+   a slotted heading, which left container-card headings at document scale. */
 .dmd-card-body h2,
 .dmd-card-body h3,
-.dmd-card-body h4 {
+.dmd-card-body h4,
+.dmd-markdown-body dmd-card > h2,
+.dmd-markdown-body dmd-card > h3,
+.dmd-markdown-body dmd-card > h4 {
   margin-top: 0.25rem;
   font-size: 1rem;
   color: var(--dmd-text-primary);
@@ -1681,8 +2203,10 @@ html {
   color: var(--dmd-text-secondary);
   font-size: 0.9rem;
 }
-.dmd-card-body > *:first-child { margin-top: 0; }
-.dmd-card-body > *:last-child { margin-bottom: 0; }
+.dmd-card-body > *:first-child,
+.dmd-card-body slot::slotted(*:first-child) { margin-top: 0; }
+.dmd-card-body > *:last-child,
+.dmd-card-body slot::slotted(*:last-child) { margin-bottom: 0; }
 
 .dmd-card-footer {
   margin-top: auto;
@@ -1726,8 +2250,9 @@ html {
 
 /* CardGrid carousel — activates when cards outnumber columns.
    Native scroll-snap track; slides are flex items sized to the viewport so
-   the track overflows horizontally. Clone zones (leading/trailing) make the
-   last → first transition gliding instead of a jump. */
+   the track overflows horizontally. The first cards are cloned after the real
+   slides (see CardGrid._syncClones) so the last position keeps the window full
+   — five-one with two cards per view — instead of ending on a jump cut. */
 .dmd-card-carousel {
   margin: 1.5rem 0;
   --dmd-carousel-gap: 1rem;
@@ -1774,6 +2299,13 @@ html {
   height: 100%;
 }
 
+/* Cloned wrap-around slides are decoration — the same card is reachable in its
+   real slide, so the copies never take a click (they also carry `inert` and
+   `aria-hidden`, which covers keyboard and screen readers in modern browsers). */
+.dmd-carousel-slide[aria-hidden="true"] {
+  pointer-events: none;
+}
+
 .dmd-carousel-controls {
   display: flex;
   align-items: center;
@@ -1796,7 +2328,7 @@ html {
   cursor: pointer;
   font-size: 1.1rem;
   line-height: 1;
-  transition: all var(--dmd-transition);
+  transition: var(--dmd-transition-interactive);
 }
 .dmd-carousel-btn:hover {
   border-color: var(--dmd-accent);
@@ -1820,7 +2352,7 @@ html {
   border-radius: 50%;
   background: var(--dmd-border-color);
   cursor: pointer;
-  transition: all var(--dmd-transition);
+  transition: var(--dmd-transition-interactive);
 }
 .dmd-carousel-dot:hover {
   background: var(--dmd-text-muted);
@@ -1964,7 +2496,11 @@ html {
   padding-bottom: 1.75rem;
   transition: color var(--dmd-transition);
 }
-.dmd-step-item:last-child {
+/* The item div is the ONLY element inside its shadow root, so a plain
+   `:last-child` would always match there and hide every connector. Scope
+   last-ness to the HOST instead, evaluated among its real light-DOM
+   siblings (works for both <dmd-step> and <Item> hosts). */
+:host(:last-child) .dmd-step-item {
   padding-bottom: 0;
 }
 
@@ -1981,7 +2517,7 @@ html {
   background: linear-gradient(to bottom, var(--dmd-accent), var(--dmd-border-color));
   opacity: 0.55;
 }
-.dmd-step-item:last-child::after {
+:host(:last-child) .dmd-step-item::after {
   display: none;
 }
 
@@ -2032,8 +2568,14 @@ html {
   line-height: 1.7;
   max-width: 60ch;
 }
-.dmd-step-body > *:first-child { margin-top: 0; }
-.dmd-step-body > *:last-child { margin-bottom: 0; }
+.dmd-step-body > *:first-child,
+.dmd-step-body slot::slotted(*:first-child) {
+  margin-top: 0;
+}
+.dmd-step-body > *:last-child,
+.dmd-step-body slot::slotted(*:last-child) {
+  margin-bottom: 0;
+}
 
 /* ==========================================================================
    EXTENDED BUILTIN COMPONENTS
@@ -2085,8 +2627,10 @@ html {
   font-size: 0.94rem;
   line-height: 1.7;
 }
-.dmd-alert-body > *:first-child { margin-top: 0; }
-.dmd-alert-body > *:last-child { margin-bottom: 0; }
+.dmd-alert-body > *:first-child,
+.dmd-alert-body slot::slotted(*:first-child) { margin-top: 0; }
+.dmd-alert-body > *:last-child,
+.dmd-alert-body slot::slotted(*:last-child) { margin-bottom: 0; }
 
 .dmd-alert-note   { --dmd-alert-color: #3b82f6; }
 .dmd-alert-info   { --dmd-alert-color: #38bdf8; }
@@ -2276,7 +2820,8 @@ a.dmd-btn { display: inline-flex; }
   color: var(--dmd-text-secondary);
   border-top: 1px solid var(--dmd-border-subtle);
 }
-.dmd-details-body p:last-child { margin-bottom: 0; }
+.dmd-details-body p:last-child,
+.dmd-details-body slot::slotted(*:last-child) { margin-bottom: 0; }
 
 /* Accordion */
 .dmd-accordion {
@@ -2288,7 +2833,13 @@ a.dmd-btn { display: inline-flex; }
   box-shadow: var(--dmd-shadow-sm);
 }
 
-.dmd-accordion-item + .dmd-accordion-item { border-top: 1px solid var(--dmd-border-color); }
+/* Each item is its own custom element with its own shadow root, so sibling
+   combinators can never match across shadow boundaries (slotted hosts are
+   not DOM children of the container). Scope the divider to the HOST instead,
+   evaluated among its real light-DOM siblings. */
+:host(:not(:first-child)) .dmd-accordion-item {
+  border-top: 1px solid var(--dmd-border-color);
+}
 
 .dmd-accordion-trigger {
   display: flex;
@@ -2362,8 +2913,14 @@ a.dmd-btn { display: inline-flex; }
   opacity: 1;
   padding: 0.5rem 1.1rem 1rem;
 }
-.dmd-accordion-panel > *:first-child { margin-top: 0; }
-.dmd-accordion-panel p:last-child { margin-bottom: 0; }
+.dmd-accordion-panel > *:first-child,
+.dmd-accordion-panel slot::slotted(*:first-child) {
+  margin-top: 0;
+}
+.dmd-accordion-panel p:last-child,
+.dmd-accordion-panel slot::slotted(*:last-child) {
+  margin-bottom: 0;
+}
 
 @media (prefers-reduced-motion: reduce) {
   .dmd-accordion-panel {
@@ -2384,15 +2941,23 @@ a.dmd-btn { display: inline-flex; }
 .dmd-columns-4 { grid-template-columns: repeat(4, 1fr); }
 
 /* Column base — `normal` (default) is borderless + flush: just content flow,
-   no card chrome. The typographic reset applies to every variant. */
+   no card chrome. The typographic reset applies to every variant. Slotted
+   children live in light DOM, so ::slotted rules are needed alongside the
+   shadow-side child resets. */
 .dmd-column {
   padding: 1rem;
 }
-.dmd-column > *:first-child { margin-top: 0; }
-.dmd-column > *:last-child { margin-bottom: 0; }
+.dmd-column > *:first-child,
+.dmd-column slot::slotted(*:first-child) {
+  margin-top: 0;
+}
+.dmd-column > *:last-child,
+.dmd-column slot::slotted(*:last-child) {
+  margin-bottom: 0;
+}
 
 /* `card` — elevated panel, matching the Card component's look. */
-.dmd-columns-card .dmd-column {
+.dmd-column-card {
   padding: 1rem 1.1rem;
   border: 1px solid var(--dmd-border-color);
   border-radius: var(--dmd-radius-md);
@@ -2403,14 +2968,14 @@ a.dmd-btn { display: inline-flex; }
     box-shadow var(--dmd-transition),
     transform var(--dmd-transition);
 }
-.dmd-columns-card .dmd-column:hover {
+.dmd-column-card:hover {
   border-color: color-mix(in srgb, var(--dmd-accent) 40%, var(--dmd-border-color));
   box-shadow: var(--dmd-shadow-md);
   transform: translateY(-1px);
 }
 
 /* `recessed` — inset tray: sits *below* the page surface rather than above it. */
-.dmd-columns-recessed .dmd-column {
+.dmd-column-recessed {
   border-radius: var(--dmd-radius-md);
   background: var(--dmd-bg-secondary);
   box-shadow: inset 0 2px 8px color-mix(in srgb, var(--dmd-border-color) 35%, transparent);
@@ -2418,7 +2983,7 @@ a.dmd-btn { display: inline-flex; }
 
 /* `neon` — accent outline + glow: the accent bleeds through the border and a
    soft matching halo. */
-.dmd-columns-neon .dmd-column {
+.dmd-column-neon {
   border: 1px solid var(--dmd-accent);
   border-radius: var(--dmd-radius-md);
   background: color-mix(in srgb, var(--dmd-accent) 6%, var(--dmd-bg-card));
@@ -2454,7 +3019,12 @@ a.dmd-btn { display: inline-flex; }
   gap: 1rem;
   padding-bottom: 1.5rem;
 }
-.dmd-timeline-item:last-child { padding-bottom: 0; }
+/* Same shadow-root caveat as Steps: plain `:last-child` inside the item's
+   shadow root is always true, so scope last-ness to the HOST among its real
+   light-DOM siblings (works for both <dmd-timeline-item> and <Item> hosts). */
+:host(:last-child) .dmd-timeline-item {
+  padding-bottom: 0;
+}
 
 /* Connector between dots — accent near the current node, bleeding to neutral. */
 .dmd-timeline-item::before {
@@ -2468,8 +3038,9 @@ a.dmd-btn { display: inline-flex; }
   background: linear-gradient(to bottom, var(--dmd-accent), var(--dmd-border-color));
   opacity: 0.45;
 }
-.dmd-timeline-item:last-child::before { display: none; }
-
+:host(:last-child) .dmd-timeline-item::before {
+  display: none;
+}
 .dmd-timeline-dot {
   width: 16px;
   height: 16px;
@@ -2525,8 +3096,14 @@ a.dmd-btn { display: inline-flex; }
   line-height: 1.7;
   max-width: 60ch;
 }
-.dmd-timeline-body > *:first-child { margin-top: 0; }
-.dmd-timeline-body p:last-child { margin-bottom: 0; }
+.dmd-timeline-body > *:first-child,
+.dmd-timeline-body slot::slotted(*:first-child) {
+  margin-top: 0;
+}
+.dmd-timeline-body p:last-child,
+.dmd-timeline-body slot::slotted(*:last-child) {
+  margin-bottom: 0;
+}
 
 @media (max-width: 900px) {
   .dmd-columns-2, .dmd-columns-3, .dmd-columns-4 { grid-template-columns: 1fr; }
@@ -2590,18 +3167,26 @@ a.dmd-btn { display: inline-flex; }
 .dmd-toc-link {
   color: var(--dmd-text-muted);
   display: block;
-  transition: color var(--dmd-transition);
+  position: relative;
+  text-decoration: none;
+  border-left: 2px solid transparent;
+  margin-left: -0.55rem;
+  padding-left: calc(0.55rem - 2px);
+  line-height: 1.45;
+  overflow-wrap: break-word;
+  transition: color var(--dmd-transition), border-color var(--dmd-transition);
 }
 
-.dmd-toc-link:hover, .dmd-toc-link.active {
-  color: var(--dmd-accent);
-  font-weight: 500;
+/* Emphasis must not change text metrics: a font-weight or dimension bump
+   widens the label and re-wraps the entry (layout shift on active/hover).
+   Accent color + static indicator bar carry the state with 0px shift. */
+.dmd-toc-link:hover {
+  color: var(--dmd-text-primary);
 }
 
 .dmd-toc-link.active {
-  border-left: 2px solid var(--dmd-accent);
-  margin-left: -0.55rem;
-  padding-left: calc(0.55rem - 2px);
+  color: var(--dmd-accent);
+  border-left-color: var(--dmd-accent);
 }
 
 /* Inline Markdown inside page-map entries: badge images, code, and links stay
@@ -2656,12 +3241,18 @@ a.dmd-btn { display: inline-flex; }
   border: 1px solid var(--dmd-border-color);
   background: var(--dmd-bg-card);
   cursor: pointer;
-  transition: all var(--dmd-transition);
+  transition: var(--dmd-transition-interactive);
 }
 
 .dmd-page-nav-card:hover {
   border-color: var(--dmd-accent);
   background: var(--dmd-accent-subtle);
+  transform: translateY(-2px);
+  box-shadow: var(--dmd-shadow-md);
+}
+
+.dmd-page-nav-card:active {
+  transform: translateY(0);
 }
 
 .dmd-page-nav-card.next {
@@ -2679,8 +3270,20 @@ a.dmd-btn { display: inline-flex; }
   margin-bottom: 0.25rem;
 }
 
+.dmd-page-nav-sub svg {
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.dmd-page-nav-card.prev:hover .dmd-page-nav-sub svg {
+  transform: translateX(-3px);
+}
+
 .dmd-page-nav-card.next .dmd-page-nav-sub {
   justify-content: flex-end;
+}
+
+.dmd-page-nav-card.next:hover .dmd-page-nav-sub svg {
+  transform: translateX(3px);
 }
 
 .dmd-page-nav-title {
@@ -2708,11 +3311,13 @@ a.dmd-btn { display: inline-flex; }
   inset: 0;
   background: rgba(0, 0, 0, 0.65);
   backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   z-index: 200;
   display: flex;
   align-items: flex-start;
   justify-content: center;
   padding: max(12vh, env(safe-area-inset-top)) 1rem max(1rem, env(safe-area-inset-bottom));
+  animation: dmd-backdrop-in 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .dmd-search-modal {
@@ -2726,6 +3331,23 @@ a.dmd-btn { display: inline-flex; }
   max-height: min(680px, calc(100dvh - 2rem));
   display: flex;
   flex-direction: column;
+  animation: dmd-modal-enter 0.24s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes dmd-backdrop-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes dmd-modal-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .dmd-search-input-wrapper {
@@ -2834,11 +3456,12 @@ a.dmd-btn { display: inline-flex; }
   padding: 0.75rem 1rem;
   border-radius: var(--dmd-radius-md);
   cursor: pointer;
-  transition: background-color var(--dmd-transition);
+  transition: background-color var(--dmd-transition), transform 0.15s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .dmd-search-item:hover, .dmd-search-item.selected {
   background: var(--dmd-accent-subtle);
+  transform: translateX(2px);
 }
 
 .dmd-search-item-header {
@@ -2901,6 +3524,18 @@ a.dmd-btn { display: inline-flex; }
   box-shadow: var(--dmd-shadow-lg);
   font-size: 0.85rem;
   line-height: 1.45;
+  animation: dmd-toast-enter 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes dmd-toast-enter {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 14px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
 }
 
 .dmd-offline-toast-action {
@@ -2913,7 +3548,7 @@ a.dmd-btn { display: inline-flex; }
   border-radius: var(--dmd-radius-sm);
   cursor: pointer;
   white-space: nowrap;
-  transition: all var(--dmd-transition);
+  transition: var(--dmd-transition-interactive);
 }
 
 .dmd-offline-toast-action:hover {
@@ -3075,7 +3710,7 @@ a.dmd-btn { display: inline-flex; }
   border: 1px solid var(--dmd-border-color);
   border-radius: var(--dmd-radius-md);
   cursor: pointer;
-  transition: all var(--dmd-transition);
+  transition: var(--dmd-transition-interactive);
   min-height: 36px;
   white-space: nowrap;
 }
@@ -3099,6 +3734,19 @@ a.dmd-btn { display: inline-flex; }
   box-shadow: var(--dmd-shadow-lg);
   /* Navbar dropdowns opt back into normal text flow. */
   white-space: normal;
+  transform-origin: top right;
+  animation: dmd-dropdown-enter 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes dmd-dropdown-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .dmd-appearance-heading {
@@ -3159,11 +3807,17 @@ a.dmd-btn { display: inline-flex; }
   border: 1px solid var(--dmd-border-color);
   border-radius: var(--dmd-radius-md);
   cursor: pointer;
-  transition: all var(--dmd-transition);
+  transition: var(--dmd-transition-interactive);
 }
 
 .dmd-theme-family-card:hover {
   border-color: var(--dmd-accent);
+  transform: translateY(-1px);
+  box-shadow: var(--dmd-shadow-sm);
+}
+
+.dmd-theme-family-card:active {
+  transform: translateY(0);
 }
 
 .dmd-theme-family-card.active {
@@ -3215,7 +3869,7 @@ fieldset.dmd-appearance-section {
   border: 0;
   border-radius: calc(var(--dmd-radius-md) - 2px);
   cursor: pointer;
-  transition: all var(--dmd-transition);
+  transition: var(--dmd-transition-interactive);
 }
 
 .dmd-segmented-control button.active {
@@ -3381,17 +4035,8 @@ fieldset.dmd-appearance-section {
    NAVIGATION RAILS
    Active-state reinforcement for sidebar + page map across families.
    ========================================================================== */
-.dmd-toc-link.active {
-  position: relative;
-  color: var(--dmd-accent);
-  font-weight: 600;
-  box-shadow: inset 2px 0 0 var(--dmd-accent);
-  padding-left: 0.5rem;
-}
-
 .dmd-sidebar-link.active {
   color: var(--dmd-accent);
-  font-weight: 650;
 }
 
 
@@ -3597,8 +4242,12 @@ fieldset.dmd-appearance-section {
     max-width: 100%;
   }
 
+  .dmd-code-block-wrapper {
+    --dmd-code-pad-x: 1rem;
+    --dmd-gutter-width: 2.6rem;
+  }
+
   .dmd-code-block-wrapper pre {
-    padding: 0.9rem 1rem;
     font-size: 0.82rem;
   }
 
@@ -3738,6 +4387,7 @@ fieldset.dmd-appearance-section {
   .dmd-diagram-btn,
   .dmd-copy-btn {
     min-height: 44px;
+    min-width: 44px;
   }
 
   .dmd-social-btn,
@@ -3781,3 +4431,98 @@ fieldset.dmd-appearance-section {
     animation-duration: 0.01ms !important;
   }
 }
+
+/* ==========================================================================
+   DENSITY: COMPACT READING MODE (FULL-FOCUS LAYOUT)
+   Dedicates the viewport to the documentation: expands the reading column,
+   relaxes content measures, and slims chrome and rails without altering
+   font sizes or text metrics.
+   ========================================================================== */
+
+/* Expand outer body container to give ample breathing room on wide viewports */
+[data-dmd-density='compact'] .dmd-layout-body {
+  max-width: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0 clamp(1rem, 2.5vw, 2.5rem);
+}
+
+/* Center stage: expand documentation content column to utilize full reading width */
+[data-dmd-density='compact'] .dmd-main-wrapper {
+  grid-template-columns: minmax(0, 1fr) var(--dmd-toc-width);
+  justify-content: stretch;
+  width: 100%;
+  max-width: none;
+  padding: clamp(1rem, 2vw, 2rem) clamp(1rem, 2.5vw, 2.5rem);
+  gap: clamp(1.5rem, 2.5vw, 2.5rem);
+}
+
+[data-dmd-density='compact'] .dmd-main-content {
+  width: 100%;
+  max-width: 100%;
+  margin: 0 auto;
+}
+
+/* Remove early line breaks so text utilizes the expansive reading width */
+[data-dmd-density='compact'] .dmd-markdown-body p,
+[data-dmd-density='compact'] .dmd-markdown-body li {
+  max-width: none;
+}
+
+/* Top chrome: trim vertical footprint to maximize content visible above the fold */
+[data-dmd-density='compact'] .dmd-navbar {
+  padding: 0 clamp(1rem, 2.5vw, 2.5rem);
+}
+
+/* Navigation rails: streamline side gutters so text remains the focal point */
+[data-dmd-density='compact'] .dmd-sidebar {
+  padding-top: 1.25rem;
+  padding-right: 0.75rem;
+}
+
+[data-dmd-density='compact'] .dmd-content-header {
+  margin-bottom: 1.1rem;
+  padding-bottom: 0.6rem;
+}
+
+/* Responsive folding: ensure full-width focus under single-column breakpoints */
+@media (max-width: 1280px) {
+  [data-dmd-density='compact'] .dmd-main-content {
+    max-width: 100%;
+  }
+}
+
+/* ==========================================================================
+   CUSTOM ELEMENT HOST LAYOUT
+   DocMeDown markdown components are compiled as custom elements with
+   shadow: "none". The host element is invisible in the layout tree so the
+   component's own template provides the visual structure. This restores the
+   rendering behaviour of the original non-CE renderer where there was no
+   extra wrapper between the document and the component output.
+   display: contents removes the host from the formatting context while
+   keeping it in the DOM for querying, event bubbling, and the
+   MutationObserver-based child adoption used by each component.
+   ========================================================================== */
+dmd-alert,
+dmd-accordion,
+dmd-accordion-item,
+dmd-badge,
+dmd-button,
+dmd-callout,
+dmd-card,
+dmd-card-grid,
+dmd-columns,
+dmd-column,
+dmd-details,
+dmd-item,
+dmd-kbd,
+dmd-mermaid,
+dmd-step,
+dmd-steps,
+dmd-tab,
+dmd-tabs,
+dmd-timeline,
+dmd-timeline-item {
+  display: contents;
+}
+

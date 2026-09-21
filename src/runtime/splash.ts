@@ -1,0 +1,367 @@
+/**
+ * Branded app-shell splash shown while the runtime boots.
+ *
+ * The runtime stylesheet is injected by JavaScript, so before the bundle runs
+ * the page is otherwise unstyled (a blank white canvas). The splash ships as
+ * inline critical CSS plus a tiny theme bootstrap inside each shell —
+ * prerendered pages, the standard template, the dev-server fallback, and
+ * offline copies — so it paints immediately, matches the saved theme and color
+ * mode (no light flash), holds for a minimum brand beat, then hands off to the
+ * first document.
+ *
+ * The overlay is a pixel-faithful preview of the real reader chrome rather
+ * than an abstract loader: a 68px-class top bar (--dmd-splash-navh) with the
+ * brand lockup, search field, and action chips; a sidebar-rail skeleton with
+ * labeled section groups and an active entry; an article skeleton with the
+ * breadcrumb row, document title, meta rule, callout, and code-block rhythms
+ * of a real page; and a table-of-contents rail on wide viewports. Column
+ * widths, type, spacing, radii, and breakpoints mirror `main.css` (TOC folds
+ * into a card at 1280px, search collapses to an icon at 1100px, the sidebar
+ * rail retires at 1024px, compact bar under 680px), so the mounted app lands
+ * on identically-proportioned chrome and dismissal reads as one crossfade
+ * rather than a blank-to-content jump.
+ *
+ * Everything here must stay dependency-free and inline: it runs before any
+ * stylesheet or module is available. Keep the output small — it is embedded in
+ * every generated page and, for `file://` copies, is not gzip-compressed.
+ */
+
+export const SPLASH_ID = "dmd-splash";
+export const SPLASH_HIDDEN_CLASS = "dmd-splash-hidden";
+/** Marks <html> while the splash is up so the page behind cannot scroll. */
+export const SPLASH_ACTIVE_CLASS = "dmd-splash-active";
+/** Records the first-paint timestamp so the splash can hold for a minimum time. */
+export const SPLASH_START_KEY = "__DOCMEDOWN_SPLASH_START__";
+/** Minimum brand time before the splash may be dismissed, in milliseconds. */
+export const SPLASH_MIN_DURATION_MS = 950;
+/** Must match the `#dmd-splash` transition duration in the stylesheet below. */
+export const SPLASH_EXIT_MS = 450;
+
+export interface SplashOptions {
+  /** Documentation name rendered in the top-bar brand lockup. */
+  name?: string;
+  /**
+   * Optional one-line description (from `docs.json` `tagline`). Rendered as
+   * the article preview's real description line so the shell reads branded
+   * instead of fully grey — omitted when not provided.
+   */
+  tagline?: string;
+  /** Optional version string rendered as a pill next to the brand name. */
+  version?: string;
+  /** Optional brand logo URL (`theme.logo.light`). Takes precedence over the mark. */
+  logo?: string;
+  /** Optional brand logo URL for dark mode (`theme.logo.dark`). */
+  logoDark?: string;
+  /** Alt text for the brand logo. Falls back to the documentation name. */
+  logoAlt?: string;
+  /**
+   * Brand accent override for light mode (from `docs.json`
+   * `theme.accentColor`). The runtime applies the same override once booted;
+   * the splash needs it inlined because it paints first. Only `#hex` forms
+   * are accepted — anything else is ignored, so a stray config value can
+   * never inject markup or CSS.
+   */
+  accent?: string;
+  /** Brand accent override for dark mode (`theme.accentColorDark`). */
+  accentDark?: string;
+}
+
+function escapeHtml(value: string): string {
+  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+/** Accepts only `#rgb`, `#rgba`, `#rrggbb`, and `#rrggbbaa` — the safe subset of CSS colors. */
+const SPLASH_ACCENT_PATTERN = /^#(?:[0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
+
+function sanitizeAccentColor(value: string | undefined): string | undefined {
+  const trimmed = value?.trim();
+  return trimmed && SPLASH_ACCENT_PATTERN.test(trimmed) ? trimmed : undefined;
+}
+
+function sanitizeLogoUrl(value: string | undefined): string | undefined {
+  const trimmed = value?.trim();
+  if (!trimmed || trimmed.length > 512) return undefined;
+  if (/[<>"'`]/.test(trimmed)) return undefined;
+  const lowered = trimmed.toLowerCase();
+  if (lowered.startsWith("javascript:") || lowered.startsWith("data:text/html") || lowered.startsWith("vbscript:")) {
+    return undefined;
+  }
+  if (
+    /^(https?:\/\/|data:image\/|\.\.?\/|#|\/[^/]|[^:/?#]+\/)/i.test(trimmed) ||
+    /^[^:/?#\s]+\.[a-z0-9]+/i.test(trimmed)
+  ) {
+    return trimmed;
+  }
+  if (/^[\w\-.]+$/i.test(trimmed)) return trimmed;
+  return undefined;
+}
+
+/**
+ * Builds the per-mode accent override stylesheet. The palette below ships the
+ * theme-family defaults; a configured brand accent must win over the theme,
+ * and the dark variant must win over the light one, so the override reuses the
+ * same selectors as the theme palette and simply comes later in the document.
+ * A light-only accent also applies in dark mode, mirroring the runtime's
+ * `accentColorDark || accentColor` fallback.
+ */
+function renderSplashAccentOverride(accent?: string, accentDark?: string): string {
+  const light = sanitizeAccentColor(accent);
+  const dark = sanitizeAccentColor(accentDark);
+  const rules: string[] = [];
+  if (light) rules.push(`:root{--dmd-splash-accent:${light}}`);
+  if (light || dark) rules.push(`:root[data-theme=dark]{--dmd-splash-accent:${dark ?? light}}`);
+  return rules.length > 0 ? `<style>${rules.join("")}</style>` : "";
+}
+
+/**
+ * Splash palette. The runtime tokens live in the JS bundle, so the splash
+ * carries a compact copy of each family's canvas, surface, border, ink,
+ * skeleton, code-surface, and accent tones per mode, plus the family's real
+ * nav height and radii. Values mirror `themes.css`; family+dark rules outrank
+ * the generic dark rule, so declaration order does not matter.
+ *
+ * Layout contract: the overlay previews the real reader chrome — a 68px-class
+ * top bar (brand lockup, search field, actions), then a centered body row with
+ * a 252px navigation skeleton, a 780px article skeleton, and a 220px
+ * table-of-contents skeleton. Columns collapse at the same breakpoints as the
+ * app (TOC into a card under 1280px, search to an icon under 1100px, sidebar
+ * under 1024px, compact bar under 680px), so the mounted app lands on
+ * identically-proportioned chrome and dismissal reads as one crossfade.
+ */
+const SPLASH_STYLE = `<style>
+html.dmd-splash-active{overflow:hidden}
+html,body{margin:0}
+:root{--dmd-splash-bg:#f7f7f5;--dmd-splash-surface:#ffffff;--dmd-splash-line:#ddded8;--dmd-splash-ink:#1a1d21;--dmd-splash-muted:#788089;--dmd-splash-bone:#e4e6e3;--dmd-splash-shine:#ffffff;--dmd-splash-accent:#315cf5;--dmd-splash-code:#16181d;--dmd-splash-code-head:#101216;--dmd-splash-code-line:#262b33;--dmd-splash-navh:68px;--dmd-splash-radius:10px;--dmd-splash-radius-sm:6px}
+:root[data-theme=dark]{--dmd-splash-bg:#121417;--dmd-splash-surface:#191d21;--dmd-splash-line:#2b3036;--dmd-splash-ink:#ededef;--dmd-splash-muted:#8b939b;--dmd-splash-bone:#212529;--dmd-splash-shine:#2c333a;--dmd-splash-accent:#5b8cff;--dmd-splash-code:#0d0f12;--dmd-splash-code-head:#08090b;--dmd-splash-code-line:#22262b}
+:root[data-dmd-theme=blueprint]{--dmd-splash-bg:#f2f5f7;--dmd-splash-surface:#fafcfd;--dmd-splash-line:#c6d3da;--dmd-splash-ink:#14212b;--dmd-splash-muted:#6c8494;--dmd-splash-bone:#dde5ea;--dmd-splash-shine:#ffffff;--dmd-splash-accent:#ef5340;--dmd-splash-code:#101b23;--dmd-splash-code-head:#0b141a;--dmd-splash-code-line:#1c2c37;--dmd-splash-navh:60px;--dmd-splash-radius:3px;--dmd-splash-radius-sm:2px}
+:root[data-dmd-theme=blueprint][data-theme=dark]{--dmd-splash-bg:#0f171e;--dmd-splash-surface:#121c24;--dmd-splash-line:#24363f;--dmd-splash-ink:#dbe6ec;--dmd-splash-muted:#7d95a3;--dmd-splash-bone:#182731;--dmd-splash-shine:#2b4350;--dmd-splash-accent:#ff6a55;--dmd-splash-code:#0a1116;--dmd-splash-code-head:#060b0f;--dmd-splash-code-line:#1b2a33}
+:root[data-dmd-theme=terminal]{--dmd-splash-bg:#f3f4f1;--dmd-splash-surface:#fbfcfa;--dmd-splash-line:#c9cdc3;--dmd-splash-ink:#161c17;--dmd-splash-muted:#6f7b70;--dmd-splash-bone:#dfe2db;--dmd-splash-shine:#ffffff;--dmd-splash-accent:#0c7c40;--dmd-splash-code:#0a0e0b;--dmd-splash-code-head:#050706;--dmd-splash-code-line:#131a14;--dmd-splash-navh:54px;--dmd-splash-radius:2px;--dmd-splash-radius-sm:0px}
+:root[data-dmd-theme=terminal][data-theme=dark]{--dmd-splash-bg:#0a0e0c;--dmd-splash-surface:#0e130f;--dmd-splash-line:#26382a;--dmd-splash-ink:#d8e6d8;--dmd-splash-muted:#7a8d7b;--dmd-splash-bone:#151d17;--dmd-splash-shine:#2c4532;--dmd-splash-accent:#39e87f;--dmd-splash-code:#060907;--dmd-splash-code-head:#030504;--dmd-splash-code-line:#1a291e}
+:root[data-dmd-theme=editorial]{--dmd-splash-bg:#faf6ee;--dmd-splash-surface:#fffdf7;--dmd-splash-line:#ded2ba;--dmd-splash-ink:#22201a;--dmd-splash-muted:#857c68;--dmd-splash-bone:#eae1cf;--dmd-splash-shine:#ffffff;--dmd-splash-accent:#a34a33;--dmd-splash-code:#211d15;--dmd-splash-code-head:#191610;--dmd-splash-code-line:#332c1e;--dmd-splash-navh:68px;--dmd-splash-radius:12px;--dmd-splash-radius-sm:8px}
+:root[data-dmd-theme=editorial][data-theme=dark]{--dmd-splash-bg:#171512;--dmd-splash-surface:#1c1915;--dmd-splash-line:#363023;--dmd-splash-ink:#ece7db;--dmd-splash-muted:#948a73;--dmd-splash-bone:#26221b;--dmd-splash-shine:#4a402c;--dmd-splash-accent:#dd805f;--dmd-splash-code:#100e0a;--dmd-splash-code-head:#0a0806;--dmd-splash-code-line:#2a251c}
+#dmd-splash{position:fixed;inset:0;z-index:2147483000;display:flex;flex-direction:column;overflow:hidden;background:var(--dmd-splash-bg);color:var(--dmd-splash-ink);font-family:system-ui,ui-sans-serif,-apple-system,"Segoe UI",sans-serif;font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased;transition:opacity .45s cubic-bezier(.4,0,.2,1),visibility .45s}
+#dmd-splash.dmd-splash-hidden{opacity:0;visibility:hidden;pointer-events:none}
+.dmd-splash-bar{position:relative;display:flex;align-items:center;justify-content:space-between;gap:clamp(0.5rem,1.5vw,1.25rem);height:var(--dmd-splash-navh);flex:0 0 var(--dmd-splash-navh);width:100%;box-sizing:border-box;margin:0;padding:0 clamp(1rem,3vw,2.5rem);border-bottom:1px solid var(--dmd-splash-line);background:color-mix(in srgb,var(--dmd-splash-surface) 88%,var(--dmd-splash-bg));backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+.dmd-splash-brand{display:flex;align-items:center;gap:0.6rem;min-width:0;flex:0 1 auto}
+.dmd-splash-mark{display:none}
+.dmd-splash-logo{height:28px;width:auto;max-width:min(160px,20vw);object-fit:contain}
+.dmd-splash-logo-dark{display:none}
+:root[data-theme=dark] .dmd-splash-logo-light{display:none}
+:root[data-theme=dark] .dmd-splash-logo-dark{display:block}
+.dmd-splash-name{font-size:1.08rem;font-weight:750;letter-spacing:-.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--dmd-splash-ink)}
+.dmd-splash-version{flex:0 0 auto;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:0.75rem;font-weight:500;padding:0.15rem 0.45rem;border:1px solid var(--dmd-splash-line);border-radius:3px;color:var(--dmd-splash-muted);background:transparent;white-space:nowrap}
+.dmd-splash-search{display:flex;align-items:center;gap:0.6rem;flex:1 1 280px;max-width:440px;min-width:0;margin:0;min-height:38px;padding:0.45rem 0.85rem;border:1px solid var(--dmd-splash-line);border-radius:var(--dmd-splash-radius);color:var(--dmd-splash-muted);background:color-mix(in srgb,var(--dmd-splash-surface) 72%,var(--dmd-splash-bg));font-size:0.875rem;box-sizing:border-box}
+.dmd-splash-search svg{width:15px;height:15px;flex:0 0 15px}
+.dmd-splash-search span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dmd-splash-search kbd{flex:0 0 auto;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:0.72rem;font-weight:600;padding:0.18rem 0.45rem;border:1px solid var(--dmd-splash-line);border-radius:var(--dmd-splash-radius-sm);background:color-mix(in srgb,var(--dmd-splash-surface) 80%,var(--dmd-splash-bg))}
+.dmd-splash-actions{display:flex;align-items:center;gap:0.75rem;flex:0 0 auto}
+.dmd-splash-actions i{display:block;width:36px;height:36px;border:1px solid var(--dmd-splash-line);border-radius:var(--dmd-splash-radius);background:color-mix(in srgb,var(--dmd-splash-bone) 30%,transparent);box-sizing:border-box}
+.dmd-splash-actions .dmd-splash-action-pill{width:105px}
+.dmd-splash-progress{position:absolute;top:0;left:0;right:0;height:2px;width:100%;overflow:hidden;background:color-mix(in srgb,var(--dmd-splash-accent) 18%,transparent);z-index:2}
+.dmd-splash-progress::after{content:"";position:absolute;top:0;bottom:0;left:0;width:38%;border-radius:9999px;background:var(--dmd-splash-accent);animation:dmd-splash-progress 1.1s cubic-bezier(.5,0,.25,1) infinite}
+.dmd-splash-body{display:flex;flex:1;min-width:0;max-width:1560px;width:100%;margin:0 auto;padding:0 clamp(0.75rem,2vw,2rem);box-sizing:border-box;overflow:hidden}
+.dmd-splash-nav{width:252px;flex-shrink:0;height:calc(100dvh - var(--dmd-splash-navh));overflow:hidden;padding:1.6rem 1rem 2rem 0;border-right:1px solid var(--dmd-splash-line);box-sizing:border-box}
+.dmd-splash-nav-label{display:block;font-size:0.67rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--dmd-splash-muted);margin:0 0.65rem 0.8rem;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.dmd-splash-nav-group{display:block;margin-bottom:1.5rem}
+.dmd-splash-nav-item{display:flex;align-items:center;padding:0.45rem 0.75rem;border-radius:var(--dmd-splash-radius);margin:0.15rem 0;box-sizing:border-box}
+.dmd-splash-nav-item .dmd-splash-bone{margin:0}
+.dmd-splash-nav-item.active,.dmd-splash-nav-active{background:color-mix(in srgb,var(--dmd-splash-accent) 14%,transparent);box-shadow:inset 3px 0 0 var(--dmd-splash-accent)}
+.dmd-splash-main-wrapper{display:grid;grid-template-columns:minmax(0,780px) minmax(180px,220px);justify-content:center;align-items:start;flex:1;min-width:0;width:100%;padding:clamp(1.5rem,4vw,3.5rem) clamp(1rem,4vw,4rem);gap:clamp(2rem,5vw,4.5rem);box-sizing:border-box}
+.dmd-splash-article{width:100%;min-width:0;max-width:780px}
+.dmd-splash-crumb-row{display:flex;align-items:center;gap:0.45rem;margin-bottom:1.5rem;padding-bottom:0.8rem;border-bottom:1px solid var(--dmd-splash-line)}
+.dmd-splash-crumb{display:block;height:9px;border-radius:999px;background:var(--dmd-splash-bone)}
+.dmd-splash-crumb.current{width:64px;background:color-mix(in srgb,var(--dmd-splash-accent) 26%,var(--dmd-splash-bone))}
+.dmd-splash-crumb-sep{display:block;width:8px;height:1px;background:var(--dmd-splash-line)}
+.dmd-splash-doc-title{font-size:clamp(2.45rem,5vw,4.25rem);font-weight:700;letter-spacing:-0.045em;line-height:1.04;margin:0.3rem 0 1.5rem;color:var(--dmd-splash-ink)}
+.dmd-splash-desc{margin:0 0 1.25rem;font-size:1.03rem;line-height:1.8;color:var(--dmd-splash-muted);max-width:62ch}
+.dmd-splash-meta{display:flex;gap:10px;margin:14px 0 24px}
+.dmd-splash-meta .dmd-splash-bone{height:9px;margin:0;border-radius:999px}
+.dmd-splash-h2{display:block;height:24px;border-radius:var(--dmd-splash-radius-sm);background:var(--dmd-splash-bone);margin:2.75rem 0 1rem;overflow:hidden;position:relative}
+.dmd-splash-callout{margin:1.5rem 0;padding:14px 16px;border:1px solid color-mix(in srgb,var(--dmd-splash-accent) 22%,var(--dmd-splash-line));border-left:4px solid var(--dmd-splash-accent);border-radius:var(--dmd-splash-radius-sm);background:color-mix(in srgb,var(--dmd-splash-accent) 7%,var(--dmd-splash-surface))}
+.dmd-splash-callout .dmd-splash-bone{margin-bottom:8px;background:color-mix(in srgb,var(--dmd-splash-accent) 10%,var(--dmd-splash-bone))}
+.dmd-splash-callout .dmd-splash-bone:last-child{margin-bottom:0}
+.dmd-splash-code{margin:1.5rem 0;border:1px solid var(--dmd-splash-code-line);border-radius:var(--dmd-splash-radius-sm);overflow:hidden}
+.dmd-splash-code-head{display:flex;align-items:center;gap:6px;height:34px;padding:0 14px;background:var(--dmd-splash-code-head)}
+.dmd-splash-code-head i{display:block;width:9px;height:9px;border-radius:50%;background:color-mix(in srgb,#fff 24%,var(--dmd-splash-code-head))}
+.dmd-splash-code-body{padding:14px 16px;background:var(--dmd-splash-code)}
+.dmd-splash-code-body .dmd-splash-bone{height:9px;margin-bottom:9px;border-radius:4px;background:color-mix(in srgb,#fff 9%,var(--dmd-splash-code))}
+.dmd-splash-code-body .dmd-splash-bone:last-child{margin-bottom:0}
+.dmd-splash-toc{width:220px;flex-shrink:0}
+.dmd-splash-toc-header{display:flex;align-items:center;gap:0.4rem;margin-bottom:0.75rem;color:var(--dmd-splash-muted);text-transform:uppercase;font-size:0.75rem;font-weight:700;letter-spacing:0.05em}
+.dmd-splash-toc-header svg{width:14px;height:14px;flex:0 0 14px}
+.dmd-splash-toc-label{display:inline}
+.dmd-splash-toc-list{border-left:1px solid var(--dmd-splash-line);padding-left:0.5rem}
+.dmd-splash-toc .dmd-splash-bone{height:10px;margin:0.35rem 0}
+.dmd-splash-toc-active{background:color-mix(in srgb,var(--dmd-splash-accent) 30%,var(--dmd-splash-bone));border-left:2px solid var(--dmd-splash-accent);margin-left:-0.55rem!important;padding-left:calc(0.55rem - 2px)}
+.dmd-splash-bone{position:relative;display:block;height:12px;margin:0 0 10px;border-radius:var(--dmd-splash-radius-sm);background:var(--dmd-splash-bone);overflow:hidden}
+.dmd-splash-bone::after{content:"";position:absolute;inset:0;background:linear-gradient(100deg,transparent 20%,color-mix(in srgb,var(--dmd-splash-shine) 70%,transparent) 50%,transparent 80%);transform:translateX(-100%);animation:dmd-splash-shimmer 2.2s ease-in-out infinite}
+.dmd-splash-nav .dmd-splash-bone:nth-of-type(3n+1)::after{animation-delay:.35s}
+.dmd-splash-article .dmd-splash-bone:nth-of-type(3n)::after{animation-delay:.7s}
+.dmd-splash-toc .dmd-splash-bone::after{animation-delay:.5s}
+.dmd-splash-bone.w30{width:30%}.dmd-splash-bone.w40{width:40%}.dmd-splash-bone.w50{width:50%}.dmd-splash-bone.w60{width:60%}.dmd-splash-bone.w70{width:70%}.dmd-splash-bone.w80{width:80%}.dmd-splash-bone.w90{width:90%}
+:root[data-dmd-theme=terminal] .dmd-splash-name,:root[data-dmd-theme=terminal] .dmd-splash-toc-header,:root[data-dmd-theme=terminal] .dmd-splash-nav-label{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:.02em}
+:root[data-dmd-theme=editorial] .dmd-splash-name{font-family:Iowan Old Style,Palatino Linotype,Book Antiqua,Palatino,Georgia,serif;font-weight:650}
+:root[data-dmd-density=compact]{--dmd-splash-navh:52px}
+:root[data-dmd-density=compact] .dmd-splash-bar{padding:0 clamp(1rem,2.5vw,2.5rem)}
+:root[data-dmd-density=compact] .dmd-splash-body{max-width:100%;width:100%;margin:0;padding:0 clamp(1rem,2.5vw,2.5rem)}
+:root[data-dmd-density=compact] .dmd-splash-nav{width:220px;padding:1.25rem 0.75rem 2rem 0}
+:root[data-dmd-density=compact] .dmd-splash-toc{width:196px}
+:root[data-dmd-density=compact] .dmd-splash-main-wrapper{grid-template-columns:minmax(0,1fr) 196px;justify-content:stretch;width:100%;max-width:none;padding:clamp(1rem,2vw,2rem) clamp(1rem,2.5vw,2.5rem);gap:clamp(1.5rem,2.5vw,2.5rem)}
+:root[data-dmd-density=compact] .dmd-splash-article{width:100%;max-width:100%;margin:0 auto}
+:root[data-dmd-density=compact] .dmd-splash-desc{max-width:none}
+:root[data-dmd-density=compact] .dmd-splash-crumb-row{margin-bottom:1.1rem;padding-bottom:0.6rem}
+:root[data-dmd-density=compact] .dmd-splash-doc-title{margin:0.2rem 0 1rem}
+:root[data-dmd-density=compact] .dmd-splash-h2{margin:2rem 0 0.75rem}
+:root[data-dmd-density=compact] .dmd-splash-callout,:root[data-dmd-density=compact] .dmd-splash-code{margin:1rem 0}
+.dmd-splash-sr{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+@keyframes dmd-splash-progress{0%{transform:translateX(-110%)}100%{transform:translateX(290%)}}
+@keyframes dmd-splash-shimmer{55%{transform:translateX(100%)}100%{transform:translateX(100%)}}
+@media (max-width:1280px){
+.dmd-splash-main-wrapper{display:flex;flex-direction:column;align-items:center;gap:1.25rem;padding:clamp(1.5rem,4vw,3rem) clamp(1rem,4vw,3rem)}
+:root[data-dmd-density=compact] .dmd-splash-main-wrapper{padding:clamp(1rem,3vw,2rem) clamp(1rem,3vw,2rem)}
+.dmd-splash-toc{order:-1;width:100%;max-width:780px;border:1px solid var(--dmd-splash-line);border-radius:var(--dmd-splash-radius-sm);background:color-mix(in srgb,var(--dmd-splash-surface) 66%,var(--dmd-splash-bg));padding:12px 14px;box-sizing:border-box}
+:root[data-dmd-density=compact] .dmd-splash-toc{max-width:100%}
+.dmd-splash-toc-header{margin-bottom:10px}
+.dmd-splash-toc-list{display:flex;flex-wrap:wrap;gap:8px 14px;border:0;padding:0}
+.dmd-splash-toc .dmd-splash-bone{margin:0;height:9px}
+.dmd-splash-toc-active{border-radius:999px;padding:0 10px;border-left:0;margin-left:0!important}
+}
+@media (max-width:1100px){.dmd-splash-search{flex:0 0 38px;max-width:38px;padding:0;justify-content:center}.dmd-splash-search span,.dmd-splash-search kbd{display:none}}
+@media (max-width:1024px){.dmd-splash-nav{display:none}}
+@media (max-width:960px){.dmd-splash-actions .dmd-splash-action-pill{display:none}}
+@media (max-width:680px){.dmd-splash-bar{gap:10px}.dmd-splash-version{display:none}.dmd-splash-actions i:nth-child(n+3){display:none}.dmd-splash-doc-title{font-size:26px}.dmd-splash-crumb-row{display:none}}
+@media (prefers-reduced-motion:reduce){
+#dmd-splash{transition:opacity .2s ease,visibility .2s;animation:none}
+#dmd-splash *,#dmd-splash ::before,#dmd-splash ::after{animation:none!important}
+.dmd-splash-progress::after{transform:none;width:60%;animation:none}
+.dmd-splash-bone::after{display:none}
+}
+</style>`;
+
+/**
+ * Resolves the saved theme before first paint so the splash matches the
+ * reader's preference instead of flashing light. Mirrors the keys and
+ * validation in `theme.svelte.ts`. Also arms a failsafe that retires the splash
+ * if the runtime never signals readiness.
+ */
+const SPLASH_BOOTSTRAP = `<script>(function(){try{var h=document.documentElement,l=window.localStorage,m=l&&l.getItem("dmd-color-mode"),f=l&&l.getItem("dmd-theme-family"),n=l&&l.getItem("dmd-theme-density");if(m!=="light"&&m!=="dark"&&m!=="auto")m="auto";if(["atlas","blueprint","terminal","editorial"].indexOf(f)<0)f="atlas";if(n!=="comfortable"&&n!=="compact")n="comfortable";var d=m==="dark"||(m==="auto"&&window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches),v=d?"dark":"light";h.setAttribute("data-theme",v);h.setAttribute("data-dmd-mode",v);h.setAttribute("data-dmd-theme",f);h.setAttribute("data-dmd-density",n);h.style.colorScheme=v;h.className+=" ${SPLASH_ACTIVE_CLASS}";window.${SPLASH_START_KEY}=Date.now();window.setTimeout(function(){var s=document.getElementById("${SPLASH_ID}");if(!s)return;s.className+=" ${SPLASH_HIDDEN_CLASS}";s.setAttribute("aria-hidden","true");h.className=h.className.replace(" ${SPLASH_ACTIVE_CLASS}","");window.setTimeout(function(){s.parentNode&&s.parentNode.removeChild(s)},${SPLASH_EXIT_MS})},9000)}catch(e){}})();</script>`;
+
+/**
+ * Head fragment for a shell: splash styles, an optional brand-accent override,
+ * the theme bootstrap (which also carries the failsafe and the `SPLASH_EXIT_MS`
+ * removal delay), and a `<noscript>` fallback so JS-disabled readers (and
+ * crawlers) get the prerendered content instead of a permanent splash.
+ */
+export function renderSplashHead(options: SplashOptions = {}): string {
+  return (
+    `${SPLASH_STYLE}${renderSplashAccentOverride(options.accent, options.accentDark)}` +
+    `${SPLASH_BOOTSTRAP}` +
+    `<noscript><style>#${SPLASH_ID}{display:none!important}html.dmd-splash-active{overflow:auto!important}</style></noscript>`
+  );
+}
+
+/**
+ * Body markup for the splash overlay: a preview of the reader shell (top bar,
+ * navigation, article, table of contents) in the same proportions as the app,
+ * so the first real paint lands where the skeleton already is. Skeleton
+ * regions are `aria-hidden` — the root keeps a single `role="status"` live
+ * message — and the visible title/description are real text.
+ */
+export function renderSplashMarkup({
+  name = "Documentation",
+  tagline,
+  version,
+  logo,
+  logoDark,
+  logoAlt,
+}: SplashOptions = {}): string {
+  const normalizedName = name.trim() || "Documentation";
+  const safeName = escapeHtml(normalizedName);
+  const lightLogo = sanitizeLogoUrl(logo);
+  const darkLogo = sanitizeLogoUrl(logoDark);
+  const logoLabel = escapeHtml((logoAlt ?? normalizedName).trim() || normalizedName);
+  const brand = lightLogo
+    ? `<img class="dmd-splash-logo dmd-splash-logo-light" src="${escapeHtml(lightLogo)}" alt="${logoLabel}" decoding="async" />` +
+      (darkLogo
+        ? `<img class="dmd-splash-logo dmd-splash-logo-dark" src="${escapeHtml(darkLogo)}" alt="${logoLabel}" decoding="async" />`
+        : "")
+    : `<span class="dmd-splash-mark" aria-hidden="true">` +
+      `<svg viewBox="0 0 32 32" fill="none">` +
+      `<path d="M10 4.5h8.6c.4 0 .8.2 1.1.5l4.3 4.3c.3.3.5.7.5 1.1V25.5a2 2 0 0 1-2 2H10a2 2 0 0 1-2-2V6.5a2 2 0 0 1 2-2Z"/>` +
+      `<path d="M18.7 4.7v3.6a2 2 0 0 0 2 2h3.6"/>` +
+      `<path d="M12 15h8"/>` +
+      `<path d="M12 19.5h8"/>` +
+      `<path d="M12 24h5"/>` +
+      `</svg></span>`;
+  const trimmedVersion = version?.trim().replace(/^v/i, "").slice(0, 24) ?? "";
+  const versionMarkup = trimmedVersion ? `<span class="dmd-splash-version">v${escapeHtml(trimmedVersion)}</span>` : "";
+  const trimmedTagline = tagline?.trim().slice(0, 220) ?? "";
+  const description = trimmedTagline
+    ? `<p class="dmd-splash-desc">${escapeHtml(trimmedTagline)}</p>`
+    : `<span class="dmd-splash-bone w70"></span>`;
+  return (
+    `<div id="${SPLASH_ID}" role="status" aria-live="polite" aria-busy="true" aria-label="Loading ${safeName}">` +
+    `<div class="dmd-splash-bar">` +
+    `<div class="dmd-splash-brand">${brand}<span class="dmd-splash-name">${safeName}</span>${versionMarkup}</div>` +
+    `<div class="dmd-splash-search" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span>Search docs…</span><kbd>⌘K</kbd></div>` +
+    `<div class="dmd-splash-actions" aria-hidden="true"><i></i><i></i><i class="dmd-splash-action-pill"></i><i class="dmd-splash-action-pill"></i><i></i></div>` +
+    `<span class="dmd-splash-progress" aria-hidden="true"></span>` +
+    `</div>` +
+    `<div class="dmd-splash-body" aria-hidden="true">` +
+    `<div class="dmd-splash-nav">` +
+    `<span class="dmd-splash-nav-label">Documentation</span>` +
+    `<span class="dmd-splash-nav-group"><span class="dmd-splash-nav-item dmd-splash-nav-active"><span class="dmd-splash-bone w70"></span></span><span class="dmd-splash-nav-item"><span class="dmd-splash-bone w80"></span></span><span class="dmd-splash-nav-item"><span class="dmd-splash-bone w60"></span></span><span class="dmd-splash-nav-item"><span class="dmd-splash-bone w80"></span></span></span>` +
+    `<span class="dmd-splash-nav-group"><span class="dmd-splash-nav-item"><span class="dmd-splash-bone w50"></span></span><span class="dmd-splash-nav-item"><span class="dmd-splash-bone w80"></span></span><span class="dmd-splash-nav-item"><span class="dmd-splash-bone w70"></span></span><span class="dmd-splash-nav-item"><span class="dmd-splash-bone w60"></span></span></span>` +
+    `<span class="dmd-splash-nav-group"><span class="dmd-splash-nav-item"><span class="dmd-splash-bone w40"></span></span><span class="dmd-splash-nav-item"><span class="dmd-splash-bone w70"></span></span><span class="dmd-splash-nav-item"><span class="dmd-splash-bone w60"></span></span></span>` +
+    `</div>` +
+    `<div class="dmd-splash-main-wrapper">` +
+    `<div class="dmd-splash-article">` +
+    `<div class="dmd-splash-crumb-row"><span class="dmd-splash-crumb" style="width:44px"></span><span class="dmd-splash-crumb-sep"></span><span class="dmd-splash-crumb current"></span></div>` +
+    `<h1 class="dmd-splash-doc-title">${safeName}</h1>` +
+    `${description}` +
+    `<div class="dmd-splash-meta"><span class="dmd-splash-bone" style="width:72px"></span><span class="dmd-splash-bone" style="width:54px"></span></div>` +
+    `<span class="dmd-splash-bone w90"></span><span class="dmd-splash-bone w80"></span><span class="dmd-splash-bone w70"></span>` +
+    `<div class="dmd-splash-callout"><span class="dmd-splash-bone w30"></span><span class="dmd-splash-bone w70"></span></div>` +
+    `<span class="dmd-splash-h2" style="width:38%"></span>` +
+    `<span class="dmd-splash-bone w90"></span><span class="dmd-splash-bone w70"></span>` +
+    `<div class="dmd-splash-code"><div class="dmd-splash-code-head"><i></i><i></i><i></i></div><div class="dmd-splash-code-body"><span class="dmd-splash-bone" style="width:45%"></span><span class="dmd-splash-bone" style="width:70%"></span><span class="dmd-splash-bone" style="width:55%"></span><span class="dmd-splash-bone" style="width:62%"></span></div></div>` +
+    `</div>` +
+    `<div class="dmd-splash-toc">` +
+    `<div class="dmd-splash-toc-header"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="8" x2="21" y1="6" y2="6"/><line x1="8" x2="21" y1="12" y2="12"/><line x1="8" x2="21" y1="18" y2="18"/><line x1="3" x2="3.01" y1="6" y2="6"/><line x1="3" x2="3.01" y1="12" y2="12"/><line x1="3" x2="3.01" y1="18" y2="18"/></svg><span class="dmd-splash-toc-label">On this page</span></div>` +
+    `<div class="dmd-splash-toc-list"><span class="dmd-splash-bone dmd-splash-toc-active" style="width:72%"></span><span class="dmd-splash-bone w90"></span><span class="dmd-splash-bone w70"></span><span class="dmd-splash-bone w80"></span><span class="dmd-splash-bone w60"></span></div>` +
+    `</div>` +
+    `</div>` +
+    `</div>` +
+    `<span class="dmd-splash-sr">Loading documentation…</span>` +
+    `</div>`
+  );
+}
+
+/** The splash element already scheduled for retirement, so calls are idempotent. */
+let pendingSplash: Element | null = null;
+
+/**
+ * Retires the splash once the app has content to show — but never before
+ * `SPLASH_MIN_DURATION_MS` has elapsed since first paint, so a fast load still
+ * gets a consistent brand beat instead of a sub-frame flash. The reveal
+ * crossfades the splash out while the page fades in (see the
+ * `html.dmd-splash-active` rule in main.css).
+ */
+export function dismissSplash(): void {
+  if (typeof document === "undefined") return;
+
+  const splash = document.getElementById(SPLASH_ID);
+  if (!splash || splash === pendingSplash || splash.classList.contains(SPLASH_HIDDEN_CLASS)) return;
+  pendingSplash = splash;
+
+  const startedAt = (window as unknown as Record<string, unknown>)[SPLASH_START_KEY];
+  const elapsed = typeof startedAt === "number" ? Date.now() - startedAt : SPLASH_MIN_DURATION_MS;
+  const delay = Math.max(0, SPLASH_MIN_DURATION_MS - elapsed);
+
+  window.setTimeout(() => {
+    document.documentElement.classList.remove(SPLASH_ACTIVE_CLASS);
+    splash.classList.add(SPLASH_HIDDEN_CLASS);
+    splash.setAttribute("aria-hidden", "true");
+    window.setTimeout(() => splash.remove(), SPLASH_EXIT_MS);
+  }, delay);
+}

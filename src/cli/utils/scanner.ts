@@ -32,7 +32,7 @@ export function extractHeadings(content: string): DocHeading[] {
 export function scanDirectory(
   dir: string,
   baseDir: string = dir,
-  excludeList: string[] = ["node_modules", ".git", ".dmd", "dist", "bin"],
+  excludeList: string[] = ["node_modules", ".git", ".dmd", "dist", "bin", "SKILL.md"],
   stopAtNestedDocsRoots: boolean = true,
 ): string[] {
   const results: string[] = [];
@@ -100,7 +100,7 @@ export function generateManifest(docDir: string, config: DocConfig): DocManifest
   const tree = buildSidebarTree(files, frontmatters, config.sidebar);
 
   return {
-    version: "1.0.0",
+    version: "0.1.9",
     generatedAt: new Date().toISOString(),
     config,
     docs: docItems,

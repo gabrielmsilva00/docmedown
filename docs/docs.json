@@ -5,6 +5,7 @@
   "description": "Next-generation zero-friction documentation engine for developers",
   "version": "1.0.0",
   "rootDoc": "README.md",
+  "url": "https://gabrielmsilva00.github.io/docmedown",
   "theme": {
     "family": "atlas",
     "density": "comfortable",
@@ -23,6 +24,10 @@
     {
       "label": "CLI Reference",
       "href": "#/guides/cli-reference"
+    },
+    {
+      "label": "Static & AI",
+      "href": "#/guides/static-site"
     },
     {
       "label": "Config Reference",

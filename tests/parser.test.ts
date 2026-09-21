@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
 import { test } from "node:test";
-import { carouselWindow } from "../src/runtime/components/Builtins";
 import { processAlerts } from "../src/runtime/markdown/callouts";
-import { renderCodeBlock } from "../src/runtime/markdown/highlighter";
+import { parseActiveLines, renderCodeBlock } from "../src/runtime/markdown/highlighter";
 import { renderMath } from "../src/runtime/markdown/katex";
 import {
   buildMermaidConfig,
@@ -19,6 +20,7 @@ import {
 } from "../src/runtime/markdown/mermaid";
 import { extractFrontmatter, parseMarkdown, slugifyHeading } from "../src/runtime/markdown/parser";
 import { HashRouter } from "../src/runtime/router";
+import { buildWrapClones, carouselWindow } from "../src/ui/builtins/carousel";
 
 test("Frontmatter extraction", () => {
   const md = `---
@@ -112,6 +114,97 @@ test("highlighter aliases languages and never fakes highlighting", () => {
   const unknown = renderCodeBlock("plain text here", "notalanguage");
   assert.ok(unknown.includes("plain text here"));
   assert.doesNotMatch(unknown, /token keyword/);
+});
+
+test("code blocks wrap lines, reopen tokens, visualize whitespace, and render active lines", () => {
+  // A multi-line comment token must be closed and reopened across line breaks
+  const css = renderCodeBlock("body {\n  /* multi\n  line */\n  color: red;\n}", "css");
+  assert.equal((css.match(/class="dmd-code-line/g) ?? []).length, 5);
+  // Continuation line reopens the token span
+  assert.match(css, /dmd-code-line"><span class="token comment/);
+
+  // {n} and {n-m} ranges highlight exactly the requested lines
+  const highlighted = renderCodeBlock("a\nb\nc\nd", "text {1,3-4}");
+  assert.equal((highlighted.match(/dmd-code-line-active/g) ?? []).length, 3);
+
+  // Empty middle lines keep their gutter number slot
+  const blanks = renderCodeBlock("a\n\nb", "text");
+  assert.equal((blanks.match(/class="dmd-code-line/g) ?? []).length, 3);
+
+  // A trailing newline must not produce a phantom gutter number
+  const trailing = renderCodeBlock("a\n", "text");
+  assert.equal((trailing.match(/class="dmd-code-line/g) ?? []).length, 1);
+
+  // Leading spaces become indicator spans that KEEP the real space inside —
+  // glyphs are CSS ::before overlays, so textContent stays byte-identical.
+  const spaced = renderCodeBlock("  hello", "text");
+  assert.ok(spaced.includes('class="dmd-ws-space"> </span>'));
+  const spacedInner = spaced.slice(spaced.indexOf("<code"), spaced.indexOf("</code>"));
+  assert.equal(spacedInner.replace(/<[^>]+>/g, ""), "  hello");
+
+  // Leading tabs keep the real tab inside their indicator span
+  const tabbed = renderCodeBlock("\thello", "text");
+  assert.ok(tabbed.includes('class="dmd-ws-tab">\t</span>'));
+  const tabbedInner = tabbed.slice(tabbed.indexOf("<code"), tabbed.indexOf("</code>"));
+  assert.equal(tabbedInner.replace(/<[^>]+>/g, ""), "\thello");
+});
+
+test("parseActiveLines understands {n}, {n-m}, and mixed ranges", () => {
+  assert.deepEqual(
+    [...parseActiveLines("{2,4-6}")].sort((a, b) => a - b),
+    [2, 4, 5, 6],
+  );
+  assert.deepEqual([...parseActiveLines("{7}")], [7]);
+  assert.equal(parseActiveLines('ts title="x"').size, 0);
+  assert.equal(parseActiveLines('ts title="braces {x}"').size, 0);
+});
+
+test("path-aware title with extension color coding", () => {
+  // Simple filename — colored by extension, no path span
+  const simple = renderCodeBlock("code", 'css title="styles.css"');
+  assert.ok(simple.includes('class="dmd-code-filename"'));
+  assert.ok(simple.includes("styles.css"));
+  assert.ok(!simple.includes('class="dmd-code-path"'));
+
+  // Relative path — directory is dimmed, filename is colored
+  const pathBlock = renderCodeBlock("code", 'js title="./src/app.ts"');
+  assert.ok(pathBlock.includes('class="dmd-code-path"'));
+  assert.ok(pathBlock.includes("./src/"));
+  assert.ok(pathBlock.includes('class="dmd-code-filename"'));
+  assert.ok(pathBlock.includes("app.ts"));
+
+  // No title — language chip shown instead
+  const noTitle = renderCodeBlock("code", "py");
+  assert.ok(noTitle.includes('class="dmd-code-lang"'));
+  assert.ok(!noTitle.includes('class="dmd-code-title"'));
+});
+
+test("copy-selected button appears only when active lines exist", () => {
+  const withActive = renderCodeBlock("a\nb\nc", "text {1,2}");
+  assert.ok(withActive.includes("data-dmd-copy-selected"));
+
+  const without = renderCodeBlock("a\nb", "text");
+  assert.ok(!without.includes("data-dmd-copy-selected"));
+});
+
+test("copy buttons carry icon classes so the copied state can swap icons", () => {
+  const block = renderCodeBlock("a", "text");
+  // The CSS icon swap (.copied .copy-icon / .copied .check-icon) depends on
+  // these classes being present in the rendered SVG.
+  assert.ok(block.includes('class="copy-icon"'));
+  assert.ok(block.includes('class="check-icon"'));
+});
+
+test("language pill is tinted by language when there is no title", () => {
+  // Known language → pill carries its palette color through the CSS variable
+  const ts = renderCodeBlock("const x = 1", "ts");
+  assert.ok(ts.includes('class="dmd-code-lang"'));
+  assert.ok(ts.includes("--dmd-lang-color:#3178c6"));
+
+  // Unknown language → neutral pill, no color variable
+  const unknown = renderCodeBlock("hello", "notalanguage");
+  assert.ok(unknown.includes('class="dmd-code-lang"'));
+  assert.ok(!unknown.includes("--dmd-lang-color"));
 });
 
 test("Mermaid engine builds deterministic base themes per family and mode", () => {
@@ -286,27 +379,86 @@ test("heading plain text keeps snake_case and decodes badge-link labels", () => 
   assert.match(parsed.headings[0].html!, /<img src="https:\/\/ci\.example\/badge\.svg"/);
 });
 
-test("carouselWindow slides a full window with wrap-around", () => {
-  // 5 cards, 2 per view: 4 positions, every window stays full
+test("carouselWindow loops one position per card with a wrapping window", () => {
+  // 5 cards, 2 per view: 5 positions, every window stays full
   assert.deepEqual(carouselWindow(5, 2, 0).indices, [0, 1]);
   assert.deepEqual(carouselWindow(5, 2, 3).indices, [3, 4]);
-  assert.equal(carouselWindow(5, 2, 0).positions, 4);
-  // Wraps backwards from the first position to the last
-  assert.deepEqual(carouselWindow(5, 2, -1).indices, [3, 4]);
-  // Wraps forwards past the last position to the first
-  assert.deepEqual(carouselWindow(5, 2, 4).indices, [0, 1]);
-  // Positions cap at total - perView + 1: start=2 normalizes back to position 0
-  assert.deepEqual(carouselWindow(4, 3, 2).indices, [0, 1, 2]);
-  assert.equal(carouselWindow(4, 3, 2).positions, 2);
+  assert.equal(carouselWindow(5, 2, 0).positions, 5);
+  // The last position wraps the window around to the first card (five-one)
+  assert.deepEqual(carouselWindow(5, 2, 4).indices, [4, 0]);
+  // Wraps backwards from the first position to the last one
+  assert.deepEqual(carouselWindow(5, 2, -1).indices, [4, 0]);
+  // Three per view: the last position shows the last card plus the first two
+  assert.deepEqual(carouselWindow(5, 3, 1).indices, [1, 2, 3]);
+  assert.deepEqual(carouselWindow(5, 3, 4).indices, [4, 0, 1]);
+  assert.equal(carouselWindow(5, 3, 4).positions, 5);
   // Single column: one card per view, one position per card
   assert.deepEqual(carouselWindow(3, 1, 2).indices, [2]);
   assert.equal(carouselWindow(3, 1, 2).positions, 3);
+  // Every card visible at once: a single, non-looping position
+  assert.deepEqual(carouselWindow(2, 3, 0).indices, [0, 1]);
+  assert.equal(carouselWindow(2, 3, 0).positions, 1);
+  assert.deepEqual(carouselWindow(3, 3, 2).indices, [0, 1, 2]);
+  assert.equal(carouselWindow(3, 3, 2).positions, 1);
   // Degenerate inputs stay safe
   assert.deepEqual(carouselWindow(0, 2, 0).indices, []);
-  assert.deepEqual(carouselWindow(2, 3, 0).indices, [0, 1]);
+  assert.equal(carouselWindow(0, 2, 0).positions, 1);
   // Negative and fractional starts normalize into range
-  assert.deepEqual(carouselWindow(5, 2, -5.7).indices, [2, 3]);
-  assert.deepEqual(carouselWindow(5, 2, 8).indices, [0, 1]);
+  assert.deepEqual(carouselWindow(5, 2, -5.7).indices, [4, 0]);
+  assert.deepEqual(carouselWindow(5, 2, 8).indices, [3, 4]);
+});
+
+test("buildWrapClones duplicates exactly the cards a wrapped window needs", () => {
+  // 5 cards, 2 per view: only the first card trails the real slides
+  assert.deepEqual(buildWrapClones(5, 2), [0]);
+  // 3 per view: the last position needs the first two cards
+  assert.deepEqual(buildWrapClones(5, 3), [0, 1]);
+  assert.deepEqual(buildWrapClones(5, 4), [0, 1, 2]);
+  // A one-card window never wraps around, so nothing is cloned
+  assert.deepEqual(buildWrapClones(5, 1), []);
+  // Everything on screen at once → no loop, no duplicates
+  assert.deepEqual(buildWrapClones(3, 3), []);
+  assert.deepEqual(buildWrapClones(3, 4), []);
+  assert.deepEqual(buildWrapClones(0, 2), []);
+  // Never more than a window's worth — the copies are not a second grid
+  assert.deepEqual(buildWrapClones(4, 2), [0]);
+  assert.deepEqual(buildWrapClones(6, 4), [0, 1, 2]);
+});
+
+test("card grid carousel renders real slide wrappers (broken-carousel guard)", () => {
+  const cardGridSrc = fs.readFileSync(path.resolve(__dirname, "../src/ui/builtins/CardGrid.ts"), "utf-8");
+  // The flex track's items must be .dmd-carousel-slide wrappers with named
+  // slots. The card hosts render `display: contents` and have no box to size
+  // or snap; a bare slot made every card an unstyled flex item and the
+  // carousel had zero horizontal overflow.
+  assert.match(cardGridSrc, /class="dmd-carousel-slide"/);
+  assert.match(cardGridSrc, /slot name="dmd-carousel-\$\{i\}"/);
+  // Each card is assigned onto its named slide slot when slotchange fires.
+  assert.match(cardGridSrc, /setAttribute\("slot", `dmd-carousel-\$\{i\}`\)/);
+  // Offsets are measured from the slides, not the boxless card hosts.
+  assert.match(cardGridSrc, /querySelectorAll<HTMLElement>\("\.dmd-carousel-slide"\)/);
+  // Prev/next scroll the viewport to the cached offset (scrollIntoView on a
+  // display:contents host has no box to align).
+  assert.match(cardGridSrc, /_viewport\.scrollTo\(\{ left: offset, behavior \}\)/);
+  // Named-slot re-fires after render are ignored so cardCount never resets.
+  assert.match(cardGridSrc, /if \(slot\.name\) return;/);
+  // The viewport must be tracked with the ref DIRECTIVE — the call form
+  // `${ref(this._viewportRef)}`, not the attribute form `ref=...` (a plain
+  // `ref` attribute receives the Ref object as a string and nothing gates the
+  // offsets/scroll/snap paths). Bundle-wise the import must also carry `ref`.
+  assert.match(cardGridSrc, /\$\{ref\(this\._viewportRef\)\}/);
+  assert.match(cardGridSrc, /import \{ createRef, ref \} from "lit\/directives\/ref\.js";/);
+  // The loop closes with duplicated slides: the wrapped window (five-one) needs
+  // the first cards again after the real ones, so they are cloned onto clone
+  // slides and kept out of the tab order / accessibility tree.
+  assert.match(cardGridSrc, /buildWrapClones\(this\._cardCount, this\._perView\)/);
+  assert.match(cardGridSrc, /slot name="dmd-carousel-clone-\$\{k\}"/);
+  assert.match(cardGridSrc, /setAttribute\("slot", `dmd-carousel-clone-\$\{slotIndex\}`\)/);
+  assert.match(cardGridSrc, /clone\.setAttribute\("inert", ""\)/);
+  assert.match(cardGridSrc, /clone\.setAttribute\("aria-hidden", "true"\)/);
+  // The duplicates are never counted as slides or scrolled to.
+  assert.match(cardGridSrc, /slice\(0, this\._cardCount\)\.map\(\(slide\) => slide\.offsetLeft\)/);
+  assert.match(cardGridSrc, /this\._clearClones\(\);/);
 });
 
 test("block-level custom components are not wrapped in <p> tags", () => {

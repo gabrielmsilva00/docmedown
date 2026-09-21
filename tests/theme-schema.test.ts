@@ -156,9 +156,21 @@ test("Mermaid viewer uses a square clipped viewport with pan-only navigation", (
 });
 
 test("Mermaid wheel panning uses a non-passive native listener", () => {
-  const component = fs.readFileSync(path.resolve(__dirname, "../src/runtime/components/MermaidDiagram.tsx"), "utf-8");
+  const component = fs.readFileSync(path.resolve(__dirname, "../src/ui/components/MermaidDiagram.svelte"), "utf-8");
 
   assert.match(component, /addEventListener\("wheel",\s*handleWheel,\s*\{\s*passive:\s*false\s*\}\)/);
   assert.match(component, /removeEventListener\("wheel",\s*handleWheel\)/);
   assert.doesNotMatch(component, /onWheel=\{handleWheel\}/);
+});
+
+test("DocMeDown clears the mount container before mounting the Svelte app", () => {
+  // Svelte's mount() does not replace existing target children the way React's
+  // createRoot().render() did. The offline shell's bootstrap placeholder
+  // ("Opening offline documentation…") and prerendered shell articles would
+  // otherwise remain visible above the reader.
+  const entry = fs.readFileSync(path.resolve(__dirname, "../src/ui/index.ts"), "utf-8");
+  const clearAt = entry.indexOf('container.innerHTML = ""');
+  const mountAt = entry.indexOf("mount(App, { target: container })");
+  assert.ok(clearAt >= 0, "initDocMeDown must clear the container before mounting");
+  assert.ok(mountAt > clearAt, "the clear must happen before mount()");
 });

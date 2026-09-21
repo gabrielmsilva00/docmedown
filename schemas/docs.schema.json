@@ -10,6 +10,11 @@
     "name": { "type": "string", "minLength": 1 },
     "tagline": { "type": "string" },
     "description": { "type": "string" },
+    "url": {
+      "type": "string",
+      "format": "uri",
+      "description": "Canonical site origin (e.g. https://docs.example.com). Enables sitemap.xml, robots.txt, canonical links, and absolute Open Graph URLs."
+    },
     "version": { "type": "string" },
     "rootDoc": { "type": "string", "minLength": 1 },
     "home": {

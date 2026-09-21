@@ -158,7 +158,7 @@ test("Offline custom component bundles resolve relative imports and defer module
     fs.writeFileSync(path.join(temporaryDirectory, "shared.js"), "export const label = 'Bundled component';", "utf-8");
     fs.writeFileSync(
       componentsPath,
-      'import { label } from "./shared.js"; export function OfflineWidget() { return window.React.createElement("span", null, label); } export default { OfflineWidget };',
+      'import { label } from "./shared.js"; export class OfflineWidget extends HTMLElement { connectedCallback() { this.textContent = label; } } export default { OfflineWidget };',
       "utf-8",
     );
 

@@ -89,6 +89,41 @@ export class LocalDocLoader {
     return null;
   }
 
+  /**
+   * Synchronous content lookup for instant navigation. Returns the raw markdown
+   * when it is already in memory — the embedded `_docs.js` corpus, a manifest
+   * entry, or a document fetched earlier this session — or `undefined` when a
+   * network request would be required.
+   */
+  public peekDocContent(slug: string): string | undefined {
+    const normalized = this.normalizeKey(slug);
+    const cached = this.cache.get(normalized);
+    if (cached !== undefined) return cached;
+
+    const item = this.embeddedManifest?.docs?.find(
+      (d) => this.normalizeKey(d.slug) === normalized || this.normalizeKey(d.path) === normalized,
+    );
+    if (item?.content) {
+      this.cache.set(normalized, item.content);
+      return item.content;
+    }
+    return undefined;
+  }
+
+  /**
+   * Every embedded document source keyed by slug. Used to warm the parse cache
+   * during idle time so the first visit to any page is a synchronous cache hit.
+   */
+  public embeddedDocSources(): Record<string, string> | null {
+    const sources: Record<string, string> = {};
+    for (const [slug, content] of this.cache) sources[slug] = content;
+    for (const doc of this.embeddedManifest?.docs ?? []) {
+      const key = this.normalizeKey(doc.slug);
+      if (doc.content && sources[key] === undefined) sources[key] = doc.content;
+    }
+    return Object.keys(sources).length > 0 ? sources : null;
+  }
+
   public async fetchDocContent(slug: string, basePath: string = ""): Promise<string | null> {
     const normalized = this.normalizeKey(slug);
 

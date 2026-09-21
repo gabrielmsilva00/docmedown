@@ -5,6 +5,7 @@ import chalk from "chalk";
 import chokidar from "chokidar";
 import mime from "mime-types";
 import { WebSocket, WebSocketServer } from "ws";
+import { renderSplashHead, renderSplashMarkup } from "../../runtime/splash";
 import { shouldWatchDocumentationSource } from "../commands/build";
 
 export interface DevServerOptions {
@@ -67,35 +68,54 @@ export function startDevServer(
 
       let filePath = path.join(rootDir, reqPath);
 
-      // Check if file exists in rootDir
+      // When the SPA is at a nested slug path (e.g. /showcase/) the relative
+      // script tags in index.html (./_docs.js) resolve to /showcase/_docs.js.
+      // Those files live at the docs root — try there before the SPA fallback,
+      // and never serve index.html for requests that look like asset files.
       if (!fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
-        const potentialIndex = path.join(rootDir, "index.html");
-        if (fs.existsSync(potentialIndex)) {
-          filePath = potentialIndex;
+        const ext = path.extname(reqPath);
+        if (ext) {
+          // Asset request (js/css/json/...) — resolve from the docs root so
+          // /showcase/_docs.js still finds docs/_docs.js.
+          filePath = path.join(rootDir, path.basename(reqPath));
+          if (!fs.existsSync(filePath)) {
+            res.writeHead(404, { "Content-Type": "text/plain" });
+            res.end("404 Not Found");
+            return;
+          }
         } else {
-          // Serve fallback runtime template
-          res.writeHead(200, { "Content-Type": "text/html" });
-          res.end(`
+          // SPA route — serve the shell.
+          const potentialIndex = path.join(rootDir, "index.html");
+          if (fs.existsSync(potentialIndex)) {
+            filePath = potentialIndex;
+          } else {
+            // Serve fallback runtime template
+            res.writeHead(200, { "Content-Type": "text/html" });
+            res.end(`
 <!DOCTYPE html>
 <html>
-<head><title>DocMeDown</title></head>
+<head><title>DocMeDown</title>${renderSplashHead()}</head>
 <body>
+  ${renderSplashMarkup({ name: "DocMeDown" })}
   <div id="dmd-app"></div>
-  <script src="/docmedown.iife.js"></script>
+  <script src="/docmedown.web.js"></script>
   ${liveReloadScript}
 </body>
 </html>
-          `);
-          return;
+            `);
+            return;
+          }
         }
       }
 
-      // Check if requesting bundled runtime docmedown.iife.js
-      if (reqPath === "/docmedown.iife.js" && !fs.existsSync(filePath)) {
+      // Check if requesting a bundled runtime asset (the served runtime or its
+      // on-demand engine bundles) that has not been copied into the docs yet.
+      const requestedAsset = path.basename(reqPath);
+      if (["docmedown.web.js", "docmedown-mermaid.js"].includes(requestedAsset) && !fs.existsSync(filePath)) {
         const bundleCandidates = [
-          path.resolve(__dirname, "docmedown.iife.js"),
-          path.resolve(__dirname, "../dist/docmedown.iife.js"),
-          path.resolve(__dirname, "../docmedown.iife.js"),
+          path.resolve(__dirname, requestedAsset),
+          path.resolve(__dirname, "../dist", requestedAsset),
+          path.resolve(__dirname, "..", requestedAsset),
         ];
         const distFile = bundleCandidates.find((p) => fs.existsSync(p));
         if (distFile) {
@@ -154,7 +174,8 @@ export function startDevServer(
         "**/.nojekyll",
         "**/_manifest.json",
         "**/_docs.js",
-        "**/docmedown.iife.js",
+        "**/docmedown.web.js",
+        "**/docmedown-mermaid.js",
       ],
       ignoreInitial: true,
     });

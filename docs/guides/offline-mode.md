@@ -40,7 +40,7 @@ Mermaid support still accounts for most of the uncompressed runtime because ever
 
 Once built, simply **double-click `index.html`**:
 - Opens seamlessly in any modern browser via `file:///C:/.../index.html`.
-- Full navigation, built-in and custom React components, interactive Mermaid viewers, all four theme families, light/dark/automatic modes, reading density, typography, and instant search work **100% offline without a web server**.
+- Full navigation, built-in and custom components, interactive Mermaid viewers, all four theme families, light/dark/automatic modes, reading density, typography, and instant search work **100% offline without a web server**.
 - Serveable and `.dist/index.html` output use the same local font stacks, so they do not depend on Google Fonts or another network font provider.
 - Ideal for:
   - Software release attachments (`.zip` / `.tar.gz`)
@@ -53,7 +53,7 @@ Once built, simply **double-click `index.html`**:
 Every built serveable site includes a **Download** button in the navbar. Selecting it:
 
 1. Reads `window.__DOCMEDOWN_DATA__`, which is the documentation corpus already loaded by the current page.
-2. Reads the current `docmedown.iife.js` runtime identified by `data-docmedown-runtime`.
+2. Reads the current `docmedown.web.js` runtime identified by `data-docmedown-runtime`.
 3. Serializes and gzip-compresses both locally in the browser.
 4. Downloads `<documentation-name>-offline.html` directly.
 

@@ -21,3 +21,6 @@ declare module "prismjs" {
 }
 
 declare module "prismjs/components/*";
+
+/** Build flag: true only for the served runtime that externalizes heavy engines. */
+declare const __DMD_EXTERNAL_HEAVY__: boolean;

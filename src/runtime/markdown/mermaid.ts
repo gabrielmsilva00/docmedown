@@ -1,5 +1,13 @@
+/**
+ * Mermaid is lazy-loaded via dynamic import() to keep the main bundle small.
+ * Only pages with mermaid diagrams trigger the import. All pure utility
+ * functions (readDiagramSize, calculateDiagramFit, etc.) remain synchronous
+ * and available without loading the full mermaid library.
+ */
+
+// Type-only import — tree-shaken at build time, zero runtime cost.
 import type { MermaidConfig } from "mermaid";
-import mermaid from "mermaid";
+import { loadMermaidEngine } from "./mermaid-loader";
 
 /**
  * DocMeDown Mermaid engine.
@@ -453,6 +461,10 @@ export async function renderDiagramSvg(
   mode: DiagramMode,
   tokens?: DiagramTokens,
 ): Promise<string> {
+  // Mermaid is resolved through the loader so the served build can externalize
+  // it (see mermaid-loader.ts); bundled builds fall back to a dynamic import.
+  const mermaid = await loadMermaidEngine();
+
   // Mermaid configuration is process-global. Serialize renders so viewers
   // mounting together cannot initialize different themes over one another.
   const render = renderQueue.then(async () => {

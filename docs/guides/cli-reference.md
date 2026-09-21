@@ -58,16 +58,50 @@ Starts an ultra-fast local development server with WebSocket-based live reloadin
 npx docmedown build [dir] [options]
 ```
 
-Recursively scans all Markdown documents, parses frontmatter, extracts headings for table of contents, and generates serveable `_manifest.json`, `_docs.js`, and runtime files in the documentation directory. It also creates a self-contained offline bundle at `<dir>/.dist/index.html` by default.
+Recursively scans all Markdown documents, parses frontmatter, extracts headings for table of contents, and generates serveable `_manifest.json`, `_docs.js`, and runtime files in the documentation directory. Every build also:
+
+- **Prerenders a static page** per document (`<slug>/index.html`, README → root `index.html`) with full SEO head tags (title, description, canonical, Open Graph, Twitter card, JSON-LD), so crawlers and no-JS visitors see complete content.
+- **Generates a `404.html`**, plus `sitemap.xml` and `robots.txt` when `url` is set in `docs.json`.
+- **Emits AI context files**: `llms.txt`, `llms-full.txt`, `SKILL.md`, and `okf.json` at the documentation root.
+- Creates a self-contained offline bundle at `<dir>/.dist/index.html` by default.
 
 ### Options:
 - `-w, --watch`: Watch source files and rebuild serveable assets plus `<dir>/.dist/index.html` after changes.
 - `--no-single-file`: Skip the default offline bundle and build serveable files only.
+- `--no-static`: Skip static page prerendering and the SEO/AI context files.
 - `-o, --out-dir <path>`: Destination directory for the offline `index.html` (default: `<dir>/.dist`).
 
 ---
 
-## 5. `config` — Interactive Terminal TUI Wizard
+## 5. `mcp` — Model Context Protocol Server
+
+```bash
+npx docmedown build ./docs   # the MCP server reads built artifacts
+npx docmedown mcp [dir]
+```
+
+Serves the built documentation as an MCP stdio server so AI coding assistants (Claude, Cursor, Windsurf, …) can query it directly. No source tree is required — only `_manifest.json` and `_docs.js` produced by `build`. Exposed tools:
+
+| Tool | Description |
+| :--- | :--- |
+| `list_docs` | Every document with slug, title, category, and reading time |
+| `read_doc` | Full markdown content of one page, including headings and last-modified date |
+| `search_docs` | Keyword search returning ranked results with content snippets |
+| `resolve_url` | Resolve a slug to its public URL on the deployed site |
+
+Example `claude_desktop_config.json` entry:
+
+```json
+{
+  "mcpServers": {
+    "my-docs": { "command": "npx", "args": ["docmedown", "mcp", "./docs"] }
+  }
+}
+```
+
+---
+
+## 6. `config` — Interactive Terminal TUI Wizard
 
 ```bash
 npx docmedown config [path]

@@ -67,7 +67,7 @@ my-project/
 │   │   ├── authentication.md    # Nested route (#/api/authentication)
 │   │   └── endpoints.md         # Nested route (#/api/endpoints)
 │   └── .dmd/
-│       └── components.js        # Browser-loadable global React components
+│       └── components.js        # Browser-loadable global custom elements
 ```
 
 > [!NOTE]
@@ -99,7 +99,7 @@ Before serving, DocMeDown builds the live documentation assets and `./docs/.dist
 
 Since DocMeDown runs as a client-side React SPA, deploying your documentation is as simple as hosting static files:
 
-- **GitHub Pages**: Use the repository's GitHub Actions workflow, which runs `npm ci`, `npm run build`, and `npm run build:docs` before publishing the complete `./docs` artifact. Direct `/docs` branch hosting also requires the generated `_docs.js`, `_manifest.json`, and `docmedown.iife.js` files to be present, plus the generated `.nojekyll` marker.
+- **GitHub Pages**: Use the repository's GitHub Actions workflow, which runs `npm ci`, `npm run build`, and `npm run build:docs` before publishing the complete `./docs` artifact. Direct `/docs` branch hosting also requires the generated `_docs.js`, `_manifest.json`, and `docmedown.web.js` files to be present (plus `docmedown-mermaid.js` for sites with diagrams), plus the generated `.nojekyll` marker.
 - **Vercel / Netlify / Cloudflare Pages**: Point the build output to `./docs` (no build command needed).
 - **Amazon S3 / Google Cloud Storage**: Copy your folder to an S3 bucket configured for static website hosting.
 

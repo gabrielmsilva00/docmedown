@@ -23,8 +23,10 @@ Drop a single `index.html` file into any directory of `.md` files, and you have 
 - ⚡ **Dynamic Remote GitHub / GitLab Mode**: Document any GitHub or GitLab repository *live* without hosting markdown files statically! Changes pushed to your repo dynamically update the documentation website immediately.
 - 📦 **Compressed Offline Copies**: Generate or download a minified, self-extracting `index.html` containing the complete documentation corpus, custom components, Mermaid renderer, styles, and runtime. Double-click it under `file:///` without a web server.
 - 🎨 **Four Complete Theme Families**: Atlas, Blueprint, Terminal, and Editorial each redefine surfaces, geometry, typography, spacing, and diagram palettes—not merely the accent color. Every family supports light, dark, automatic mode, and comfortable or compact density.
+- 🌐 **Static + SEO Output**: every build prerenders complete static pages per document with canonical URLs, Open Graph, Twitter cards, JSON-LD structured data, `sitemap.xml`, and `robots.txt` — crawlers see everything, no JS required.
+- 🤖 **AI-Native Distribution**: auto-generated `llms.txt` / `llms-full.txt` / `SKILL.md` / `okf.json`, plus a built-in MCP server (`docmedown mcp`) so Claude, Cursor, and Windsurf can read and search your docs directly.
 - 🔍 **Instant Fuzzy Search**: Keyboard-driven command palette (`⌘K` / `Ctrl+K`) with real-time in-browser indexing.
-- ⚛️ **React Custom Components (.dmd)**: Support for custom React components inside `.dmd/` or built-in components (`<Tabs>`, `<CardGrid>`, `<Badge>`, `<Steps>`).
+- 🧩 **Custom Element Components (.dmd)**: Framework-free custom elements inside `.dmd/` plus built-in components (`<Tabs>`, `<CardGrid>`, `<Badge>`, `<Steps>`).
 - 📊 **Mermaid Diagrams & KaTeX Math**: Theme-aware diagrams with automatic Fit, zoom, 1:1 view, SVG export, expanded review, and offline parity, plus native LaTeX equations.
 - 💡 **GitHub-Style Callouts**: Full support for `[!NOTE]`, `[!TIP]`, `[!IMPORTANT]`, `[!WARNING]`, and `[!CAUTION]`.
 
@@ -158,7 +160,7 @@ Within this repository, the equivalent command is `npm run build:docs:watch`.
 
 ## 🚢 GitHub Pages Hosting
 
-The repository includes `.github/workflows/pages.yml`, which builds the production runtime and generated documentation assets before publishing `./docs/` through GitHub Pages. This is required because `_docs.js`, `_manifest.json`, and `docmedown.iife.js` are generated files and intentionally ignored by Git.
+The repository includes `.github/workflows/pages.yml`, which builds the production runtime and generated documentation assets before publishing `./docs/` through GitHub Pages. This is required because `_docs.js`, `_manifest.json`, and `docmedown.web.js` are generated files and intentionally ignored by Git.
 
 To enable it for a repository fork or project site:
 
@@ -166,24 +168,27 @@ To enable it for a repository fork or project site:
 2. In **Settings → Pages**, set the source to **GitHub Actions**.
 3. Push documentation or runtime changes; the workflow runs `npm ci`, `npm run build`, and `npm run build:docs`, then uploads the complete `docs/` directory.
 
-The generated entrypoint uses same-directory relative URLs (`./_docs.js` and `./docmedown.iife.js`), so it works at both a custom domain and a project URL such as `/repository-name/`. The Pages workflow verifies those generated files before upload and includes `.nojekyll` for direct static-file compatibility. Hash routing keeps document navigation client-side without requiring server rewrites.
+The generated entrypoint uses same-directory relative URLs (`./_docs.js` and `./docmedown.web.js`), so it works at both a custom domain and a project URL such as `/repository-name/`. The Pages workflow verifies those generated files before upload and includes `.nojekyll` for direct static-file compatibility. Hash routing keeps document navigation client-side without requiring server rewrites.
 
 ---
 
-## ⚛️ Custom React Components (.dmd)
+## 🧩 Custom Components (.dmd)
 
-Define global React components in a browser-loadable `.dmd/components.js` module. React is available as `window.React` in that module:
+Define global components as **custom elements** in a browser-loadable `.dmd/components.js` module — no framework dependency, so they also work outside DocMeDown:
 
 ```js title=".dmd/components.js"
-const { createElement, useState } = window.React;
-
-export function CounterButton() {
-  const [count, setCount] = useState(0);
-  return createElement(
-    'button',
-    { onClick: () => setCount((value) => value + 1) },
-    `Clicked ${count} times`
-  );
+export class CounterButton extends HTMLElement {
+  connectedCallback() {
+    let count = 0;
+    const button = document.createElement("button");
+    button.textContent = "Clicked 0 times";
+    button.addEventListener("click", () => {
+      count += 1;
+      button.textContent = `Clicked ${count} times`;
+    });
+    this.innerHTML = "";
+    this.appendChild(button);
+  }
 }
 
 export default {
@@ -191,7 +196,7 @@ export default {
 };
 ```
 
-You can now use `<CounterButton />` anywhere inside your Markdown documents!
+You can now use `<CounterButton />` anywhere inside your Markdown documents! The runtime registers every export as `dmd-<name>` custom element and upgrades the PascalCase tags in your Markdown automatically.
 
 The standard build embeds `.dmd/components.js` in `docs/.dist/index.html`, so the same custom components work in the distributable offline bundle.
 
@@ -289,8 +294,10 @@ Use the **Appearance** menu to switch family, color mode, and reading density at
 | `docmedown [dir]` | Auto-initializes if empty, or starts local preview server |
 | `docmedown init [dir]` | Scaffolds starter docs, `index.html`, `docs.json`, and `.dmd` folder |
 | `docmedown serve [dir]` (or `dev`) | Starts local live-reloading dev server on `http://localhost:3000` |
-| `docmedown build [dir]` | Builds serveable files and `./<dir>/.dist/index.html` for offline use |
+| `docmedown build [dir]` | Builds serveable files, prerendered static pages with SEO metadata, AI context files (`llms.txt`, `llms-full.txt`, `SKILL.md`, `okf.json`), and `./<dir>/.dist/index.html` for offline use |
 | `docmedown build [dir] --no-single-file` | Builds serveable files only |
+| `docmedown build [dir] --no-static` | Skips static page prerendering and SEO/AI context files |
+| `docmedown mcp [dir]` | Serves the built documentation as an MCP (Model Context Protocol) stdio server for AI assistants |
 | `docmedown config [path]` | Launches interactive TUI configuration wizard |
 
 ---

@@ -9,9 +9,12 @@
 <body>
   <div id="dmd-app"></div>
 
+  <!-- Generated shells (prerendered pages, offline copies) inject the branded
+       splash inline; this scaffold is replaced by the prerender on build. -->
+
   <!-- Pre-compiled docs data (enables 100% offline file:/// double-click viewing without web server) -->
   <script src="./_docs.js"></script>
   <!-- DocMeDown Runtime Script -->
-  <script src="./docmedown.iife.js" data-docmedown-runtime></script>
+  <script src="./docmedown.web.js" data-docmedown-runtime></script>
 </body>
 </html>

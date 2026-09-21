@@ -1,6 +1,14 @@
+import {
+  renderSplashHead,
+  renderSplashMarkup,
+  SPLASH_ACTIVE_CLASS,
+  SPLASH_HIDDEN_CLASS,
+  SPLASH_ID,
+  type SplashOptions,
+} from "./splash";
 import type { DocManifest } from "./types";
 
-export const OFFLINE_FORMAT_VERSION = 1;
+export const OFFLINE_FORMAT_VERSION = 2;
 export const OFFLINE_RUNTIME_SCRIPT_ATTRIBUTE = "data-docmedown-runtime";
 
 export interface OfflineDocumentationData {
@@ -69,10 +77,14 @@ function escapeHtml(value: string): string {
  * Generates the tiny self-extracting HTML shell shared by CLI and browser
  * exporters. The payload is a base64-encoded gzip stream containing compact
  * JSON with documentation data and the minified IIFE runtime.
+ *
+ * The shell carries the same inline splash as served pages, so an offline copy
+ * opens on the branded loader instead of a blank canvas while the runtime is
+ * decompressed and booted.
  */
-export function createCompressedOfflineHtml(encodedGzip: string, title: string): string {
-  const bootstrap = `(async()=>{try{const b=Uint8Array.from(atob(document.getElementById("d").textContent.trim()),c=>c.charCodeAt(0)),s=await new Response(new Blob([b]).stream().pipeThrough(new DecompressionStream("gzip"))).text(),e=JSON.parse(s);if(e.version!==${OFFLINE_FORMAT_VERSION})throw new Error("Unsupported offline format");window.__DOCMEDOWN_OFFLINE__=true;window.__DOCMEDOWN_DATA__=e.data;window.__DOCMEDOWN_CONFIG__=e.data.manifest.config;const u=URL.createObjectURL(new Blob([e.runtime],{type:"text/javascript"}));window.__DOCMEDOWN_RUNTIME_URL__=u;const j=document.createElement("script");j.src=u;j.onerror=()=>{URL.revokeObjectURL(u);throw new Error("Runtime bootstrap failed")};document.head.appendChild(j)}catch(e){document.getElementById("dmd-app").textContent="Could not open this offline documentation copy: "+e.message}})();`;
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="icon" href="data:,"><title>${escapeHtml(title)}</title></head><body><div id="dmd-app">Opening offline documentation…</div><script id="d" type="application/octet-stream">${encodedGzip}</script><script>${bootstrap}</script></body></html>`;
+export function createCompressedOfflineHtml(encodedGzip: string, title: string, splash: SplashOptions = {}): string {
+  const bootstrap = `(async()=>{try{const b=Uint8Array.from(atob(document.getElementById("d").textContent.trim()),c=>c.charCodeAt(0)),s=await new Response(new Blob([b]).stream().pipeThrough(new DecompressionStream("gzip"))).text(),e=JSON.parse(s);if(e.version!==${OFFLINE_FORMAT_VERSION})throw new Error("Unsupported offline format");window.__DOCMEDOWN_OFFLINE__=true;window.__DOCMEDOWN_DATA__=e.data;window.__DOCMEDOWN_CONFIG__=e.data.manifest.config;const u=URL.createObjectURL(new Blob([e.runtime],{type:"text/javascript"}));window.__DOCMEDOWN_RUNTIME_URL__=u;const j=document.createElement("script");j.src=u;j.onerror=()=>{URL.revokeObjectURL(u);throw new Error("Runtime bootstrap failed")};document.head.appendChild(j)}catch(e){var p=document.getElementById("${SPLASH_ID}");if(p){p.className+=" ${SPLASH_HIDDEN_CLASS}";p.setAttribute("aria-hidden","true");setTimeout(function(){p.parentNode&&p.parentNode.removeChild(p)},600)}var h=document.documentElement;h.className=h.className.replace(" ${SPLASH_ACTIVE_CLASS}","");document.getElementById("dmd-app").textContent="Could not open this offline documentation copy: "+e.message}})();`;
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="icon" href="data:,"><title>${escapeHtml(title)}</title>${renderSplashHead(splash)}</head><body>${renderSplashMarkup({ name: title, ...splash })}<div id="dmd-app"></div><script id="d" type="application/octet-stream">${encodedGzip}</script><script>${bootstrap}</script></body></html>`;
 }
 
 async function compressGzip(value: string): Promise<Uint8Array> {
@@ -89,14 +101,31 @@ function findRuntimeScript(): HTMLScriptElement | null {
   return [...document.scripts].find((script) => /docmedown(?:\.iife)?\.js(?:[?#].*)?$/i.test(script.src)) ?? null;
 }
 
-async function readRuntimeSource(): Promise<string> {
+async function readRuntimeSource(hasDiagrams = false): Promise<string> {
   const runtimeScript = findRuntimeScript();
   if (!runtimeScript?.src) {
     throw new Error("The current DocMeDown runtime script could not be located.");
   }
   const response = await fetch(runtimeScript.src, { credentials: "same-origin", cache: "force-cache" });
   if (!response.ok) throw new Error(`Could not read the current DocMeDown runtime (${response.status}).`);
-  return response.text();
+  let code = await response.text();
+
+  // When the corpus contains diagrams and the runtime externalized Mermaid,
+  // embed docmedown-mermaid.js so the offline bundle remains 100% self-contained.
+  if (hasDiagrams && !code.includes("DocMeDownMermaid")) {
+    try {
+      const mermaidUrl = new URL("docmedown-mermaid.js", runtimeScript.src).href;
+      const mermaidRes = await fetch(mermaidUrl, { credentials: "same-origin", cache: "force-cache" });
+      if (mermaidRes.ok) {
+        const mermaidCode = await mermaidRes.text();
+        code = `${code}\n;${mermaidCode}`;
+      }
+    } catch {
+      // Continue with base runtime if mermaid bundle cannot be fetched
+    }
+  }
+
+  return code;
 }
 
 export async function createOfflineDownload(): Promise<{ blob: Blob; filename: string }> {
@@ -106,7 +135,16 @@ export async function createOfflineDownload(): Promise<{ blob: Blob; filename: s
     throw new Error("This site has no embedded documentation corpus to export. Run a DocMeDown build first.");
   }
 
-  const runtime = await readRuntimeSource();
+  const hasDiagrams =
+    Object.values(data.docs).some((source) => /(?:^|\n)[ \t]*(?:`{3,}|~{3,})[ \t]*mermaid\b/i.test(source)) ||
+    Boolean(
+      data.nestedSites &&
+        Object.values(data.nestedSites).some((site) =>
+          Object.values(site.docs).some((source) => /(?:^|\n)[ \t]*(?:`{3,}|~{3,})[ \t]*mermaid\b/i.test(source)),
+        ),
+    );
+
+  const runtime = await readRuntimeSource(hasDiagrams);
   const envelope: OfflineEnvelope = { version: OFFLINE_FORMAT_VERSION, data, runtime };
   const compressed = await compressGzip(JSON.stringify(envelope));
   const html = createCompressedOfflineHtml(bytesToBase64(compressed), data.manifest.config.name || "Documentation");

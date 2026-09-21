@@ -1,6 +1,6 @@
 ---
 title: Welcome to DocMeDown
-description: The simplest MarkDown documenter yet. Dual CLI Tool & Web Script React SPA.
+description: The simplest MarkDown documenter yet. Live runtime, static compiler, and AI-native documentation distribution.
 order: 1
 tags: [overview, philosophy, features]
 ---
@@ -28,7 +28,7 @@ graph TD
     subgraph DocMeDown ["2. DocMeDown Engine"]
         D[Zero-Config Auto-Indexer]
         E[Markdown & Math Parser]
-        F[React SPA Runtime]
+        F[Svelte Custom Element Runtime]
         G[Custom .dmd Components]
     end
 
@@ -53,11 +53,11 @@ graph TD
 | :--- | :---: | :---: | :---: | :---: |
 | **Setup Time** | **< 10 seconds** | ~5-10 mins | ~2 mins | ~15 mins |
 | **Zero-Config Mode** | **Yes** ⚡ | No | Partial | No |
-| **React SPA Runtime** | **Yes** ⚛️ | Yes | No (Vanilla) | No (Static HTML) |
+| **Custom Element Runtime** | **Yes** 🧩 | Yes | No (Vanilla) | No (Static HTML) |
 | **Dynamic Remote GitHub Docs** | **Yes** 🌐 | No | Partial | No |
 | **100% Offline Single-File HTML** | **Yes** 📦 | No | No | No |
 | **Interactive Terminal TUI** | **Yes** 🛠️ | No | No | No |
-| **Global Custom React Components** | **Yes (`.dmd/`)** | Yes (MDX) | Plugins | Extensions |
+| **Framework-Free Custom Components** | **Yes (`.dmd/`)** | Yes (MDX) | Plugins | Extensions |
 | **Built-in Fuzzy Search (⌘K)** | **Yes** 🔍 | Plugin required | Plugin required | Basic |
 | **Mermaid & KaTeX Math** | **Built-in** 📊 | Plugins | Plugins | Plugins |
 
@@ -65,11 +65,11 @@ graph TD
 
 ## 🎨 Interactive Live Demo
 
-Below are live custom components loaded from `docs/.dmd/components.js`. The first observes the real Appearance menu state; the second demonstrates component-local React state:
+Below are live custom components loaded from `docs/.dmd/components.js`. The first observes the real Appearance menu state; the second demonstrates component-local state:
 
 <InteractiveThemeDemo />
 
-<CounterWidget title="Live React State Widget in Markdown" />
+<CounterWidget title="Live State Widget in Markdown" />
 
 ---
 
@@ -79,7 +79,7 @@ Below are live custom components loaded from `docs/.dmd/components.js`. The firs
 - 🛠️ **[CLI Command Reference](./guides/cli-reference.md)**: Explore `init`, `serve`, `build`, and `config`.
 - 🌐 **[Dynamic Remote GitHub Docs](./guides/remote-github.md)**: Document remote repositories without hosting markdown files.
 - 📦 **[Offline Single-File Bundler](./guides/offline-mode.md)**: Build single-file offline HTML bundles.
-- ⚛️ **[Custom Components Guide](./guides/custom-components.md)**: Learn how to use `.dmd` React widgets.
+- 🧩 **[Custom Components Guide](./guides/custom-components.md)**: Learn how to use `.dmd` custom elements.
 - 📝 **[Markdown & Math Features](./guides/markdown-features.md)**: Alerts, Prism syntax highlighting, Mermaid, and KaTeX.
 - 🎛️ **[Markdown & Component Showcase](./showcase.md)**: Every Markdown feature and all 12+ built-in components — source next to live renders.
 - ⚙️ **[Configuration Reference](./configuration.md)**: Detailed `docs.json` options.

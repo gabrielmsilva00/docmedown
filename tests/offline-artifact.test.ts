@@ -20,24 +20,34 @@ function decodeOfflineArtifact(html: string) {
 }
 
 test("serveable and single-file artifacts keep custom components, Mermaid, and typography self-contained", () => {
-  const serveableRuntime = readArtifact("docs", "docmedown.iife.js");
+  const serveableRuntime = readArtifact("docs", "docmedown.web.js");
+  const mermaidEngine = readArtifact("docs", "docmedown-mermaid.js");
   const offlineHtml = readArtifact("docs", ".dist", "index.html");
   const onlineHtml = readArtifact("docs", "index.html");
   const embeddedDocs = readArtifact("docs", "_docs.js");
   const offlineEnvelope = decodeOfflineArtifact(offlineHtml);
 
-  assert.ok(serveableRuntime.includes("mermaid"));
+  // The served runtime defers Mermaid to an on-demand classic script so pages
+  // without a diagram never download it; the offline copy inlines it instead.
+  assert.ok(mermaidEngine.includes("mermaid"));
+  assert.ok(serveableRuntime.includes("docmedown-mermaid.js"));
+  assert.ok(offlineEnvelope.runtime.includes("mermaid"));
   assert.ok(!serveableRuntime.includes('import("./'));
   assert.ok(!offlineEnvelope.runtime.includes("cdn.jsdelivr.net/npm/mermaid"));
   assert.ok(!offlineHtml.includes("fonts.googleapis.com"));
   assert.ok(!onlineHtml.includes("fonts.googleapis.com"));
+  // Served and offline shells both open on the inline branded splash.
+  assert.ok(offlineHtml.includes('id="dmd-splash"'));
+  assert.ok(onlineHtml.includes('id="dmd-splash"'));
+  // The offline shell no longer ships a plain "Opening…" placeholder.
+  assert.ok(!offlineHtml.includes("Opening offline documentation"));
   assert.ok(embeddedDocs.includes("InteractiveThemeDemo"));
   assert.ok(embeddedDocs.includes("Live appearance state"));
   assert.ok(embeddedDocs.includes("data-dmd-theme"));
   assert.ok(!embeddedDocs.includes("data-preset"));
   assert.ok(!embeddedDocs.includes('from "./'));
   assert.ok(offlineEnvelope.data.componentsSource.includes("InteractiveThemeDemo"));
-  assert.equal(offlineEnvelope.version, 1);
+  assert.equal(offlineEnvelope.version, 2);
   assert.ok(offlineHtml.includes('new DecompressionStream("gzip")'));
   assert.ok(offlineHtml.includes("window.__DOCMEDOWN_OFFLINE__=true"));
   assert.ok(serveableRuntime.includes("This page is already a self-contained offline documentation copy."));
@@ -60,6 +70,15 @@ test("nested offline artifacts embed their own bundled custom components", () =>
   assert.ok(embeddedDocs.includes("OrbitCounter"));
   assert.ok(offlineEnvelope.data.componentsSource.includes("OrbitCounter"));
   assert.ok(!offlineHtml.includes("fonts.googleapis.com"));
+  // Offline copies without diagrams omit Mermaid, shrinking from 1.8 MB to ~570 KB.
+  assert.ok(
+    offlineHtml.length < 700 * 1024,
+    `offline html size ${(offlineHtml.length / 1024) | 0} KB should be under 700 KB`,
+  );
+  assert.ok(
+    !offlineEnvelope.runtime.includes("sequenceDiagram"),
+    "offline runtime must not inline Mermaid when no diagrams exist",
+  );
 });
 
 test("the root offline bundle embeds nested documentation sites for self-contained navigation", () => {

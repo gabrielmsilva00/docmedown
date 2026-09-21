@@ -17,6 +17,21 @@
   --dmd-radius-lg: 16px;
   --dmd-radius-full: 9999px;
   --dmd-transition: 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  /* Explicit property list for interactive surfaces. `transition: all` makes
+     the engine reconcile every animatable property on each theme switch (still
+     the hottest restyle path), so the shared token names exactly what hover,
+     active, and theme changes touch — no layout properties, no transition
+     storm. */
+  --dmd-transition-interactive: color var(--dmd-transition), background-color var(--dmd-transition),
+    border-color var(--dmd-transition), box-shadow var(--dmd-transition), transform var(--dmd-transition),
+    opacity var(--dmd-transition);
+  /* Native form controls, scrollbars, and the canvas match the resolved mode
+     immediately instead of flashing the light palette mid-transition. */
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
 }
 
 /* Semantic layout/motion contract referenced by shell + density rules. */
@@ -326,9 +341,9 @@
 
 :root[data-dmd-density='compact'] {
   --dmd-nav-height: 52px;
-  --dmd-sidebar-width: 228px;
+  --dmd-sidebar-width: 220px;
   --dmd-toc-width: 196px;
-  --dmd-space-section: 2rem;
+  --dmd-space-section: 2.25rem;
 }
 
 :root[data-dmd-theme='editorial'][data-dmd-density='compact'] {

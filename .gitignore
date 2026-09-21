@@ -8,6 +8,28 @@ docs/**/.dist/
 docs/**/_manifest.json
 docs/**/_docs.js
 docs/**/docmedown.iife.js
+docs/**/docmedown.web.js
+docs/**/docmedown-mermaid.js
+# Generated static-site pages and AI context artifacts (rebuilt on every build;
+# the prerendered home page stays tracked so fresh clones pass hosting tests).
+docs/**/llms.txt
+docs/**/llms-full.txt
+docs/**/okf.json
+docs/**/SKILL.md
+docs/**/sitemap.xml
+docs/**/robots.txt
+docs/**/404.html
+docs/**/SKILL/
+docs/guides/*/index.html
+docs/getting-started/
+docs/showcase/
+docs/configuration/
+docs/examples/index.html
+docs/examples/*/index.html
+docs/examples/*/getting-started/
+docs/examples/*/guides/*/index.html
+docs/**/packing/
+!docs/index.html
 # The root marker is tracked so fresh clones pass the hosting contract tests;
 # nested markers are regenerated per documentation root on every build.
 docs/**/.nojekyll

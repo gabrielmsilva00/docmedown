@@ -57,9 +57,10 @@ program
 // Subcommand: build
 program
   .command("build [dir]")
-  .description("Build serveable documentation and a standalone offline bundle")
+  .description("Build serveable documentation, a static site, and a standalone offline bundle")
   .option("-w, --watch", "Watch source files and rebuild both outputs after changes")
   .option("--no-single-file", "Skip the default standalone offline index.html bundle")
+  .option("--no-static", "Skip static page prerendering and SEO/AI context files")
   .option("-o, --out-dir <path>", "Offline bundle output directory (default: <dir>/.dist)")
   .action(async (dir = "./docs", options) => {
     if (options.watch) {
@@ -67,6 +68,15 @@ program
     } else {
       await buildCommand(dir, options);
     }
+  });
+
+// Subcommand: mcp
+program
+  .command("mcp [dir]")
+  .description("Serve the built documentation as an MCP (Model Context Protocol) stdio server")
+  .action(async (dir = "./docs") => {
+    const { mcpCommand } = await import("./commands/mcp");
+    await mcpCommand(dir);
   });
 
 // Subcommand: config

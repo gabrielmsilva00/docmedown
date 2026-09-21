@@ -6,8 +6,10 @@ declare module "*.svelte" {
   export default component;
 }
 
-/** Vite CSS raw imports used by the Lit builtin shared styles. */
+/** Vite CSS raw imports used by the builtin shared styles. */
 declare module "*.css?raw" {
   const content: string;
   export default content;
 }
+
+declare module "svelte/internal/client";

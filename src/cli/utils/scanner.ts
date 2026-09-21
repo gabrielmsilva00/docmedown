@@ -99,11 +99,20 @@ export function generateManifest(docDir: string, config: DocConfig): DocManifest
 
   const tree = buildSidebarTree(files, frontmatters, config.sidebar);
 
+  const dmdDir = path.join(docDir, ".dmd");
+  const customComponents = fs.existsSync(dmdDir)
+    ? fs
+        .readdirSync(dmdDir)
+        .filter((file) => file.endsWith(".svelte"))
+        .map((file) => path.basename(file, ".svelte"))
+    : [];
+
   return {
     version: "0.1.9",
     generatedAt: new Date().toISOString(),
     config,
     docs: docItems,
     tree,
+    customComponents: customComponents.length > 0 ? customComponents : undefined,
   };
 }

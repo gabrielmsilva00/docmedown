@@ -1,14 +1,37 @@
+import * as Svelte from "svelte";
 import { mount, unmount } from "svelte";
+import * as SvelteInternalClient from "svelte/internal/client";
 import App from "./App.svelte";
 import "./components/MermaidDiagram.svelte";
 import { loadDocConfig, normalizeConfig } from "../runtime/config";
 import { registerLanguage } from "../runtime/markdown/highlighter";
 import { configureMermaidEngine } from "../runtime/markdown/mermaid-loader";
 import { getStaticRuntimeContext } from "../runtime/router";
+import { configureCompilerEngine } from "../runtime/svelte-compiler-loader";
 import type { DocMeDownInitOptions, DocMeDownInstance } from "../runtime/types";
 import { doc } from "./doc-context.svelte";
 import { ComponentRegistry, defineDmd, dmdTag } from "./registry";
 import { theme } from "./theme.svelte";
+
+if (typeof window !== "undefined") {
+  (window as any).__DOCMEDOWN_SVELTE__ = {
+    ...Svelte,
+    client: SvelteInternalClient,
+    internal: {
+      client: SvelteInternalClient,
+    },
+  };
+}
+if (typeof globalThis !== "undefined" && !(globalThis as any).__DOCMEDOWN_SVELTE__) {
+  (globalThis as any).__DOCMEDOWN_SVELTE__ = {
+    ...Svelte,
+    client: SvelteInternalClient,
+    internal: {
+      client: SvelteInternalClient,
+    },
+  };
+}
+
 // Svelte builtin custom elements: self-register on import (<svelte:options customElement>).
 import "./builtins/Accordion.svelte";
 import "./builtins/AccordionItem.svelte";
@@ -91,9 +114,10 @@ for (const name of BUILTIN_NAMES) {
 const mountedInstances = new WeakMap<HTMLElement, { destroy: () => void }>();
 
 export async function initDocMeDown(options: DocMeDownInitOptions = {}): Promise<DocMeDownInstance | null> {
-  // The served build fetches its on-demand Mermaid bundle relative to the
-  // documentation base, so a nested page reaches the site-root script.
+  // The served build fetches its on-demand Mermaid and Svelte compiler bundles
+  // relative to the documentation base, so a nested page reaches the site-root script.
   configureMermaidEngine(options.basePath || "");
+  configureCompilerEngine(options.basePath || "");
 
   let container: HTMLElement | null = null;
 
@@ -164,7 +188,7 @@ if (typeof window !== "undefined") {
     registerComponent: (name: string, element: unknown, tag?: string) => defineDmd(name, element as never, tag),
     registerComponents: (map: Record<string, unknown>) =>
       ComponentRegistry.getInstance().registerMultiple(map as Record<string, never>),
-    /** Register a custom Prism grammar at runtime, e.g. from `.dmd/components.js`. */
+    /** Register a custom Prism grammar at runtime, e.g. from `.dmd`. */
     registerLanguage,
   };
 

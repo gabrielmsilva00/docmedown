@@ -608,25 +608,25 @@ it becomes a plain `<li>`. Here it drives a `Timeline`, a `Steps`, and an `Accor
 
 ## Part 3 — Your Own Components (`.dmd/`)
 
-Drop a browser module at `.dmd/components.js` exporting `HTMLElement` subclasses — no framework dependency. These two live widgets ship with this very site:
+Author first-class Svelte 5 components as `.svelte` files under `.dmd/` — compiled ahead-of-time during build for zero-overhead static distribution, and dynamically compiled at runtime when developing. These two live widgets ship with this very site:
 
-```js title=".dmd/components.js"
-export class CounterWidget extends HTMLElement {
-  connectedCallback() {
-    const title = this.getAttribute("title") || "Counter";
-    let count = 0;
-    const button = document.createElement("button");
-    button.textContent = `${title}: 0`;
-    button.addEventListener("click", () => {
-      count += 1;
-      button.textContent = `${title}: ${count}`;
-    });
-    this.innerHTML = "";
-    this.appendChild(button);
-  }
-}
+```svelte title=".dmd/CounterWidget.svelte"
+<svelte:options customElement={{ tag: "dmd-counter-widget" }} />
 
-export default { CounterWidget };
+<script>
+  let { title = "Counter" } = $props();
+  let count = $state(0);
+</script>
+
+<div class="dmd-custom-panel">
+  <strong>{title}</strong>
+  <p class="dmd-custom-desc">
+    A component-local reactive state value using Svelte 5 runes.
+  </p>
+  <button type="button" class="dmd-custom-btn" onclick={() => count++}>
+    Count: {count}
+  </button>
+</div>
 ```
 
 <InteractiveThemeDemo />

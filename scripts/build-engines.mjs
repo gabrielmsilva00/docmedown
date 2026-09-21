@@ -23,6 +23,11 @@ const engines = [
     outfile: "docmedown-mermaid.js",
     globalName: "DocMeDownMermaid",
   },
+  {
+    entry: "src/runtime/svelte-compiler-engine.ts",
+    outfile: "docmedown-compiler.js",
+    globalName: "DocMeDownCompiler",
+  },
 ];
 
 for (const engine of engines) {

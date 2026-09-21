@@ -8,19 +8,10 @@
  * so nested component trees work without any framework mounting logic.
  */
 
+import { dmdTag } from "../runtime/svelte-tag";
+
 export type DmdElementClass = new () => HTMLElement;
-
-function toKebab(name: string): string {
-  return name
-    .replace(/([a-z0-9])([A-Z])/g, "$1-$2")
-    .replace(/[\s_]+/g, "-")
-    .toLowerCase();
-}
-
-/** Canonical custom element tag for a component name: "CounterWidget" → "dmd-counter-widget". */
-export function dmdTag(name: string): string {
-  return `dmd-${toKebab(name)}`;
-}
+export { dmdTag };
 
 export class ComponentRegistry {
   private static instance: ComponentRegistry;
@@ -85,15 +76,19 @@ export class ComponentRegistry {
 
   /**
    * Loads user components from the `.dmd` directory (or the embedded
-   * `componentsSource` blob produced by the build). The module may export
-   * custom element classes, tag strings, or a `register(name, element)` map.
+   * `componentsSource` blob produced by the build). Components may be
+   * AOT-compiled `.svelte` custom elements, runtime-compiled `.svelte` files,
+   * or legacy custom element classes.
    */
   public async loadDmdDirectory(basePath: string = ""): Promise<void> {
     if (typeof window === "undefined") return;
 
     const runtimeWindow = window as any;
     if (!runtimeWindow.__DOCMEDOWN_COMPONENTS_READY__ && runtimeWindow.__DOCMEDOWN_DATA__?.componentsSource) {
-      const componentModule = new Blob([runtimeWindow.__DOCMEDOWN_DATA__.componentsSource], {
+      const { linkSveltePrimitives } = await import("../runtime/svelte-runtime");
+      const rawSource = runtimeWindow.__DOCMEDOWN_DATA__.componentsSource;
+      const linkedSource = linkSveltePrimitives(rawSource);
+      const componentModule = new Blob([linkedSource], {
         type: "text/javascript",
       });
       const componentModuleUrl = URL.createObjectURL(componentModule);
@@ -116,6 +111,22 @@ export class ComponentRegistry {
     }
 
     const prefix = basePath ? `${basePath.replace(/\/$/, "")}/.dmd` : ".dmd";
+
+    // In dynamic/serve mode, load raw .svelte components listed in the manifest
+    const manifestComps: string[] = runtimeWindow.__DOCMEDOWN_DATA__?.manifest?.customComponents || [];
+    if (manifestComps.length > 0) {
+      const { loadAndRegisterSvelteComponent } = await import("../runtime/svelte-runtime");
+      for (const compName of manifestComps) {
+        try {
+          const tag = await loadAndRegisterSvelteComponent(`${prefix}/${compName}.svelte`, compName);
+          this.register(compName, tag);
+        } catch (err) {
+          console.warn(`[DocMeDown] Could not dynamically compile ${compName}.svelte:`, err);
+        }
+      }
+    }
+
+    // Legacy fallback for .dmd/components.js or .dmd/index.js
     for (const url of [`${prefix}/components.js`, `${prefix}/index.js`]) {
       try {
         const mod = await import(/* @vite-ignore */ url);

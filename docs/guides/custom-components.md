@@ -7,52 +7,73 @@ tags: [components, custom-elements, dmd, interactive, widgets]
 
 # Custom Components (`.dmd`) 🧩
 
-DocMeDown lets you bring full interactivity into your documentation with **framework-free custom elements** — no MDX bundler configuration, no React dependency, and components that keep working even outside DocMeDown.
+DocMeDown lets you bring full interactivity into your documentation with **native Svelte 5 custom components** — no complex bundler configurations, no React or Lit dependencies, and zero overhead in production.
 
 ---
 
 ## 1. Creating Custom Components in `.dmd/`
 
-Create a browser-loadable `.dmd/components.js` file inside your docs folder exporting `HTMLElement` subclasses:
+Custom components are authored as standard Svelte 5 single-file components (`.svelte`) inside the `.dmd/` directory of your documentation folder.
 
-```js title=".dmd/components.js"
-export class InteractiveMetric extends HTMLElement {
-  connectedCallback() {
-    const label = this.getAttribute("label") || "Metric";
-    const target = Number(this.getAttribute("target")) || 100;
+Create your component file, such as `.dmd/InteractiveMetric.svelte`:
 
-    const panel = document.createElement("div");
-    panel.style.cssText =
-      "padding:1rem;border-radius:8px;border:1px solid var(--dmd-border-color);background:var(--dmd-bg-card);margin:1rem 0;";
+```svelte title=".dmd/InteractiveMetric.svelte"
+<svelte:options customElement={{ tag: "dmd-interactive-metric" }} />
 
-    const readout = document.createElement("div");
-    readout.style.fontWeight = "600";
-    readout.textContent = `${label}: 10%`;
+<script>
+  let { label = "API Success Rate", target = 100 } = $props();
+  let value = $state(10);
+</script>
 
-    const slider = document.createElement("input");
-    slider.type = "range";
-    slider.min = "0";
-    slider.max = String(target);
-    slider.value = "10";
-    slider.style.cssText = "width:100%;margin-top:8px;";
-    slider.addEventListener("input", () => {
-      readout.textContent = `${label}: ${slider.value}%`;
-    });
+<div class="metric-panel">
+  <div class="metric-readout">
+    <strong>{label}</strong>: {value}%
+  </div>
+  <input
+    type="range"
+    min="0"
+    max={target}
+    bind:value
+    class="metric-slider"
+  />
+</div>
 
-    panel.append(readout, slider);
-    this.innerHTML = "";
-    this.appendChild(panel);
+<style>
+  .metric-panel {
+    padding: 1rem;
+    border-radius: 8px;
+    border: 1px solid var(--dmd-border-color);
+    background: var(--dmd-bg-card);
+    margin: 1rem 0;
   }
-}
-
-export default {
-  InteractiveMetric,
-};
+  .metric-readout {
+    font-weight: 600;
+    color: var(--dmd-text-primary);
+  }
+  .metric-slider {
+    width: 100%;
+    margin-top: 8px;
+  }
+</style>
 ```
 
-You can now use `<InteractiveMetric label="API Success Rate" />` directly in any `.md` file! The runtime registers every export as a `dmd-<name>` custom element and upgrades the PascalCase tags in your Markdown automatically.
+You can now use `<InteractiveMetric label="API Success Rate" />` directly in any `.md` file! The runtime upgrades your PascalCase tags to `dmd-<name>` custom elements automatically.
 
-When you run `docmedown build`, the generated `_docs.js` and `.dist/index.html` bundle this entry module with its relative JavaScript imports. Keep browser-only code in the component graph; server-only Node APIs cannot run in either static or offline documentation output.
+### Ahead-of-Time (AOT) vs. In-Browser Runtime Compilation
+
+DocMeDown gives you the best of both worlds:
+
+1. **Ahead-of-Time (AOT) Production Builds**:
+   When you run `docmedown build`, all `.dmd/*.svelte` components are compiled ahead-of-time during bundling. The compiled code is embedded directly into `_docs.js` and `.dist/index.html`. In production, your documentation loads instantly with **zero runtime compiler overhead**.
+
+2. **In-Browser Runtime Compilation**:
+   In local preview or dynamic serve mode (`docmedown serve`), raw `.svelte` components can be fetched dynamically. DocMeDown loads its lightweight compiler engine on-demand (`dist/docmedown-compiler.js`) and compiles components in-browser, linking them directly to active Svelte 5 runtime primitives.
+
+3. **Tag Auto-Derivation**:
+   If you omit `<svelte:options customElement={{ tag: "..." }} />`, DocMeDown automatically assigns the canonical `dmd-<kebab-name>` tag matching your component's file name (e.g. `MyWidget.svelte` becomes `<dmd-my-widget>`).
+
+4. **Legacy Compatibility**:
+   If you still have existing custom element classes in `.dmd/components.js` or `.dmd/index.js`, DocMeDown continues to bundle and register them seamlessly alongside Svelte components.
 
 ---
 

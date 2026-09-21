@@ -75,11 +75,11 @@ export async function initCommand(targetDirArg: string = "./docs", options: Init
   if (!fs.existsSync(dmdDir)) {
     fs.mkdirSync(dmdDir, { recursive: true });
   }
-  const dmdComponentPath = path.join(dmdDir, "components.js");
+  const dmdComponentPath = path.join(dmdDir, "CounterWidget.svelte");
   if (!fs.existsSync(dmdComponentPath)) {
-    const templateDmd = fs.readFileSync(path.join(activeTemplateDir, ".dmd/components.js"), "utf-8");
+    const templateDmd = fs.readFileSync(path.join(activeTemplateDir, ".dmd/CounterWidget.svelte"), "utf-8");
     fs.writeFileSync(dmdComponentPath, templateDmd, "utf-8");
-    console.log(chalk.green("  ✔ Created .dmd/components.js"));
+    console.log(chalk.green("  ✔ Created .dmd/CounterWidget.svelte"));
   }
 
   // 7. Generate the same serveable and offline artifacts as `docmedown build`.

@@ -1,9 +1,11 @@
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { gzipSync } from "node:zlib";
 import chalk from "chalk";
 import chokidar from "chokidar";
 import { buildSync } from "esbuild";
+import { compile } from "svelte/compiler";
 import { normalizeConfig, parseDocConfigJson } from "../../runtime/config";
 import {
   createCompressedOfflineHtml,
@@ -11,6 +13,7 @@ import {
   type OfflineEnvelope,
   type OfflineNestedSiteData,
 } from "../../runtime/offline-export";
+import { dmdTag, ensureCustomElementTag } from "../../runtime/svelte-tag";
 import type { DocConfig } from "../../runtime/types";
 import { emitAiContextFiles } from "../ai-context";
 import { emitStaticSite } from "../seo";
@@ -49,16 +52,121 @@ export function escapeInlineScriptContent(value: string): string {
 }
 
 /**
- * Resolves local imports before a custom component module is embedded in `_docs.js`
- * or a single-file bundle. Blob modules do not have a stable filesystem URL, so a
- * raw `.dmd/components.js` file cannot resolve its own relative imports offline.
+ * Resolves and bundles custom components for embedding in `_docs.js` or single-file bundles.
+ * Prioritizes `.dmd/*.svelte` components compiled via Svelte 5 customElement mode,
+ * while maintaining backward compatibility with legacy `.dmd/components.js`.
  */
-export function bundleCustomComponents(componentsPath: string): string | undefined {
-  if (!fs.existsSync(componentsPath)) return undefined;
+export function bundleCustomComponents(targetPath: string): string | undefined {
+  let dmdDir: string | undefined;
+  let legacyFile: string | undefined;
+
+  if (fs.existsSync(targetPath)) {
+    const stat = fs.statSync(targetPath);
+    if (stat.isDirectory()) {
+      if (fs.existsSync(path.join(targetPath, ".dmd"))) {
+        dmdDir = path.join(targetPath, ".dmd");
+      } else {
+        dmdDir = targetPath;
+      }
+    } else {
+      legacyFile = targetPath;
+      dmdDir = path.dirname(targetPath);
+    }
+  } else {
+    const parent = path.dirname(targetPath);
+    if (fs.existsSync(parent) && fs.statSync(parent).isDirectory()) {
+      dmdDir = parent;
+    } else {
+      return undefined;
+    }
+  }
+
+  const svelteFiles =
+    dmdDir && fs.existsSync(dmdDir) ? fs.readdirSync(dmdDir).filter((file) => file.endsWith(".svelte")) : [];
+
+  if (svelteFiles.length > 0 && dmdDir) {
+    try {
+      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "docmedown-svelte-bundle-"));
+      try {
+        const dmdEntries = fs.readdirSync(dmdDir);
+        for (const entry of dmdEntries) {
+          if (!entry.endsWith(".svelte")) {
+            const src = path.join(dmdDir, entry);
+            if (fs.statSync(src).isFile()) {
+              fs.copyFileSync(src, path.join(tempDir, entry));
+            }
+          }
+        }
+
+        const entryImports: string[] = [];
+        const entryExports: string[] = [];
+        for (const svelteFile of svelteFiles) {
+          const rawSource = fs.readFileSync(path.join(dmdDir, svelteFile), "utf-8");
+          const baseName = svelteFile.replace(/\.svelte$/, "");
+          const tag = dmdTag(baseName);
+          const taggedSource = ensureCustomElementTag(rawSource, tag);
+
+          const compiled = compile(taggedSource, {
+            filename: svelteFile,
+            customElement: true,
+          });
+
+          const outJsFile = `${baseName}.compiled.js`;
+          fs.writeFileSync(path.join(tempDir, outJsFile), compiled.js.code, "utf-8");
+          entryImports.push(`import "./${outJsFile}";`);
+          entryExports.push(`${JSON.stringify(baseName)}: ${JSON.stringify(tag)}`);
+        }
+
+        let defaultExportExpr = `{ ${entryExports.join(", ")} }`;
+        if (fs.existsSync(path.join(tempDir, "components.js"))) {
+          entryImports.push(`import legacyComponents from "./components.js";`);
+          defaultExportExpr = `{ ...(legacyComponents || {}), ${entryExports.join(", ")} }`;
+        } else if (fs.existsSync(path.join(tempDir, "index.js"))) {
+          entryImports.push(`import legacyComponents from "./index.js";`);
+          defaultExportExpr = `{ ...(legacyComponents || {}), ${entryExports.join(", ")} }`;
+        }
+
+        const entryPath = path.join(tempDir, "entry.js");
+        fs.writeFileSync(entryPath, `${entryImports.join("\n")}\nexport default ${defaultExportExpr};\n`, "utf-8");
+
+        const result = buildSync({
+          entryPoints: [entryPath],
+          bundle: true,
+          format: "esm",
+          platform: "browser",
+          target: "es2022",
+          write: false,
+          minify: true,
+          external: ["svelte", "svelte/*"],
+          legalComments: "none",
+        });
+
+        const bundledSource = result.outputFiles[0]?.text;
+        if (!bundledSource) {
+          throw new Error("esbuild did not produce an output module for Svelte components.");
+        }
+
+        return bundledSource;
+      } finally {
+        fs.rmSync(tempDir, { recursive: true, force: true });
+      }
+    } catch (error) {
+      throw new Error(
+        `Could not bundle Svelte custom components from ${dmdDir}: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }
+
+  // Fallback to legacy components.js / index.js if present
+  const candidate =
+    (legacyFile && fs.existsSync(legacyFile) && !fs.statSync(legacyFile).isDirectory() ? legacyFile : undefined) ||
+    (dmdDir && [path.join(dmdDir, "components.js"), path.join(dmdDir, "index.js")].find((p) => fs.existsSync(p)));
+
+  if (!candidate || !fs.existsSync(candidate)) return undefined;
 
   try {
     const result = buildSync({
-      entryPoints: [componentsPath],
+      entryPoints: [candidate],
       bundle: true,
       format: "esm",
       platform: "browser",
@@ -76,7 +184,7 @@ export function bundleCustomComponents(componentsPath: string): string | undefin
     return bundledSource;
   } catch (error) {
     throw new Error(
-      `Could not bundle custom components from ${componentsPath}: ${error instanceof Error ? error.message : String(error)}`,
+      `Could not bundle custom components from ${candidate}: ${error instanceof Error ? error.message : String(error)}`,
     );
   }
 }
@@ -174,7 +282,7 @@ export function collectNestedOfflineSites(targetDir: string): Record<string, Off
       name: nestedConfig.name || key,
       manifest: generateManifest(nestedRoot, nestedConfig),
       docs: nestedDocs,
-      componentsSource: bundleCustomComponents(path.join(nestedRoot, ".dmd", "components.js")),
+      componentsSource: bundleCustomComponents(path.join(nestedRoot, ".dmd")),
     };
   }
 
@@ -186,7 +294,7 @@ export function shouldWatchDocumentationSource(rootDir: string, changedPath: str
   const segments = relativePath.split("/");
   const firstSegment = segments[0];
   const baseName = segments[segments.length - 1];
-  const isCustomComponentModule = /(^|\/)\.dmd\/(components|index)\.js$/i.test(relativePath);
+  const isCustomComponentModule = /(^|\/)\.dmd\/[^/]+\.(svelte|js|ts)$/i.test(relativePath);
 
   // Build outputs can be written at any depth (e.g. `.nojekyll` inside nested
   // documentation roots), so generated artifacts are matched by basename to
@@ -260,7 +368,7 @@ export async function buildCommand(targetDirArg: string = "./docs", options: Bui
     docsMap[file] = raw;
   }
 
-  const componentsPath = path.join(targetDir, ".dmd", "components.js");
+  const componentsPath = path.join(targetDir, ".dmd");
   const componentsSource = bundleCustomComponents(componentsPath);
 
   // 2. Generate _docs.js for precompiled local and file:/// documentation data.

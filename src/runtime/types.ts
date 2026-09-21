@@ -87,6 +87,7 @@ export interface DocManifest {
   config: DocConfig;
   docs: DocFileItem[];
   tree: SidebarTreeNode[];
+  customComponents?: string[];
 }
 
 export interface SidebarTreeNode {

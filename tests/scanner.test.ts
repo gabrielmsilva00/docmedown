@@ -23,6 +23,7 @@ import {
   type OfflineEnvelope,
   sanitizeDownloadName,
 } from "../src/runtime/offline-export";
+import { linkSveltePrimitives } from "../src/runtime/svelte-runtime";
 
 test("Extract headings from markdown content", () => {
   const content = `
@@ -171,6 +172,48 @@ test("Offline custom component bundles resolve relative imports and defer module
     assert.ok(!bundledSource?.includes("./shared.js"));
     assert.ok(bootstrap.includes("window.__DOCMEDOWN_DATA__ = data"));
     assert.ok(!bootstrap.includes("__DOCMEDOWN_COMPONENTS_READY__"));
+  } finally {
+    fs.rmSync(temporaryDirectory, { recursive: true, force: true });
+  }
+});
+
+test(".dmd/*.svelte components are discovered in manifest and bundled AOT via Svelte 5 customElement compiler", () => {
+  const temporaryDirectory = fs.mkdtempSync(path.join(os.tmpdir(), "docmedown-svelte-test-"));
+  const dmdDir = path.join(temporaryDirectory, ".dmd");
+  fs.mkdirSync(dmdDir, { recursive: true });
+
+  try {
+    const svelteContent = `
+<script>
+  let { label = "Count" } = $props();
+  let count = $state(0);
+</script>
+
+<button onclick={() => count++}>{label}: {count}</button>
+    `.trim();
+
+    fs.writeFileSync(path.join(dmdDir, "SampleWidget.svelte"), svelteContent, "utf-8");
+
+    // 1. Scanner discovery in manifest
+    const manifest = generateManifest(temporaryDirectory, DEFAULT_CONFIG);
+    assert.deepEqual(manifest.customComponents, ["SampleWidget"]);
+
+    // 2. Watcher regex triggers on .dmd/*.svelte
+    assert.ok(shouldWatchDocumentationSource(temporaryDirectory, path.join(dmdDir, "SampleWidget.svelte")));
+
+    // 3. AOT bundling via bundleCustomComponents
+    const bundledSource = bundleCustomComponents(temporaryDirectory);
+    assert.ok(bundledSource, "bundleCustomComponents should return bundled code");
+    assert.ok(bundledSource.includes("dmd-sample-widget"), "Should register custom element dmd-sample-widget");
+    assert.ok(bundledSource.includes("SampleWidget"), "Should export SampleWidget tag");
+
+    // 4. Linker rewrites svelte runtime imports to window.__DOCMEDOWN_SVELTE__
+    const linked = linkSveltePrimitives(bundledSource);
+    assert.ok(linked.includes("window.__DOCMEDOWN_SVELTE__"), "Linker should wire global svelte runtime");
+    assert.ok(
+      !/import\s+.*from\s+['"]svelte\/internal\/client['"]/.test(linked),
+      "Bare svelte imports must be stripped",
+    );
   } finally {
     fs.rmSync(temporaryDirectory, { recursive: true, force: true });
   }

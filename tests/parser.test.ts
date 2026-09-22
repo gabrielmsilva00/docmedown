@@ -183,6 +183,11 @@ test("path-aware title with extension color coding", () => {
 test("copy-selected button appears only when active lines exist", () => {
   const withActive = renderCodeBlock("a\nb\nc", "text {1,2}");
   assert.ok(withActive.includes("data-dmd-copy-selected"));
+  assert.ok(withActive.includes("dmd-copy-selected-btn"));
+  assert.ok(withActive.includes('aria-label="Copy highlighted lines"'));
+  // Both copy buttons carry copy-icon and check-icon for state transitions
+  assert.equal((withActive.match(/class="copy-icon"/g) ?? []).length, 2);
+  assert.equal((withActive.match(/class="check-icon"/g) ?? []).length, 2);
 
   const without = renderCodeBlock("a\nb", "text");
   assert.ok(!without.includes("data-dmd-copy-selected"));

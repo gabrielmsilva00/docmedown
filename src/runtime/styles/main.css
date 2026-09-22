@@ -1250,15 +1250,15 @@ html {
   border: 1px solid color-mix(in srgb, var(--dmd-lang-color, #8494a9) 26%, transparent);
 }
 
-/* Copy buttons — icon-only, no background/card styling ------------------- */
+/* Copy buttons — icon-only, sleek chromeless styling ------------------- */
 .dmd-copy-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background-color: transparent;
-  border: none;
-  padding: 0.25rem;
-  color: rgba(255, 255, 255, 0.4);
+  background-color: transparent !important;
+  border: none !important;
+  padding: 0.28rem;
+  color: rgba(255, 255, 255, 0.45);
   cursor: pointer;
   border-radius: var(--dmd-radius-sm);
   transition:
@@ -1269,7 +1269,7 @@ html {
 
 .dmd-copy-btn:hover {
   color: #ffffff;
-  background-color: rgba(255, 255, 255, 0.08);
+  background-color: rgba(255, 255, 255, 0.08) !important;
   transform: scale(1.06);
 }
 
@@ -1289,8 +1289,8 @@ html {
 /* Copied state: the button fills with a soft green tint while the checkmark
    pops in — the swap reads as an event, not just a color change. */
 .dmd-copy-btn.copied {
-  color: #34d399;
-  background-color: rgba(16, 185, 129, 0.16);
+  color: #34d399 !important;
+  background-color: rgba(16, 185, 129, 0.16) !important;
 }
 
 .dmd-copy-btn.copied .copy-icon {
@@ -1325,13 +1325,14 @@ html {
 }
 
 .dmd-copy-selected-btn {
-  opacity: 0.65;
-  transform: scale(0.85);
+  color: var(--dmd-accent);
+  opacity: 0.8;
 }
 
 .dmd-copy-selected-btn:hover {
+  color: var(--dmd-accent-hover);
+  background-color: color-mix(in srgb, var(--dmd-accent) 14%, transparent) !important;
   opacity: 1;
-  transform: scale(0.92);
 }
 
 /* Pre container — just a scrollable shell; line layout lives on spans ----- */
@@ -1375,6 +1376,8 @@ html {
 .dmd-code-line {
   display: block;
   position: relative;
+  box-sizing: border-box;
+  min-width: 100%;
   padding: 0 var(--dmd-code-pad-x) 0 calc(var(--dmd-gutter-width) + var(--dmd-code-pad-x));
   min-height: 1.65em;
   white-space: pre-wrap;
@@ -1410,13 +1413,13 @@ html {
 }
 
 .dmd-code-line-active {
-  background: color-mix(in srgb, var(--dmd-accent) 8%, transparent);
-  box-shadow: inset 2px 0 0 var(--dmd-accent);
-  /* Full-bleed highlight: extend into gutter + right padding */
-  margin-left: calc(-1 * (var(--dmd-gutter-width) + var(--dmd-code-pad-x)));
-  margin-right: calc(-1 * var(--dmd-code-pad-x));
-  padding-left: calc(var(--dmd-gutter-width) + var(--dmd-code-pad-x));
-  padding-right: var(--dmd-code-pad-x);
+  background: color-mix(in srgb, var(--dmd-accent) 10%, transparent);
+  box-shadow: inset 3px 0 0 var(--dmd-accent);
+}
+
+.dmd-code-line-active::before {
+  color: var(--dmd-accent);
+  font-weight: 600;
 }
 
 /* Leading whitespace indicators ------------------------------------------
@@ -4384,10 +4387,14 @@ fieldset.dmd-appearance-section {
   .dmd-toc-header,
   .dmd-toc-link,
   .dmd-tab-btn,
-  .dmd-diagram-btn,
-  .dmd-copy-btn {
+  .dmd-diagram-btn {
     min-height: 44px;
     min-width: 44px;
+  }
+
+  .dmd-copy-btn {
+    min-height: 32px;
+    min-width: 32px;
   }
 
   .dmd-social-btn,

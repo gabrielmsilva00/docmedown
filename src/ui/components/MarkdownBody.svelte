@@ -43,6 +43,11 @@
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT);
     for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
       const el = node as HTMLElement;
+      // Never upgrade internal elements inside code blocks, pre tags, or diagrams
+      if (el.closest?.(".dmd-code-block-wrapper, pre, .dmd-diagram-host")) continue;
+      if (el.classList?.contains("dmd-copy-btn") || el.classList?.contains("dmd-copy-selected-btn")) continue;
+      if (el.hasAttribute?.("data-dmd-copy") || el.hasAttribute?.("data-dmd-copy-selected")) continue;
+
       const tag = registry.resolveTag(el.tagName.toLowerCase());
       if (tag) candidates.push({ el, tag });
     }

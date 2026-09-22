@@ -177,9 +177,12 @@ function renderTitleHtml(title: string): string {
   return `<span class="dmd-code-path">${escapeHtml(dir)}</span><span class="dmd-code-filename" style="color:${color}">${FILE_ICON_SVG}${escapeHtml(filename)}</span>`;
 }
 
-/** Clipboard icon used by both copy buttons. */
+/** Clipboard icon for standard copy button. */
 const CLIPBOARD_SVG =
   '<svg class="copy-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>';
+/** Distinct clipboard icon with line indicators for the copy-highlighted-lines button. */
+const CLIPBOARD_HIGHLIGHT_SVG =
+  '<svg class="copy-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/><line x1="12" y1="12" x2="18" y2="12" stroke-width="2"/><line x1="12" y1="16" x2="16" y2="16" stroke-width="2"/></svg>';
 const CHECK_SVG =
   '<svg class="check-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>';
 
@@ -214,7 +217,7 @@ export function renderCodeBlock(code: string, infoString: string = ""): string {
     <div class="dmd-code-header-right">
       ${
         hasActive
-          ? `<button type="button" class="dmd-copy-btn dmd-copy-selected-btn" data-dmd-copy-selected aria-label="Copy highlighted lines" title="Copy highlighted lines">${CLIPBOARD_SVG}${CHECK_SVG}</button>`
+          ? `<button type="button" class="dmd-copy-btn dmd-copy-selected-btn" data-dmd-copy-selected aria-label="Copy highlighted lines" title="Copy highlighted lines">${CLIPBOARD_HIGHLIGHT_SVG}${CHECK_SVG}</button>`
           : ""
       }
       <button type="button" class="dmd-copy-btn" data-dmd-copy aria-label="Copy code" title="Copy code">${CLIPBOARD_SVG}${CHECK_SVG}</button>

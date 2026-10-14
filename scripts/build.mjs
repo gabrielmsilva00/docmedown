@@ -142,43 +142,19 @@ async function runUnitTests() {
 
   const tsxCli = path.join(root, "node_modules", "tsx", "dist", "cli.mjs");
 
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     const proc = spawn(process.execPath, [tsxCli, "--test", ...files], {
       cwd: root,
-      stdio: ["ignore", "pipe", "pipe"],
-    });
-
-    let stdout = "";
-    let stderr = "";
-    proc.stdout.on("data", (chunk) => {
-      stdout += chunk.toString();
-    });
-    proc.stderr.on("data", (chunk) => {
-      stderr += chunk.toString();
+      stdio: "inherit",
     });
 
     proc.on("close", (code) => {
       const duration = Date.now() - t0;
-      const testsMatch = stdout.match(/ℹ tests (\d+)/);
-      const passMatch = stdout.match(/ℹ pass (\d+)/);
-      const failMatch = stdout.match(/ℹ fail (\d+)/);
-
-      const total = testsMatch ? Number.parseInt(testsMatch[1], 10) : 0;
-      const pass = passMatch ? Number.parseInt(passMatch[1], 10) : 0;
-      const fail = failMatch ? Number.parseInt(failMatch[1], 10) : 0;
-      const passRate = total > 0 ? Math.round((pass / total) * 100) : code === 0 ? 100 : 0;
-
-      resolve({
-        ok: code === 0 || passRate >= 95,
-        code,
-        total,
-        pass,
-        fail,
-        passRate,
-        duration,
-        stdout,
-        stderr,
-      });
+      if (code === 0) {
+        resolve({ ok: true, duration });
+      } else {
+        reject(new Error(`Unit test suite failed with exit code ${code}`));
+      }
     });
   });
 }
@@ -318,33 +294,10 @@ async function main() {
     // 2.2 Unit Tests
     console.log(chalk.dim("  Running unit test suite..."));
     const testResult = await runUnitTests();
-    testScore = testResult.passRate;
+    testScore = 100;
+    console.log(chalk.green(`  ✔ Unit Test Suite: All unit tests passed cleanly (${testResult.duration}ms)`));
 
-    if (testScore < 95) {
-      console.error(
-        chalk.red.bold(
-          `\n✖ BUILD ABORTED: Unit test pass rate (${testScore}%, ${testResult.pass}/${testResult.total}) is below the required 95% threshold!`,
-        ),
-      );
-      if (testResult.fail > 0) {
-        console.error(chalk.red(`  ${testResult.fail} test(s) failed.`));
-      }
-      process.exit(1);
-    } else if (testScore < 100) {
-      console.warn(
-        chalk.yellow.bold(
-          `\n⚠ QUALITY WARNING: Unit test suite completed with ${testScore}% pass rate (${testResult.pass}/${testResult.total}). Target is 100%!\n  Proceeding with build because the >= 95% threshold was met.\n`,
-        ),
-      );
-    } else {
-      console.log(
-        chalk.green(
-          `  ✔ Unit Test Suite: ${testResult.total}/${testResult.total} passed (100% completion in ${testResult.duration}ms)`,
-        ),
-      );
-    }
-
-    console.log(chalk.green(`✨ Quality Gate: Linters (100%) and Tests (${testScore}%) passed.\n`));
+    console.log(chalk.green(`✨ Quality Gate: Linters (100%) and Tests (100%) passed.\n`));
   } else {
     console.log(chalk.magenta("⚡ Fast mode active: Bypassing diagnostics and unit test gates.\n"));
   }

@@ -229,12 +229,24 @@ if (typeof customElements !== "undefined" && !customElements.get(${JSON.stringif
         const entryPath = path.join(tempDir, "entry.js");
         fs.writeFileSync(entryPath, `${entryImports.join("\n")}\nexport default ${defaultExportExpr};\n`, "utf-8");
 
+        const candidatePaths = [
+          ...(require.resolve.paths ? require.resolve.paths("react") || [] : []),
+          path.resolve(__dirname, "../../node_modules"),
+          path.resolve(__dirname, "../node_modules"),
+          path.resolve(__dirname, "node_modules"),
+          path.resolve(process.cwd(), "node_modules"),
+          path.resolve(targetPath, "node_modules"),
+          path.resolve(dmdDir, "node_modules"),
+        ].filter((p) => fs.existsSync(p));
+        const nodePaths = [...new Set(candidatePaths)];
+
         const result = buildSync({
           entryPoints: [entryPath],
           bundle: true,
           format: "esm",
           platform: "browser",
           target: "es2022",
+          nodePaths,
           write: false,
           minify: true,
           external: ["svelte", "svelte/*", "docmedown/motion", "motion", "docmedown"],
@@ -271,12 +283,22 @@ if (typeof customElements !== "undefined" && !customElements.get(${JSON.stringif
   if (!candidate || !fs.existsSync(candidate)) return undefined;
 
   try {
+    const fallbackNodePaths = [
+      path.resolve(__dirname, "../../node_modules"),
+      path.resolve(__dirname, "../node_modules"),
+      path.resolve(__dirname, "node_modules"),
+      path.resolve(process.cwd(), "node_modules"),
+      path.resolve(targetPath, "node_modules"),
+      dmdDir ? path.resolve(dmdDir, "node_modules") : "",
+    ].filter((p) => p && fs.existsSync(p));
+
     const result = buildSync({
       entryPoints: [candidate],
       bundle: true,
       format: "esm",
       platform: "browser",
       target: "es2022",
+      nodePaths: [...new Set(fallbackNodePaths)],
       write: false,
       minify: true,
       legalComments: "none",

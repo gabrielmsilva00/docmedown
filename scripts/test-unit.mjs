@@ -6,7 +6,12 @@ import { fileURLToPath } from "node:url";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const testsDir = path.join(root, "tests");
 // Exclude tests that require compiled artifacts from dist/
-const postBuildTests = new Set(["bundle-size.test.ts", "offline-artifact.test.ts"]);
+const postBuildTests = new Set([
+  "bundle-size.test.ts",
+  "offline-artifact.test.ts",
+  "package-smoke.test.ts",
+  "mcp.test.ts",
+]);
 
 const files = fs
   .readdirSync(testsDir)

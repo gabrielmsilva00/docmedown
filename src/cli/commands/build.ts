@@ -121,8 +121,13 @@ export function bundleCustomComponents(targetPath: string): string | undefined {
         }
 
         // Provide bridge runtime if React bridging is required
-        const bridgeSrc = path.resolve(__dirname, "../../runtime/bridges/react-bridge.ts");
-        if (fs.existsSync(bridgeSrc)) {
+        const bridgeCandidates = [
+          path.resolve(__dirname, "../../runtime/bridges/react-bridge.ts"),
+          path.resolve(__dirname, "../src/runtime/bridges/react-bridge.ts"),
+          path.resolve(__dirname, "src/runtime/bridges/react-bridge.ts"),
+        ];
+        const bridgeSrc = bridgeCandidates.find((p) => fs.existsSync(p));
+        if (bridgeSrc) {
           fs.copyFileSync(bridgeSrc, path.join(tempDir, "react-bridge-runtime.ts"));
         }
 

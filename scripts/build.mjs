@@ -79,7 +79,7 @@ async function buildCli() {
 function runNode(scriptPath, args, label) {
   const t0 = Date.now();
   return new Promise((resolve, reject) => {
-    const proc = spawn(process.execPath, [scriptPath, ...args], { cwd: root, stdio: "ignore" });
+    const proc = spawn(process.execPath, [scriptPath, ...args], { cwd: root, stdio: "inherit" });
     proc.on("close", (code) => {
       if (code === 0) resolve({ label, duration: Date.now() - t0 });
       else reject(new Error(`${label} failed with exit code ${code}`));
@@ -128,7 +128,12 @@ async function runLinter() {
 async function runUnitTests() {
   const t0 = Date.now();
   const testsDir = path.join(root, "tests");
-  const postBuildTests = new Set(["bundle-size.test.ts", "offline-artifact.test.ts"]);
+  const postBuildTests = new Set([
+    "bundle-size.test.ts",
+    "offline-artifact.test.ts",
+    "package-smoke.test.ts",
+    "mcp.test.ts",
+  ]);
   const files = fs
     .readdirSync(testsDir)
     .filter((f) => f.endsWith(".test.ts") && !postBuildTests.has(f))

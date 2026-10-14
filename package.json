@@ -79,7 +79,7 @@
     "test:mcp:client": "node ./scripts/test-mcp-client.mjs",
     "test:artifacts": "npx tsx --test tests/offline-artifact.test.ts",
     "test:bundle": "npx tsx --test tests/bundle-size.test.ts",
-    "test:release": "npm run typecheck && npm run lint && npm run test && npm run test:mcp && npm run build && npm run build:docs && npm run test:artifacts && npm run test:bundle && npm pack --dry-run",
+    "test:release": "npm run typecheck && npm run lint && npm run test && npm run build && npm run test:mcp && npm run build:docs && npm run test:artifacts && npm run test:bundle && npm pack --dry-run",
     "doctor": "node ./bin/docmedown.js doctor ./docs",
     "doctor:project": "node ./scripts/doctor-project.mjs",
     "validate": "node ./bin/docmedown.js validate ./docs",

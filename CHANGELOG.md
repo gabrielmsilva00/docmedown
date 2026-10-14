@@ -4,12 +4,14 @@ All notable changes to DocMeDown are documented here.
 
 ## Unreleased
 
+---
+
+## 0.9.1 - 2026-10-14
+
 - **v1.0.0-rc01 Release Candidate Stabilization**:
   - Ecosystem dogfooding and cross-browser edge case hardening.
   - Stress testing high-volume markdown corpora and concurrent dynamic component cache.
   - Verification across diverse hosting providers (GitHub Pages, Cloudflare Pages, Netlify, Vercel) and air-gapped environments.
-
----
 
 ## 0.9.0 - 2026-10-14
 

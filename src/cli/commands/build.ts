@@ -19,6 +19,7 @@ import { dmdTag, ensureCustomElementTag } from "../../runtime/svelte-tag";
 import type { DocConfig } from "../../runtime/types";
 import { emitAiContextFiles } from "../ai-context";
 import { emitStaticSite } from "../seo";
+import { linkRootMarkdownFiles } from "../utils/link-root";
 import { convertReactToSvelte } from "../utils/react-to-svelte";
 import { generateManifest, scanDirectory } from "../utils/scanner";
 
@@ -737,6 +738,16 @@ export function shouldWatchDocumentationSource(rootDir: string, changedPath: str
   const isGeneratedOutput =
     baseName === ".nojekyll" || GENERATED_DOC_OUTPUTS.includes(baseName) || segments.includes(".dist");
 
+  // Check if changedPath is a root markdown file in the parent project directory
+  const parentDir = path.dirname(rootDir);
+  const isDirectParentMarkdown =
+    path.dirname(path.resolve(changedPath)).toLowerCase() === parentDir.toLowerCase() &&
+    /\.(md|mdx)$/i.test(changedPath);
+
+  if (isDirectParentMarkdown && !baseName.startsWith(".") && baseName !== "SKILL.md") {
+    return true;
+  }
+
   return (
     Boolean(relativePath) &&
     !relativePath.startsWith("..") &&
@@ -750,6 +761,16 @@ export function shouldWatchDocumentationSource(rootDir: string, changedPath: str
 
 export async function buildCommand(targetDirArg: string = "./docs", options: BuildOptions = {}) {
   const targetDir = path.resolve(process.cwd(), targetDirArg);
+  const rootDir = process.cwd();
+
+  // Link root markdown files into targetDir if targetDir is a direct subfolder of rootDir (e.g. ./docs)
+  if (
+    path.resolve(rootDir).toLowerCase() !== path.resolve(targetDir).toLowerCase() &&
+    path.dirname(targetDir).toLowerCase() === path.resolve(rootDir).toLowerCase()
+  ) {
+    linkRootMarkdownFiles(rootDir, targetDir);
+  }
+
   const { onlineDir, offlineDir } = getBuildOutputPaths(targetDir, options.outDir);
   const buildOfflineBundle = options.singleFile !== false;
 

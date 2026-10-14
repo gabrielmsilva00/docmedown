@@ -3,6 +3,7 @@ import path from "node:path";
 import chalk from "chalk";
 import open from "open";
 import prompts from "prompts";
+import { linkRootMarkdownFiles } from "../utils/link-root";
 import { startDevServer } from "../utils/server";
 import { buildCommand } from "./build";
 
@@ -20,6 +21,18 @@ export async function initCommand(targetDirArg: string = "./docs", options: Init
   // Ensure target directory exists
   if (!fs.existsSync(targetDir)) {
     fs.mkdirSync(targetDir, { recursive: true });
+  }
+
+  // Link root markdown files into targetDir if targetDir is a direct subfolder (e.g. ./docs)
+  const rootDir = process.cwd();
+  if (
+    path.resolve(rootDir).toLowerCase() !== path.resolve(targetDir).toLowerCase() &&
+    path.dirname(targetDir).toLowerCase() === path.resolve(rootDir).toLowerCase()
+  ) {
+    const { linked } = linkRootMarkdownFiles(rootDir, targetDir);
+    if (linked.length > 0) {
+      console.log(chalk.green(`  ✔ Linked root markdown file${linked.length === 1 ? "" : "s"}: ${linked.join(", ")}`));
+    }
   }
 
   const templatesDir = path.resolve(__dirname, "../../templates");

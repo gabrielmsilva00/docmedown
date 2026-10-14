@@ -21,9 +21,9 @@ Get a modern documentation site running in three steps:
 <Tabs type="pills">
   <Tab label="1. Scaffold Docs" icon="🚀">
 ```bash
-npx docmedown init ./docs
+npx docmedown
 ```
-Creates `docs.json`, starter Markdown guides, and the `.dmd/` custom component folder.
+Automatically detects root markdown files (`README.md`, `CONTRIBUTING.md`, `ROADMAP.md`, etc.), links both root and `./docs/` at top level without an artificial `./docs/` subdivision, and initializes configuration.
   </Tab>
   <Tab label="2. Live Preview" icon="🔥">
 ```bash

@@ -35,9 +35,20 @@ export function scanDirectory(
   baseDir: string = dir,
   excludeList: string[] = ["node_modules", ".git", ".dmd", "dist", "bin", "SKILL.md"],
   stopAtNestedDocsRoots: boolean = true,
+  visitedDirs: Set<string> = new Set(),
 ): string[] {
   const results: string[] = [];
   if (!fs.existsSync(dir)) return results;
+
+  try {
+    const realDirPath = fs.realpathSync(dir);
+    if (visitedDirs.has(realDirPath)) {
+      return results;
+    }
+    visitedDirs.add(realDirPath);
+  } catch {
+    // If realpathSync fails, proceed without cycle check
+  }
 
   const entries = fs.readdirSync(dir, { withFileTypes: true });
 
@@ -49,14 +60,26 @@ export function scanDirectory(
     const fullPath = path.join(dir, entry.name);
     const relPath = path.relative(baseDir, fullPath).replace(/\\/g, "/");
 
-    if (entry.isDirectory()) {
+    let isDirectory = entry.isDirectory();
+    let isFile = entry.isFile();
+    if (entry.isSymbolicLink()) {
+      try {
+        const stat = fs.statSync(fullPath);
+        isDirectory = stat.isDirectory();
+        isFile = stat.isFile();
+      } catch {
+        continue;
+      }
+    }
+
+    if (isDirectory) {
       const isNestedDocsRoot =
         stopAtNestedDocsRoots && fullPath !== baseDir && fs.existsSync(path.join(fullPath, "docs.json"));
 
       if (!isNestedDocsRoot) {
-        results.push(...scanDirectory(fullPath, baseDir, excludeList, stopAtNestedDocsRoots));
+        results.push(...scanDirectory(fullPath, baseDir, excludeList, stopAtNestedDocsRoots, visitedDirs));
       }
-    } else if (entry.isFile() && /\.(md|mdx)$/i.test(entry.name)) {
+    } else if (isFile && /\.(md|mdx)$/i.test(entry.name)) {
       results.push(relPath);
     }
   }

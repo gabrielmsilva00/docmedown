@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import chalk from "chalk";
 import open from "open";
+import { linkRootMarkdownFiles } from "../utils/link-root";
 import { startDevServer } from "../utils/server";
 import { buildCommand } from "./build";
 
@@ -23,6 +24,15 @@ export async function serveCommand(targetDirArg: string = "./docs", options: Ser
     } else {
       targetDir = process.cwd();
     }
+  }
+
+  // Link root markdown files into targetDir if targetDir is a direct subfolder of root (e.g. ./docs)
+  const rootDir = process.cwd();
+  if (
+    path.resolve(rootDir).toLowerCase() !== path.resolve(targetDir).toLowerCase() &&
+    path.dirname(targetDir).toLowerCase() === path.resolve(rootDir).toLowerCase()
+  ) {
+    linkRootMarkdownFiles(rootDir, targetDir);
   }
 
   const effectiveMode = options.preview ? "preview" : options.mode || "production";

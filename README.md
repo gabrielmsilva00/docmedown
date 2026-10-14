@@ -41,9 +41,12 @@ Drop a single `index.html` file into any directory of `.md` files, and you have 
 ### Option 1: Using the CLI Tool
 
 ```bash
-# Scaffold a new documentation directory and start preview immediately
-npx docmedown ./docs
+# Run at your project root: detects root .md files (README, CONTRIBUTING, CHANGELOG, etc.)
+# and links both root and the ./docs/ folder by default!
+npx docmedown
 ```
+
+> **Automatic Root Markdown Linking**: Real-world projects typically keep `.md` files at their repository root (`README.md`, `CONTRIBUTING.md`, `CHANGELOG.md`, `ROADMAP.md`). When running `docmedown`, it detects `.md` files at your current directory and links them directly alongside your `./docs/` folder by default. All root and `./docs/` documents appear seamlessly at the top level of your documentation without creating an unnecessary `./docs/` subdivision.
 
 To configure branding, themes, or remote GitHub repository sources with an interactive terminal wizard:
 

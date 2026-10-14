@@ -6,6 +6,15 @@ All notable changes to DocMeDown are documented here.
 
 ---
 
+## 0.9.3 - 2026-10-14
+
+- **Automatic Root Markdown Detection & Unified Default Linking**:
+  - Automatically detects markdown files located directly at project root (`README.md`, `CONTRIBUTING.md`, `CHANGELOG.md`, `ROADMAP.md`, etc.) when running `docmedown`.
+  - Links root markdown files directly into the `./docs/` folder by default (using relative symlinks with transparent hardlink and copy fallbacks).
+  - Integrates root documents seamlessly at the top level of the documentation hierarchy without creating an artificial `./docs/` folder subdivision.
+  - Development server watcher (`docmedown serve`) and build compiler (`docmedown build`) watch and hot-reload root markdown changes in real time.
+  - Auto-cleans broken or stale symlinks when root markdown files are removed or renamed.
+
 ## 0.9.2 - 2026-10-14
 
 - **v1.0.0-rc01 Release Candidate Preparation**:

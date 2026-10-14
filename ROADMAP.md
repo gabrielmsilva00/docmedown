@@ -267,6 +267,11 @@ v0.3.0a ──► v0.3.1-v0.3.x ──► v0.4.0 ──► v0.5.0 ──► v0.6
   - [x] Click-to-edit inline headings and callouts.
   - [x] Markdown table visual editor.
   - [x] Frontmatter metadata form editor with schema validation.
+- [x] **Automatic Root Markdown Detection & Unified Default Linking**:
+  - [x] Auto-detect markdown files directly at project root (`README.md`, `CONTRIBUTING.md`, `CHANGELOG.md`, `ROADMAP.md`, etc.) upon running `docmedown`.
+  - [x] Link root markdown files directly into the default `./docs/` folder without creating an artificial `./docs/` folder subdivision.
+  - [x] Full watcher, live HMR, and build pipeline integration for linked root documents with transparent fallback to hard links or copies.
+  - [x] Automated stale symlink cleanup on document removal or rename.
 
 ---
 

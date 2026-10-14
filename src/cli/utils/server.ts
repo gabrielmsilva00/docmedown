@@ -7,6 +7,7 @@ import mime from "mime-types";
 import { WebSocket, WebSocketServer } from "ws";
 import { renderSplashHead, renderSplashMarkup } from "../../runtime/splash";
 import { shouldWatchDocumentationSource } from "../commands/build";
+import { detectRootMarkdownFiles, linkRootMarkdownFiles } from "./link-root";
 
 export interface DevServerOptions {
   port?: number;
@@ -445,7 +446,11 @@ export function startDevServer(options: DevServerOptions): Promise<DevServerHand
     });
 
     // File watcher for hot reload
-    const watcher = chokidar.watch(rootDir, {
+    const parentDir = path.dirname(rootDir);
+    const rootFiles = detectRootMarkdownFiles(parentDir);
+    const watchPaths = [rootDir, ...rootFiles.map((f) => path.join(parentDir, f))];
+
+    const watcher = chokidar.watch(watchPaths, {
       ignored: [
         "**/node_modules/**",
         "**/.git/**",
@@ -458,16 +463,27 @@ export function startDevServer(options: DevServerOptions): Promise<DevServerHand
         "**/docmedown-mermaid.js",
       ],
       ignoreInitial: true,
+      followSymlinks: true,
     });
 
     let reloadTimeout: NodeJS.Timeout | null = null;
     watcher.on("all", (event, changedPath) => {
       if (!shouldRebuildDocumentation(rootDir, changedPath)) return;
 
+      const isDirectParentMarkdown =
+        path.dirname(path.resolve(changedPath)).toLowerCase() === parentDir.toLowerCase() &&
+        /\.(md|mdx)$/i.test(changedPath);
+
+      if (isDirectParentMarkdown && (event === "add" || event === "unlink")) {
+        linkRootMarkdownFiles(parentDir, rootDir);
+      }
+
       if (reloadTimeout) clearTimeout(reloadTimeout);
       reloadTimeout = setTimeout(async () => {
         const isPreview = changedPath.includes(".preview");
-        const rel = path.relative(isPreview ? previewDir : rootDir, changedPath).replace(/\\/g, "/");
+        const rel = isDirectParentMarkdown
+          ? path.basename(changedPath)
+          : path.relative(isPreview ? previewDir : rootDir, changedPath).replace(/\\/g, "/");
 
         // Targeted HMR for Markdown files
         if (/\.(md|mdx)$/i.test(changedPath) && fs.existsSync(changedPath)) {

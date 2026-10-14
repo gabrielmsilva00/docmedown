@@ -19,7 +19,7 @@ You can initialize a brand new documentation site with a single command:
 npx docmedown ./docs
 ```
 
-This scaffolds your documentation directory, creates starter Markdown guides, and starts a live preview server!
+This scaffolds your documentation directory, automatically links any root `*.md` files (like `README.md`, `CONTRIBUTING.md`, `CHANGELOG.md`) alongside your `./docs/` folder without an artificial subdivision, and starts a live preview server!
 
 ---
 

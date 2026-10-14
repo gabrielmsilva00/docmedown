@@ -21,7 +21,8 @@ npm install -g docmedown
 
 | Command | Shorthand | Purpose | Key Flags |
 | :--- | :--- | :--- | :--- |
-| **[`init`](#1-init-instant-scaffolding)** | — | Scaffold starter documentation directory | `--no-start` |
+| **[`docmedown`](#0-docmedown--quickstart-dev-server)** | `dmd` | Quickstart setup if empty, or starts local preview server | `-p, --port`, `-y, --yes`, `--no-open` |
+| **[`init`](#1-init--interactive-setup-wizard)** | — | Interactive setup wizard to configure and scaffold docs | `-y, --yes`, `-n, --name`, `-t, --theme`, `--no-start` |
 | **[`serve`](#2-serve-alias-dev-hot-live-reload)** | `dev` | High-speed local dev server with WebSocket hot reload | `-p, --port`, `-H, --host`, `--no-open` |
 | **[`build`](#3-build-static-compiler-bundler)** | — | Prerender static HTML, SEO, AI context, and offline bundle | `-w, --watch`, `--no-single-file`, `-o, --out-dir` |
 | **[`validate`](#4-validate-link-frontmatter-linter)** | — | Deep linter for broken links, missing anchors, and YAML errors | `--json` |
@@ -31,27 +32,55 @@ npm install -g docmedown
 
 ---
 
-## 1. `init` — Instant Scaffolding
+## 0. `docmedown` — Quickstart & Dev Server
 
-Scaffold a complete, modern documentation workspace with sensible defaults.
+When run in a directory that already contains documentation, `docmedown` immediately launches the local development server.
+
+When run in an empty directory or without documentation, `docmedown` acts as the **Quickstart setup**:
+1. Uses quickstart defaults (detecting your project name from `package.json`).
+2. Renders a preview tree view of the directories and files to be created.
+3. **Prompts for confirmation BEFORE creating any files** (unless `-y, --yes` is supplied).
 
 ```bash
-# Scaffold in ./docs:
+# Quickstart in ./docs (prompts for confirmation before creating files):
+npx docmedown
+
+# Quickstart without confirmation prompt:
+npx docmedown -y
+```
+
+---
+
+## 1. `init` — Interactive Setup Wizard
+
+The `init` command launches the interactive setup wizard, walking you through customizing your documentation site before generating files:
+
+1. **Interactive Questionnaire**: Choose documentation directory, project name, tagline, theme family, default color mode, and whether to include sample custom components.
+2. **Directory Tree Preview**: Renders a complete tree view showing every file that will be created or linked from root.
+3. **Pre-Creation Confirmation**: Prompts for confirmation **before** writing any files to disk.
+
+```bash
+# Launch interactive setup wizard:
+npx docmedown init
+
+# Launch interactive setup for a specific directory:
 npx docmedown init ./docs
 
-# Scaffold without launching the preview server immediately:
-npx docmedown init ./docs --no-start
+# Non-interactive / CI with defaults:
+npx docmedown init ./docs -y --no-start
 ```
 
 ### What gets created:
 ```
 docs/
+├── index.html                # Single-page runtime shell
+├── favicon.svg               # Vector documentation icon
 ├── docs.json                 # Core configuration (theme, navigation, branding)
-├── README.md                 # Documentation home page (#/README)
+├── README.md                 # Primary documentation home page (or linked from root)
 ├── getting-started.md        # Starter guide (#/getting-started)
+├── CHANGELOG.md              # Linked from root (if present)
 ├── guides/
-│   ├── installation.md       # Category page (#/guides/installation)
-│   └── advanced.md           # Category page (#/guides/advanced)
+│   └── custom-components.md  # Custom component reference
 └── .dmd/
     └── CounterWidget.svelte  # Svelte 5 runes component starter
 ```

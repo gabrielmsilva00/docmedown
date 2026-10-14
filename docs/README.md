@@ -64,7 +64,7 @@ DocMeDown acts as a universal component orchestration layer. You can author inte
 <CardGrid cols={2}>
   <Card
     title="1. Zero-Friction Local Docs"
-    description="Drop index.html and write Markdown. No bundlers, no config files, instant client-side fuzzy search (⌘K)."
+    description="Drop index.html and write Markdown. Unifies root *.md and ./docs/ automatically, zero bundlers, instant fuzzy search (⌘K)."
     href="#/getting-started"
     badge="Zero Config"
     badgeType="success"

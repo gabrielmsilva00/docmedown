@@ -764,17 +764,34 @@ export async function buildCommand(targetDirArg: string = "./docs", options: Bui
   const rootDir = process.cwd();
 
   // Link root markdown files into targetDir if targetDir is a direct subfolder of rootDir (e.g. ./docs)
-  if (
+  const isDirectSubfolder =
     path.resolve(rootDir).toLowerCase() !== path.resolve(targetDir).toLowerCase() &&
-    path.dirname(targetDir).toLowerCase() === path.resolve(rootDir).toLowerCase()
-  ) {
-    linkRootMarkdownFiles(rootDir, targetDir);
+    path.dirname(targetDir).toLowerCase() === path.resolve(rootDir).toLowerCase();
+
+  let linkedRootFiles: string[] = [];
+  if (isDirectSubfolder) {
+    const linkResult = linkRootMarkdownFiles(rootDir, targetDir);
+    linkedRootFiles = linkResult.linked;
   }
 
   const { onlineDir, offlineDir } = getBuildOutputPaths(targetDir, options.outDir);
   const buildOfflineBundle = options.singleFile !== false;
 
   console.log(chalk.bold.magenta("\n⚡ DocMeDown Build\n"));
+  if (isDirectSubfolder) {
+    console.log(
+      chalk.dim(
+        `  Unified documents: Root (*.md) + ${path.relative(rootDir, targetDir) || targetDirArg} (linked by default without ./docs/ subdivision)`,
+      ),
+    );
+    if (linkedRootFiles.length > 0) {
+      console.log(
+        chalk.green(
+          `  ✔ Linked root markdown file${linkedRootFiles.length === 1 ? "" : "s"}: ${linkedRootFiles.join(", ")}`,
+        ),
+      );
+    }
+  }
 
   if (!fs.existsSync(targetDir)) {
     console.error(chalk.red(`✖ Directory not found: ${targetDir}`));

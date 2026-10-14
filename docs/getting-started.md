@@ -89,16 +89,20 @@ This generates a clean, production-ready directory structure with sensible defau
 
 ```
 my-project/
+├── README.md                 # Your root project readme (detected & preserved)
+├── CONTRIBUTING.md           # Root guide (linked into docs automatically)
+├── CHANGELOG.md              # Root changelog (linked into docs automatically)
 └── docs/
-    ├── docs.json                 # Site branding, theme family & navigation
-    ├── README.md                 # Home page document (serves at #/README)
-    ├── getting-started.md        # Starter guide (#/getting-started)
+    ├── docs.json             # Site branding, theme family & navigation
+    ├── getting-started.md    # Starter guide (#/getting-started)
     ├── guides/
-    │   ├── installation.md       # Category document
-    │   └── configuration.md      # Category document
+    │   └── custom-components.md  # Category document
     └── .dmd/
         └── CounterWidget.svelte  # Svelte 5 interactive runes component
 ```
+
+> [!NOTE]
+> **Unified Root & `./docs/` Reading**: DocMeDown automatically detects root Markdown files (`README.md`, `CONTRIBUTING.md`, `CHANGELOG.md`, `ROADMAP.md`, etc.) and links them into `./docs/` by default. They appear as first-class documents alongside `./docs/` pages at the top level of navigation, with no artificial `./docs/` subdivision.
 
 ---
 

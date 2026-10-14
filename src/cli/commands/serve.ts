@@ -26,19 +26,37 @@ export async function serveCommand(targetDirArg: string = "./docs", options: Ser
     }
   }
 
-  // Link root markdown files into targetDir if targetDir is a direct subfolder of root (e.g. ./docs)
   const rootDir = process.cwd();
-  if (
+
+  // Link root markdown files into targetDir if targetDir is a direct subfolder of root (e.g. ./docs)
+  const isDirectSubfolder =
     path.resolve(rootDir).toLowerCase() !== path.resolve(targetDir).toLowerCase() &&
-    path.dirname(targetDir).toLowerCase() === path.resolve(rootDir).toLowerCase()
-  ) {
-    linkRootMarkdownFiles(rootDir, targetDir);
+    path.dirname(targetDir).toLowerCase() === path.resolve(rootDir).toLowerCase();
+
+  let linkedRootFiles: string[] = [];
+  if (isDirectSubfolder) {
+    const linkResult = linkRootMarkdownFiles(rootDir, targetDir);
+    linkedRootFiles = linkResult.linked;
   }
 
   const effectiveMode = options.preview ? "preview" : options.mode || "production";
 
   console.log(chalk.bold.magenta("\n⚡ DocMeDown Dev Server\n"));
   console.log(chalk.dim(`  Serving directory: ${targetDir}`));
+  if (isDirectSubfolder) {
+    console.log(
+      chalk.dim(
+        `  Unified documents: Root (*.md) + ${path.relative(rootDir, targetDir) || targetDirArg} (linked by default without ./docs/ subdivision)`,
+      ),
+    );
+    if (linkedRootFiles.length > 0) {
+      console.log(
+        chalk.green(
+          `  ✔ Linked root markdown file${linkedRootFiles.length === 1 ? "" : "s"}: ${linkedRootFiles.join(", ")}`,
+        ),
+      );
+    }
+  }
   console.log(
     chalk.dim(
       `  Mode: ${effectiveMode === "preview" ? chalk.yellow("Preview (.preview staging)") : chalk.green("Production (direct source)")}`,

@@ -1,6 +1,6 @@
 {
   "name": "docmedown",
-  "version": "0.9.3",
+  "version": "0.9.4",
   "description": "The simplest MarkDown documenter yet. CLI, web script, and static-site compiler with AI-native distribution.",
   "author": "Gabriel M. P. da Silva",
   "license": "Apache-2.0",

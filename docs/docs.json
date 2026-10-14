@@ -3,7 +3,7 @@
   "name": "DocMeDown",
   "tagline": "The simplest MarkDown documenter yet",
   "description": "Next-generation zero-friction documentation engine for modern developers",
-  "version": "0.9.0",
+  "version": "0.9.4",
   "rootDoc": "README.md",
   "url": "https://gabrielmsilva00.github.io/docmedown",
   "theme": {

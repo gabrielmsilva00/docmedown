@@ -272,6 +272,10 @@ v0.3.0a ──► v0.3.1-v0.3.x ──► v0.4.0 ──► v0.5.0 ──► v0.6
   - [x] Link root markdown files directly into the default `./docs/` folder without creating an artificial `./docs/` folder subdivision.
   - [x] Full watcher, live HMR, and build pipeline integration for linked root documents with transparent fallback to hard links or copies.
   - [x] Automated stale symlink cleanup on document removal or rename.
+- [x] **Interactive Scaffold Tree Preview & Confirmation Prompt**:
+  - [x] Visual directory preview tree rendered in `docmedown init` and quickstart mode before file creation.
+  - [x] Interactive confirmation prompt with `-y, --yes` flag support for non-interactive and CI environments.
+  - [x] Automated project name and description detection from `package.json` for customized initialization.
 
 ---
 

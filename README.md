@@ -17,6 +17,7 @@ Drop a single `index.html` file into any directory of `.md` files, and you have 
 ## ✨ Features at a Glance
 
 - 🚀 **Zero-Config Auto-Discovery**: Automatically parses and indexes all `.md` files & subfolders into categories, builds navigation sidebars, and powers instant search out of the box.
+- 📁 **Unified Root & `./docs/` Discovery**: Automatically detects markdown files at your project root (`README.md`, `CONTRIBUTING.md`, `CHANGELOG.md`, `ROADMAP.md`, etc.) and links both root and `./docs/` together by default without creating an artificial `./docs/` subdivision.
 - 🌐 **Dual Usage: CLI Tool & Web Script**:
   - Run via single-line CLI: `npx docmedown ./docs`
   - Or drop `<script src="https://cdn.jsdelivr.net/npm/docmedown@latest/dist/docmedown.iife.js"></script>` into an `index.html` on any static host.
@@ -33,7 +34,6 @@ Drop a single `index.html` file into any directory of `.md` files, and you have 
 - 📊 **Mermaid Diagrams & KaTeX Math**: Theme-aware diagrams with automatic Fit, zoom, 1:1 view, SVG export, expanded review, and offline parity, plus native LaTeX equations.
 - 💡 **GitHub-Style Callouts**: Full support for `[!NOTE]`, `[!TIP]`, `[!IMPORTANT]`, `[!WARNING]`, and `[!CAUTION]`.
 
-
 ---
 
 ## 🚀 10-Second Quickstart
@@ -41,12 +41,10 @@ Drop a single `index.html` file into any directory of `.md` files, and you have 
 ### Option 1: Using the CLI Tool
 
 ```bash
-# Run at your project root: detects root .md files (README, CONTRIBUTING, CHANGELOG, etc.)
+# Run at your project root: detects root *.md files (README, CONTRIBUTING, CHANGELOG, etc.)
 # and links both root and the ./docs/ folder by default!
 npx docmedown
 ```
-
-> **Automatic Root Markdown Linking**: Real-world projects typically keep `.md` files at their repository root (`README.md`, `CONTRIBUTING.md`, `CHANGELOG.md`, `ROADMAP.md`). When running `docmedown`, it detects `.md` files at your current directory and links them directly alongside your `./docs/` folder by default. All root and `./docs/` documents appear seamlessly at the top level of your documentation without creating an unnecessary `./docs/` subdivision.
 
 To configure branding, themes, or remote GitHub repository sources with an interactive terminal wizard:
 
@@ -74,6 +72,32 @@ Create an `index.html` inside your docs folder:
 ```
 
 Place your `README.md` alongside `index.html`, and you're done!
+
+---
+
+## 📁 Unified Root & `./docs/` Architecture
+
+Real-world repositories rarely store all documentation exclusively inside `./docs/`. Almost every project maintains essential Markdown files directly at root:
+- `README.md` (Project overview and introduction)
+- `CONTRIBUTING.md` (Contribution guidelines)
+- `CHANGELOG.md` (Release history and changelog)
+- `ROADMAP.md` (Project roadmap)
+- `SECURITY.md` (Vulnerability disclosure policies)
+
+Instead of forcing you to choose between root files or a `./docs/` folder, or duplicating files, **DocMeDown unifies both by default**.
+
+### How It Works
+
+When you run `docmedown`, `docmedown serve`, or `docmedown build`:
+
+1. **Auto-Detection**: Scans the current directory (`process.cwd()`) for all root `*.md` files.
+2. **Unified Linking**: Transparently links each root Markdown file directly into `./docs/` (using relative symlinks, falling back to hard links or file copies if permissions require).
+3. **Flat Top-Level Navigation**: Because root files are linked directly at `./docs/`, they sit at the root of the documentation tree alongside your `./docs/` pages (e.g. Overview, Contributing, Getting Started) **without creating an artificial `./docs/` category subdivision**.
+4. **No Template Clobbering**: If a `README.md` already exists at your project root, `docmedown init` preserves it as the primary documentation Overview rather than generating a generic placeholder template.
+5. **Bi-Directional Live Sync**:
+   - The dev server (`docmedown serve`) watches both `./docs/` and root `*.md` files. Edits to root files trigger instantaneous WebSocket HMR in the browser without full page reloads.
+   - The in-browser 2-Way Editor (`Ctrl+E` / `⌘E`) writes directly back to the target root files.
+6. **Automatic Cleanup**: If a root Markdown file is deleted or renamed, stale links are pruned automatically on the next command run.
 
 ---
 
@@ -311,8 +335,8 @@ Use the **Appearance** menu to switch family, color mode, and reading density at
  
 | Command | Description |
 | :--- | :--- |
-| `docmedown [dir]` | Auto-initializes if empty, or starts local preview server |
-| `docmedown init [dir]` | Scaffolds starter docs, `index.html`, `docs.json`, and `.dmd` folder |
+| `docmedown [dir]` | Quickstart setup if empty (shows preview tree & prompts for confirmation), or starts local preview server |
+| `docmedown init [dir]` | Interactive setup wizard to configure and scaffold docs (shows preview tree & prompts for confirmation) |
 | `docmedown serve [dir]` (or `dev`) | Starts local live-reloading dev server with WebSocket HMR and in-browser editor (`Ctrl+E`) |
 | `docmedown serve [dir] --preview` | Starts dev server in staged `.preview/` overlay mode |
 | `docmedown build [dir]` | Builds serveable files, prerendered static pages with SEO metadata, AI context files (`llms.txt`, `llms-full.txt`, `SKILL.md`, `okf.json`), and `./<dir>/.dist/index.html` for offline use |

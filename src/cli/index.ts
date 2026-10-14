@@ -4,7 +4,7 @@ import { Command } from "commander";
 import packageJson from "../../package.json";
 import { buildCommand, watchBuildCommand } from "./commands/build";
 import { configTuiCommand } from "./commands/config-tui";
-import { initCommand } from "./commands/init";
+import { initCommand, quickstartCommand } from "./commands/init";
 import { serveCommand } from "./commands/serve";
 
 const program = new Command();
@@ -16,20 +16,29 @@ program
   )
   .version(packageJson.version);
 
-// Default action when directory is passed: npx docmedown ./docs
+// Default action when directory is passed: npx docmedown [dir]
 program
-  .argument("[dir]", "Documentation directory to initialize or serve", "./docs")
+  .argument(
+    "[dir]",
+    "Documentation directory to quickstart or serve (automatically links root *.md and ./docs/ together by default)",
+    "./docs",
+  )
   .option("-p, --port <number>", "Port for local dev server", "3000")
   .option("--no-open", "Do not automatically open the browser")
+  .option("-y, --yes", "Skip confirmation prompt in quickstart mode")
   .action(async (dir, options) => {
     const targetDir = path.resolve(process.cwd(), dir);
-    // If target directory or config or index doesn't exist, init first
+    // If target directory or config or index doesn't exist, run quickstart
     const hasIndex = fs.existsSync(path.join(targetDir, "index.html"));
     const hasDocs =
       fs.existsSync(path.join(targetDir, "README.md")) || fs.existsSync(path.join(targetDir, "docs.json"));
 
     if (!hasIndex && !hasDocs) {
-      await initCommand(dir, { start: options.open });
+      await quickstartCommand(dir, {
+        start: options.open,
+        yes: options.yes,
+        port: Number(options.port) || 3000,
+      });
     } else {
       await serveCommand(dir, { port: options.port, open: options.open });
     }
@@ -38,17 +47,26 @@ program
 // Subcommand: init
 program
   .command("init [dir]")
-  .description("Scaffold a new DocMeDown documentation site")
+  .description("Launch the interactive setup wizard to scaffold a new DocMeDown documentation site")
+  .option("-y, --yes", "Skip interactive prompts and confirmation, using defaults")
+  .option("-n, --name <name>", "Project name for documentation")
+  .option("-t, --theme <family>", "Documentation theme family (atlas, blueprint, terminal, editorial)")
   .option("--no-start", "Do not start the local preview server after initialization")
-  .action(async (dir = "./docs", options) => {
-    await initCommand(dir, { start: options.start });
+  .action(async (dir, options) => {
+    await initCommand(dir, {
+      projectName: options.name,
+      themeFamily: options.theme,
+      start: options.start,
+      yes: options.yes,
+      interactive: !options.yes,
+    });
   });
 
 // Subcommand: serve / dev
 program
   .command("serve [dir]")
   .alias("dev")
-  .description("Start local live-reload development server")
+  .description("Start local live-reload development server (serves both root *.md and ./docs/ documents seamlessly)")
   .option("-p, --port <number>", "Port to listen on", "3000")
   .option("-H, --host <string>", "Host to bind server to", "localhost")
   .option("--preview", "Serve .preview staging directory with fallback to production source")
@@ -61,7 +79,9 @@ program
 // Subcommand: build
 program
   .command("build [dir]")
-  .description("Build serveable documentation, a static site, and a standalone offline bundle")
+  .description(
+    "Build serveable documentation, a static site, and an offline bundle (merging root *.md and ./docs/ documents)",
+  )
   .option("-w, --watch", "Watch source files and rebuild both outputs after changes")
   .option("--no-single-file", "Skip the default standalone offline index.html bundle")
   .option("--no-static", "Skip static page prerendering and SEO/AI context files")

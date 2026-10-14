@@ -6,6 +6,21 @@ All notable changes to DocMeDown are documented here.
 
 ---
 
+## 0.9.4 - 2026-10-14
+
+- **Interactive Scaffold Tree Preview & Confirmation Prompt**:
+  - Interactive setup wizard (`docmedown init [dir]`) and quickstart mode (`docmedown [dir]`) display a visual directory preview tree before creating files.
+  - Interactive confirmation prompt with `-y, --yes` flag support for automated and CI environments.
+  - Project detection automatically extracts project name and description from `package.json` for personalized scaffolding.
+- **Automatic Root Markdown Detection & Unified Default Linking**:
+  - Automatically detects markdown files located directly at project root (`README.md`, `CONTRIBUTING.md`, `CHANGELOG.md`, `ROADMAP.md`, etc.) when running `docmedown`.
+  - Links root markdown files directly into the `./docs/` folder by default (using relative symlinks with transparent hardlink and copy fallbacks).
+  - Integrates root documents seamlessly at the top level of the documentation hierarchy without creating an artificial `./docs/` folder subdivision.
+  - Development server watcher (`docmedown serve`) and build compiler (`docmedown build`) watch and hot-reload root markdown changes in real time.
+  - Auto-cleans broken or stale symlinks when root markdown files are removed or renamed.
+
+---
+
 ## 0.9.3 - 2026-10-14
 
 - **Automatic Root Markdown Detection & Unified Default Linking**:

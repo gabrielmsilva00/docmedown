@@ -108,3 +108,65 @@ test("Card visual styling, colors, and heading scaling in CSS", () => {
   assert.match(mainCss, /\.dmd-card-title code/);
   assert.match(mainCss, /\.dmd-card-subtitle code/);
 });
+
+test("Card component contract: content prop, direct markdown/HTML, and embedded doc lookup", () => {
+  // content prop declaration in $props
+  assert.match(cardSrc, /content\s*=\s*""/);
+  assert.match(cardSrc, /content\?:\s*string/);
+  // parseMarkdown integration
+  assert.match(cardSrc, /import\s*\{\s*parseMarkdown\s*\}\s*from/);
+  // Embedded doc lookup from offline bundle
+  assert.match(cardSrc, /__DOCMEDOWN_DATA__/);
+  // Renders resolved content in dmd-card-body
+  assert.match(cardSrc, /\{#if resolvedHtml\}\s*\{@html resolvedHtml\}\s*\{\/if\}/);
+});
+
+test("inlineCardOnlineSources discovers Card content URLs, fetches them, and inlines them into docsMap", async () => {
+  const { inlineCardOnlineSources } = await import("../src/cli/commands/build");
+
+  const originalFetch = globalThis.fetch;
+  const fetchedCalls: string[] = [];
+
+  try {
+    globalThis.fetch = (async (input: string | URL | Request) => {
+      const url = String(input);
+      fetchedCalls.push(url);
+      if (url === "https://raw.githubusercontent.com/org/repo/main/SPEC.md") {
+        return new Response("# Online Spec\n\n- Feature A\n- Feature B", { status: 200 });
+      }
+      if (url === "https://cdn.example.com/docs/card-extra.md") {
+        return new Response("---\ntitle: Extra\n---\n\nOnline extra body", { status: 200 });
+      }
+      return new Response("Not found", { status: 404 });
+    }) as typeof fetch;
+
+    const docsMap: Record<string, string> = {
+      README: `# Welcome
+
+<CardGrid cols={2}>
+  <Card
+    title="Zero Build Friction"
+    content="https://raw.githubusercontent.com/org/repo/main/SPEC.md"
+  />
+  <dmd-card content="https://cdn.example.com/docs/card-extra.md"></dmd-card>
+  <Card content="## Direct Markdown\nNo fetching needed" />
+  <Card content="<p>Direct HTML</p>" />
+</CardGrid>
+`,
+    };
+
+    const inlined = await inlineCardOnlineSources(docsMap);
+
+    assert.equal(inlined.length, 2);
+    assert.ok(inlined.includes("https://raw.githubusercontent.com/org/repo/main/SPEC.md"));
+    assert.ok(inlined.includes("https://cdn.example.com/docs/card-extra.md"));
+
+    // docsMap contains the fetched contents
+    assert.ok(docsMap["https://raw.githubusercontent.com/org/repo/main/SPEC.md"]?.includes("# Online Spec"));
+    assert.ok(docsMap["https://cdn.example.com/docs/card-extra.md"]?.includes("Online extra body"));
+    // Normalized keys are also stored
+    assert.ok(docsMap["https://raw.githubusercontent.com/org/repo/main/SPEC"]?.includes("# Online Spec"));
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});

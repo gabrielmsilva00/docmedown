@@ -8,7 +8,8 @@ import { renderCodeBlock } from "./highlighter";
  * while fenced sources stay opaque for the final document pass.
  */
 
-const INLINE_PARENTS = new Set(["button", "kbd", "badge"]);
+const INLINE_TAGS = new Set(["badge", "button", "kbd"]);
+const INLINE_PARENTS = INLINE_TAGS;
 const OPEN_RE = /<([A-Z][A-Za-z0-9]*)\b((?:[^>"']|"[^"]*"|'[^']*')*)(\/?)>/g;
 const ANY_RE = /<(\/?)([A-Z][A-Za-z0-9]*)\b((?:[^>"']|"[^"]*"|'[^']*')*)(\/?)>/g;
 const CLOSE_RE = /<\/([A-Z][A-Za-z0-9]*)\s*>/g;
@@ -67,7 +68,7 @@ function nextOpen(src: string, from: number, prot: Array<[number, number]>): Ope
   while (true) {
     m = OPEN_RE.exec(src);
     if (m === null) return null;
-    if (!inRanges(m.index, prot)) {
+    if (!inRanges(m.index, prot) && !INLINE_TAGS.has(m[1].toLowerCase())) {
       return { tag: m[1], full: m[0], start: m.index, end: m.index + m[0].length, selfClosing: m[3] === "/" };
     }
   }
@@ -223,8 +224,6 @@ export function expandSelfClosingComponents(html: string): string {
     (_m, tag: string, attrs: string) => `<${tag}${attrs}></${tag}>`,
   );
 }
-
-const INLINE_TAGS = new Set(["badge", "button", "kbd"]);
 
 /** A paragraph that opens straight into a block component. */
 const COMPONENT_PARAGRAPH = /<p>\s*<([A-Z][A-Za-z0-9]*)\b/g;

@@ -55,6 +55,19 @@ export function linkSveltePrimitives(jsCode: string): string {
     "const $1 = ((typeof window !== 'undefined' && window.__DOCMEDOWN_SVELTE__) || (typeof globalThis !== 'undefined' && globalThis.__DOCMEDOWN_SVELTE__));\n",
   );
 
+  // 6. Rewrite named imports from 'docmedown/motion' or 'motion'
+  linked = linked.replace(
+    /import\s*\{([^}]+)\}\s*from\s*['"](?:docmedown\/motion|motion)['"];?/g,
+    (_, specifiers) =>
+      `const { ${toDestructuring(specifiers)} } = ((typeof window !== 'undefined' && window.__DOCMEDOWN_MOTION__) || (typeof globalThis !== 'undefined' && globalThis.__DOCMEDOWN_MOTION__));\n`,
+  );
+
+  // 7. Rewrite import * as X from 'docmedown/motion' or 'motion'
+  linked = linked.replace(
+    /import\s*\*\s*as\s+(\w+)\s*from\s*['"](?:docmedown\/motion|motion)['"];?/g,
+    "const $1 = ((typeof window !== 'undefined' && window.__DOCMEDOWN_MOTION__) || (typeof globalThis !== 'undefined' && globalThis.__DOCMEDOWN_MOTION__));\n",
+  );
+
   return linked;
 }
 

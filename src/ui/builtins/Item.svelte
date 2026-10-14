@@ -104,7 +104,7 @@
         <span class="dmd-accordion-label">{title}</span>
         <span class="dmd-accordion-chevron" aria-hidden="true">▾</span>
       </button>
-      <div class="dmd-accordion-panel{open ? ' open' : ''}"><slot></slot></div>
+      <div class="dmd-accordion-panel{open ? ' open' : ''}"><div class="dmd-accordion-content"><slot></slot></div></div>
     </div>
   {:else if parentKind === "steps"}
     <div class="dmd-step-item">

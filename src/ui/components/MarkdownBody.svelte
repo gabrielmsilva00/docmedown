@@ -8,6 +8,12 @@
     openEmbeddedNestedSite,
   } from "../../runtime/offline-export";
   import { ComponentRegistry } from "../registry";
+  import { doc } from "../doc-context.svelte";
+  import {
+    formatTable,
+    readTableData,
+    type TableCopyFormat,
+  } from "../../runtime/markdown/tables";
 
   let {
     html,
@@ -43,10 +49,30 @@
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT);
     for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
       const el = node as HTMLElement;
-      // Never upgrade internal elements inside code blocks, pre tags, or diagrams
-      if (el.closest?.(".dmd-code-block-wrapper, pre, .dmd-diagram-host")) continue;
-      if (el.classList?.contains("dmd-copy-btn") || el.classList?.contains("dmd-copy-selected-btn")) continue;
-      if (el.hasAttribute?.("data-dmd-copy") || el.hasAttribute?.("data-dmd-copy-selected")) continue;
+      // Never upgrade internal elements inside code blocks, pre tags, diagrams, or table chrome
+      if (
+        el.closest?.(
+          ".dmd-code-block-wrapper, pre, .dmd-diagram-host, .dmd-table-toolbar, .dmd-table-copy, .dmd-table-copy-menu",
+        )
+      ) {
+        continue;
+      }
+      if (
+        el.classList?.contains("dmd-copy-btn") ||
+        el.classList?.contains("dmd-copy-selected-btn") ||
+        el.classList?.contains("dmd-table-copy-btn") ||
+        el.classList?.contains("dmd-table-copy-item")
+      ) {
+        continue;
+      }
+      if (
+        el.hasAttribute?.("data-dmd-copy") ||
+        el.hasAttribute?.("data-dmd-copy-selected") ||
+        el.hasAttribute?.("data-dmd-table-toggle") ||
+        el.hasAttribute?.("data-dmd-table-copy")
+      ) {
+        continue;
+      }
 
       const tag = registry.resolveTag(el.tagName.toLowerCase());
       if (tag) candidates.push({ el, tag });
@@ -66,10 +92,21 @@
         if (brace) {
           const literal = brace[1].trim();
           if (/^(false|null|undefined)$/i.test(literal)) continue; // omit → property false
-          replacement.setAttribute(attr.name, literal.toLowerCase() === "true" ? "" : literal);
+          const val = literal.toLowerCase() === "true" ? "" : literal;
+          replacement.setAttribute(attr.name, val);
+          if (literal !== "" && !Number.isNaN(Number(literal))) {
+            try {
+              (replacement as any)[attr.name] = Number(literal);
+            } catch {}
+          }
           continue;
         }
         replacement.setAttribute(attr.name, attr.value);
+        if (attr.value !== "" && !Number.isNaN(Number(attr.value))) {
+          try {
+            (replacement as any)[attr.name] = Number(attr.value);
+          } catch {}
+        }
       }
       while (el.firstChild) {
         replacement.appendChild(el.firstChild);
@@ -166,17 +203,157 @@
     );
   }
 
+  async function writeClipboard(text: string): Promise<boolean> {
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+        return true;
+      }
+    } catch {}
+    try {
+      const textarea = document.createElement("textarea");
+      textarea.value = text;
+      textarea.setAttribute("readonly", "");
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      document.body.appendChild(textarea);
+      textarea.select();
+      const ok = document.execCommand("copy");
+      textarea.remove();
+      return ok;
+    } catch {
+      return false;
+    }
+  }
+
+  function closeAllTableMenus() {
+    if (!container) return;
+    container.querySelectorAll<HTMLElement>("[data-dmd-table-toggle]").forEach((btn) => {
+      btn.setAttribute("aria-expanded", "false");
+    });
+    container.querySelectorAll<HTMLElement>(".dmd-table-copy-menu").forEach((menu) => {
+      menu.setAttribute("hidden", "");
+    });
+  }
+
+  function toggleTableMenu(button: HTMLElement) {
+    const parent = button.closest(".dmd-table-copy");
+    const menu = parent?.querySelector<HTMLElement>(".dmd-table-copy-menu");
+    if (!menu) return;
+    const isExpanded = button.getAttribute("aria-expanded") === "true";
+    closeAllTableMenus();
+    if (!isExpanded) {
+      button.setAttribute("aria-expanded", "true");
+      menu.removeAttribute("hidden");
+      menu.querySelector<HTMLElement>("[role='menuitem']")?.focus();
+    }
+  }
+
+  async function copyTable(item: HTMLElement, format: TableCopyFormat) {
+    const block = item.closest<HTMLElement>("[data-dmd-table]");
+    const table = block?.querySelector<HTMLTableElement>("table.dmd-table");
+    const toggleBtn = block?.querySelector<HTMLElement>("[data-dmd-table-toggle]");
+    closeAllTableMenus();
+    if (!table || !toggleBtn) return;
+    toggleBtn.focus();
+
+    const data = readTableData(table);
+    const text = formatTable(data, format);
+    const ok = await writeClipboard(text);
+
+    const label = toggleBtn.querySelector<HTMLElement>(".dmd-table-copy-label");
+    const btnText = toggleBtn.querySelector<HTMLElement>(".dmd-table-copy-btn-text");
+    clearTimeout(copyResetTimers.get(toggleBtn));
+    toggleBtn.classList.toggle("copied", ok);
+    toggleBtn.classList.toggle("copy-failed", !ok);
+    if (label) label.textContent = ok ? "Copied!" : "Try again";
+    if (btnText) btnText.textContent = ok ? "Copied!" : "Try again";
+    const status = block?.querySelector<HTMLElement>("[data-dmd-table-status]");
+    if (status) status.textContent = ok ? `Table copied as ${format === "markdown" ? "Markdown" : format.toUpperCase()}.` : "Could not copy table. Choose a format to try again.";
+    copyResetTimers.set(
+      toggleBtn,
+      setTimeout(() => {
+        toggleBtn.classList.remove("copied");
+        toggleBtn.classList.remove("copy-failed");
+        if (label) label.textContent = "Copy table";
+        if (btnText) btnText.textContent = "Copy";
+        if (status) status.textContent = "";
+      }, 2000),
+    );
+  }
+
   $effect(() => {
     // Track html so the effect re-runs when the route replaces the article.
     void html;
     if (!container) return;
     upgradeCustomComponents(container);
     markOfflineLinks();
+
+    const handleOutsideClick = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest?.(".dmd-table-copy")) {
+        closeAllTableMenus();
+      }
+    };
+    const handleGlobalKey = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement;
+      const copy = target.closest?.(".dmd-table-copy");
+      if (!copy || !container.contains(copy)) return;
+      const toggle = copy.querySelector<HTMLElement>("[data-dmd-table-toggle]");
+      const expanded = toggle?.getAttribute("aria-expanded") === "true";
+      if (event.key === "Escape" && expanded) {
+        event.preventDefault();
+        closeAllTableMenus();
+        toggle?.focus();
+      } else if (event.key === "Tab") {
+        // Menu items are programmatically focused; resume tab order at the trigger.
+        if (expanded) toggle?.focus();
+        closeAllTableMenus();
+      } else if (["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) {
+        event.preventDefault();
+        if (!expanded && toggle) toggleTableMenu(toggle);
+        const items = Array.from(copy.querySelectorAll<HTMLElement>("[role='menuitem']"));
+        const index = items.indexOf(target);
+        const next = event.key === "Home" ? 0 : event.key === "End" ? items.length - 1 : index < 0 ? (event.key === "ArrowUp" ? items.length - 1 : 0) : (index + (event.key === "ArrowUp" ? -1 : 1) + items.length) % items.length;
+        items[next]?.focus();
+      }
+    };
+    window.addEventListener("click", handleOutsideClick);
+    window.addEventListener("keydown", handleGlobalKey);
+    return () => {
+      window.removeEventListener("click", handleOutsideClick);
+      window.removeEventListener("keydown", handleGlobalKey);
+    };
   });
 
   // Handle internal markdown link clicks smoothly
   function handleClick(event: MouseEvent) {
     const target = event.target as HTMLElement;
+
+    // Table copy menu dropdown toggle and format items
+    const tableToggle = target.closest?.("[data-dmd-table-toggle]") as HTMLElement | null;
+    if (tableToggle) {
+      event.preventDefault();
+      event.stopPropagation();
+      toggleTableMenu(tableToggle);
+      return;
+    }
+    const tableCopyItem = target.closest?.("[data-dmd-table-copy]") as HTMLElement | null;
+    if (tableCopyItem) {
+      event.preventDefault();
+      event.stopPropagation();
+      const format = tableCopyItem.getAttribute("data-dmd-table-copy") as TableCopyFormat;
+      void copyTable(tableCopyItem, format);
+      return;
+    }
+
+    // Inline edit triggers on headings/blocks
+    const editTrigger = target.closest?.("[data-dmd-inline-edit]");
+    if (editTrigger) {
+      event.preventDefault();
+      doc.isEditorOpen = true;
+      return;
+    }
 
     // Code block copy buttons (delegated: rendered markdown is static HTML)
     const copySelected = target.closest?.("[data-dmd-copy-selected]");
@@ -232,6 +409,14 @@
       } else {
         window.location.hash = href;
       }
+    } else if (href.startsWith("#")) {
+      event.preventDefault();
+      const anchor = href.substring(1);
+      if (onNavigate) {
+        onNavigate(doc.currentSlug, anchor);
+      } else {
+        doc.router?.scrollToAnchor(anchor);
+      }
     }
   }
 </script>
@@ -243,6 +428,12 @@
   role="none"
   bind:this={container}
   onclick={handleClick}
+  ondblclick={(event: MouseEvent) => {
+    const target = event.target as HTMLElement;
+    if (target?.closest("h1, h2, h3, h4, h5, h6, .dmd-callout, .dmd-alert")) {
+      doc.isEditorOpen = true;
+    }
+  }}
   onkeydown={(event: KeyboardEvent) => {
     // Enter key on links navigates them
     if (event.key === "Enter") handleClick(event as unknown as MouseEvent);

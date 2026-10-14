@@ -68,11 +68,13 @@
         if (node.slug) onNavigate(node.slug);
       }}
     >
-      {#if node.icon}<span class="dmd-item-icon">{node.icon}</span>{/if}
-      <span class="dmd-item-title">{node.title}</span>
-      {#if node.badge}
-        <span class="dmd-badge dmd-badge-{node.badgeType || "info"}">{node.badge}</span>
-      {/if}
+      <span class="dmd-item-icon" aria-hidden="true">{#if node.icon}{node.icon}{/if}</span>
+      <span class="dmd-item-body">
+        <span class="dmd-item-title">{node.title}</span>
+        {#if node.badge}
+          <span class="dmd-badge dmd-badge-{node.badgeType || "info"}">{node.badge}</span>
+        {/if}
+      </span>
     </a>
   </li>
 {/if}

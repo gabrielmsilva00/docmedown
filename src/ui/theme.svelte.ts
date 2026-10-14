@@ -50,6 +50,7 @@ export class ThemeStore {
   mode = $state<ColorMode>("auto");
   family = $state<ThemeFamily>("atlas");
   density = $state<ThemeDensity>("comfortable");
+  motion = $state<"full" | "reduced">("full");
   systemDark = $state(false);
 
   /** Brand overrides applied by the app as inline `--dmd-accent` tokens. */
@@ -65,6 +66,13 @@ export class ThemeStore {
     this.mode = readSavedPreference("dmd-color-mode", ["light", "dark", "auto"]) ?? options.defaultMode ?? "auto";
     this.family = readSavedPreference("dmd-theme-family", FAMILY_VALUES) ?? options.defaultFamily ?? "atlas";
     this.density = readSavedPreference("dmd-theme-density", DENSITY_VALUES) ?? options.defaultDensity ?? "comfortable";
+    const rootMotion =
+      typeof document !== "undefined" ? document.documentElement?.getAttribute("data-dmd-motion") : null;
+    const initialMotion =
+      rootMotion === "reduced" || rootMotion === "off"
+        ? "reduced"
+        : (readSavedPreference("dmd-motion", ["full", "reduced"]) ?? "full");
+    this.motion = initialMotion;
     this.accentColor = options.accentColor;
     this.accentColorDark = options.accentColorDark;
 
@@ -102,6 +110,11 @@ export class ThemeStore {
   public setDensity(newDensity: ThemeDensity) {
     this.density = newDensity;
     safeSet("dmd-theme-density", newDensity);
+  }
+
+  public setMotion(newMotion: "full" | "reduced") {
+    this.motion = newMotion;
+    safeSet("dmd-motion", newMotion);
   }
 
   public toggleMode() {

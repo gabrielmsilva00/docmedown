@@ -34,6 +34,14 @@ export async function initCommand(targetDirArg: string = "./docs", options: Init
     console.log(chalk.green("  ✔ Created index.html"));
   }
 
+  // 1.5 Copy or create favicon.svg if available
+  const faviconPath = path.join(targetDir, "favicon.svg");
+  const templateFavicon = path.join(activeTemplateDir, "favicon.svg");
+  if (!fs.existsSync(faviconPath) && fs.existsSync(templateFavicon)) {
+    fs.copyFileSync(templateFavicon, faviconPath);
+    console.log(chalk.green("  ✔ Created favicon.svg"));
+  }
+
   // 2. Copy or create docs.json
   const configPath = path.join(targetDir, "docs.json");
   if (!fs.existsSync(configPath)) {

@@ -148,6 +148,13 @@ test("Compressed offline envelopes round-trip and produce a minified self-extrac
   assert.ok(!html.includes("# Offline"));
   assert.ok(!html.includes('window.example = "</script>"'));
   assert.ok(html.includes("Docs &lt;&quot;offline&quot;&gt;"));
+  assert.ok(html.includes('<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,'));
+  assert.ok(!html.includes('href="data:,"'));
+
+  const terminalOfflineHtml = createCompressedOfflineHtml(encoded, "Terminal Docs", {}, "terminal");
+  assert.ok(terminalOfflineHtml.includes('<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,'));
+  assert.notEqual(terminalOfflineHtml, html);
+
   assert.equal(sanitizeDownloadName(" DocMeDown API v2 "), "docmedown-api-v2-offline.html");
 });
 

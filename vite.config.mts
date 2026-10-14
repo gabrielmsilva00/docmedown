@@ -31,12 +31,8 @@ export default defineConfig({
   build: {
     target: "es2022",
     outDir: "dist",
-    // `npm run build` regenerates CLI and declaration output after Vite completes.
-    // Start from a clean runtime directory so the ESM/CJS Mermaid chunks always
-    // match their entry files; the IIFE remains self-contained for docs output.
-    // IIFE forbids code splitting: everything is inlined, which the offline
-    // single-file bundle requires anyway (Mermaid/KaTeX/Prism included).
-    emptyOutDir: true,
+    // `dist/` is cleaned once at build start, allowing parallel artifact builds.
+    emptyOutDir: false,
     lib: {
       entry: path.resolve(rootDirectory, "src/ui/index.ts"),
       name: "DocMeDown",

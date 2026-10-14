@@ -74,7 +74,7 @@ export interface DiagramSubgraph {
  * hand-authored or future renderer output.
  */
 export function readDiagramSize(svg: string): DiagramSize | null {
-  const viewBox = svg.match(/\bviewBox=["']\s*[-\d.]+[\s,]+[-\d.]+[\s,]+([\d.]+)[\s,]+([\d.]+)\s*["']/i);
+  const viewBox = svg.match(/\bviewBox=["']\s*[-+\d.eE]+[\s,]+[-+\d.eE]+[\s,]+([-+\d.eE]+)[\s,]+([-+\d.eE]+)\s*["']/i);
   const width = viewBox ? Number(viewBox[1]) : Number(svg.match(/\bwidth=["']([\d.]+)(?:px)?["']/i)?.[1]);
   const height = viewBox ? Number(viewBox[2]) : Number(svg.match(/\bheight=["']([\d.]+)(?:px)?["']/i)?.[1]);
 

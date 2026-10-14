@@ -2,15 +2,16 @@
   "$schema": "https://raw.githubusercontent.com/gabrielmsilva00/docmedown/main/schemas/docs.schema.json",
   "name": "DocMeDown",
   "tagline": "The simplest MarkDown documenter yet",
-  "description": "Next-generation zero-friction documentation engine for developers",
-  "version": "0.3.1",
+  "description": "Next-generation zero-friction documentation engine for modern developers",
+  "version": "0.9.0",
   "rootDoc": "README.md",
   "url": "https://gabrielmsilva00.github.io/docmedown",
   "theme": {
     "family": "atlas",
     "density": "comfortable",
     "defaultMode": "auto",
-    "codeTheme": "github"
+    "codeTheme": "github",
+    "favicon": "default"
   },
   "nav": [
     {
@@ -18,29 +19,185 @@
       "href": "#/README"
     },
     {
-      "label": "Getting Started",
+      "label": "Quickstart",
       "href": "#/getting-started"
     },
     {
-      "label": "CLI Reference",
+      "label": "Architecture",
+      "href": "#/guides/architecture"
+    },
+    {
+      "label": "Components",
+      "href": "#/guides/custom-components"
+    },
+    {
+      "label": "DX & Editor",
+      "href": "#/guides/developer-experience"
+    },
+    {
+      "label": "Config",
+      "href": "#/configuration"
+    },
+    {
+      "label": "CLI",
       "href": "#/guides/cli-reference"
     },
     {
-      "label": "Static & AI",
-      "href": "#/guides/static-site"
-    },
-    {
-      "label": "Config Reference",
-      "href": "#/configuration"
+      "label": "Showcase",
+      "href": "#/showcase"
     },
     {
       "label": "GitHub",
       "href": "https://github.com/gabrielmsilva00/docmedown",
       "external": true
+    }
+  ],
+  "sidebar": [
+    {
+      "title": "Getting Started",
+      "icon": "🚀",
+      "children": [
+        {
+          "title": "Welcome & Overview",
+          "path": "README.md",
+          "icon": "⚡"
+        },
+        {
+          "title": "Quickstart Tutorial",
+          "path": "getting-started.md",
+          "icon": "🚀",
+          "badge": "Start Here",
+          "badgeType": "success"
+        },
+        {
+          "title": "Project Structure",
+          "path": "guides/project-structure.md",
+          "icon": "📁"
+        },
+        {
+          "title": "Engine Architecture",
+          "path": "guides/architecture.md",
+          "icon": "🏛️",
+          "badge": "Deep Dive",
+          "badgeType": "info"
+        }
+      ]
     },
     {
-      "label": "Examples",
-      "href": "#/examples"
+      "title": "Content Authoring",
+      "icon": "✍️",
+      "children": [
+        {
+          "title": "Markdown, Syntax & Math",
+          "path": "guides/markdown-features.md",
+          "icon": "📝"
+        },
+        {
+          "title": "Mermaid Diagrams",
+          "path": "guides/mermaid-diagrams.md",
+          "icon": "📊"
+        },
+        {
+          "title": "Built-in UI Primitives",
+          "path": "guides/built-in-components.md",
+          "icon": "🧩",
+          "badge": "20 Primitives",
+          "badgeType": "info"
+        },
+        {
+          "title": "Component Showcase",
+          "path": "showcase.md",
+          "icon": "🎛️"
+        }
+      ]
+    },
+    {
+      "title": "Interactive Components (.dmd)",
+      "icon": "🧩",
+      "children": [
+        {
+          "title": "Custom Components Guide",
+          "path": "guides/custom-components.md",
+          "icon": "⚡",
+          "badge": "Svelte 5 / React",
+          "badgeType": "new"
+        }
+      ]
+    },
+    {
+      "title": "Developer Experience (DX)",
+      "icon": "⚡",
+      "children": [
+        {
+          "title": "Live HMR, Editor & Previews",
+          "path": "guides/developer-experience.md",
+          "icon": "🔥",
+          "badge": "v0.9.0",
+          "badgeType": "new"
+        }
+      ]
+    },
+    {
+      "title": "Deployment & Distribution",
+      "icon": "🚢",
+      "children": [
+        {
+          "title": "Static Site (SSG) & SEO",
+          "path": "guides/static-site.md",
+          "icon": "🌐"
+        },
+        {
+          "title": "100% Offline Single-File",
+          "path": "guides/offline-mode.md",
+          "icon": "📦",
+          "badge": "Air-Gapped",
+          "badgeType": "warning"
+        },
+        {
+          "title": "Dynamic Remote Git",
+          "path": "guides/remote-github.md",
+          "icon": "☁️"
+        }
+      ]
+    },
+    {
+      "title": "AI-Native Documentation",
+      "icon": "🤖",
+      "children": [
+        {
+          "title": "Model Context Protocol (MCP)",
+          "path": "guides/mcp-server.md",
+          "icon": "🤖",
+          "badge": "AI Ready",
+          "badgeType": "success"
+        }
+      ]
+    },
+    {
+      "title": "Reference & Tools",
+      "icon": "🛠️",
+      "children": [
+        {
+          "title": "Configuration (docs.json)",
+          "path": "configuration.md",
+          "icon": "⚙️"
+        },
+        {
+          "title": "CLI Command Matrix",
+          "path": "guides/cli-reference.md",
+          "icon": "💻"
+        },
+        {
+          "title": "Migration Guides",
+          "path": "guides/migrations.md",
+          "icon": "🔄"
+        },
+        {
+          "title": "Runnable Reference Sites",
+          "path": "examples.md",
+          "icon": "🧪"
+        }
+      ]
     }
   ],
   "socials": [

@@ -19,10 +19,35 @@ export class LocalDocLoader {
       }
       if (globalData.docs && typeof globalData.docs === "object") {
         for (const [key, content] of Object.entries(globalData.docs)) {
+          this.cache.set(key, content as string);
           this.cache.set(this.normalizeKey(key), content as string);
         }
       }
     }
+
+    // Restore saved user drafts from localStorage if in offline mode
+    try {
+      if (
+        typeof window !== "undefined" &&
+        typeof localStorage !== "undefined" &&
+        (window.location.protocol === "file:" || Boolean((window as any).__DOCMEDOWN_OFFLINE__))
+      ) {
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (k?.startsWith("dmd-offline-doc-")) {
+            const slug = k.slice("dmd-offline-doc-".length);
+            const savedContent = localStorage.getItem(k);
+            if (savedContent) {
+              this.cache.set(slug, savedContent);
+              this.cache.set(this.normalizeKey(slug), savedContent);
+              if (globalData?.docs && typeof globalData.docs === "object") {
+                globalData.docs[slug] = savedContent;
+              }
+            }
+          }
+        }
+      }
+    } catch {}
 
     // 2. Check window global manifest
     if ((window as any).__DOCMEDOWN_MANIFEST__) {
@@ -32,6 +57,7 @@ export class LocalDocLoader {
     // 3. Check window global docs
     if ((window as any).__DOCMEDOWN_DOCS__) {
       for (const [key, content] of Object.entries((window as any).__DOCMEDOWN_DOCS__)) {
+        this.cache.set(key, content as string);
         this.cache.set(this.normalizeKey(key), content as string);
       }
     }
@@ -52,6 +78,7 @@ export class LocalDocLoader {
       try {
         const docsMap = JSON.parse(docsEl.textContent);
         for (const [key, content] of Object.entries(docsMap)) {
+          this.cache.set(key, content as string);
           this.cache.set(this.normalizeKey(key), content as string);
         }
       } catch (err) {
@@ -96,6 +123,7 @@ export class LocalDocLoader {
    * network request would be required.
    */
   public peekDocContent(slug: string): string | undefined {
+    if (this.cache.has(slug)) return this.cache.get(slug);
     const normalized = this.normalizeKey(slug);
     const cached = this.cache.get(normalized);
     if (cached !== undefined) return cached;
@@ -116,7 +144,10 @@ export class LocalDocLoader {
    */
   public embeddedDocSources(): Record<string, string> | null {
     const sources: Record<string, string> = {};
-    for (const [slug, content] of this.cache) sources[slug] = content;
+    for (const [slug, content] of this.cache) {
+      const key = this.normalizeKey(slug);
+      if (sources[key] === undefined) sources[key] = content;
+    }
     for (const doc of this.embeddedManifest?.docs ?? []) {
       const key = this.normalizeKey(doc.slug);
       if (doc.content && sources[key] === undefined) sources[key] = doc.content;
@@ -125,6 +156,9 @@ export class LocalDocLoader {
   }
 
   public async fetchDocContent(slug: string, basePath: string = ""): Promise<string | null> {
+    if (this.cache.has(slug)) {
+      return this.cache.get(slug)!;
+    }
     const normalized = this.normalizeKey(slug);
 
     // 1. Check in-memory cache / embedded docs / _docs.js
@@ -173,6 +207,12 @@ export class LocalDocLoader {
     }
 
     return null;
+  }
+
+  public setDocContent(key: string, content: string): void {
+    this.cache.set(key, content);
+    const normalized = this.normalizeKey(key);
+    this.cache.set(normalized, content);
   }
 
   private normalizeKey(key: string): string {

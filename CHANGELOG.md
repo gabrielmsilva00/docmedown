@@ -4,6 +4,62 @@ All notable changes to DocMeDown are documented here.
 
 ## Unreleased
 
+- **v1.0.0-rc01 Release Candidate Stabilization**:
+  - Ecosystem dogfooding and cross-browser edge case hardening.
+  - Stress testing high-volume markdown corpora and concurrent dynamic component cache.
+  - Verification across diverse hosting providers (GitHub Pages, Cloudflare Pages, Netlify, Vercel) and air-gapped environments.
+
+---
+
+## 0.9.0 - 2026-10-14
+
+### Added
+
+- **Universal Multi-Framework Custom Components (.dmd)**:
+  - Authors can now write custom documentation widgets in **native Svelte 5** (`.svelte`), **React with TypeScript** (`.tsx`), or standard **Web Elements / Lit** (`.ts`) inside `.dmd/`.
+  - **Build-Time React-to-Svelte AOT Compiler (`convertReactToSvelte`)**: Standard React TSX components (`useState`, `useEffect`, props, JSX) are semantically converted into native Svelte 5 custom elements at build time, eliminating React and ReactDOM from production bundles.
+  - **Runtime Component Bridge Architecture**: `createReactBridge` mounts arbitrary complex React components via React 18 `createRoot()` with 100% hook parity (`useContext`, `useReducer`, 3rd-party libs) and leak-free `unmount()` teardown. `createElementBridge` wraps Custom Elements with normalized attribute/property reflection and event bubbling.
+  - **SHA-256 + IndexedDB Compilation Cache**: JIT in-browser compilation caches compiled ESM modules in IndexedDB (`DocMeDownComponentCache`) keyed by cryptographic SHA-256 hashes, bypassing subsequent compiles.
+
+- **In-Browser Split-View Markdown Editor & Live HMR**:
+  - **True In-Place Hot-Module Reload (HMR)**: Dev server watches markdown and configuration files, streaming targeted `hmr:update` and `hmr:config` WebSocket events to update the reader in-place without losing scroll position, expanded callouts, or active tabs.
+  - **Interactive 2-Way Editor (`Ctrl+E` / `⌘E`)**: Split-view editor modal with live keystroke Markdown preview, syntax highlighting, keyboard shortcuts (`Ctrl+S` / `Cmd+S` to save, `Esc` to close, `Tab` indentation), and direct persistence to source files (`POST /__dmd_api__/save`).
+  - **Staged Preview System**: Serve and test documentation changes safely using `.preview/` staging (`dmd serve --preview`), complete with in-browser one-click "Publish Preview" and "Discard Preview" actions.
+
+- **Interactive Data Tables & Delimited Text Toolbar**:
+  - Standard GFM markdown tables, fenced `csv`, and fenced `tsv` blocks automatically render as interactive data tables.
+  - Built-in table toolbar displaying column/row counts with instant copy actions (Copy Markdown, Copy HTML, Copy CSV).
+  - Responsive horizontal scrolling, sortable columns, accessible data summaries, and keyboard navigation.
+
+- **Built-in `<Media>` Component**:
+  - Native custom element component supporting responsive video, audio, and iframe embeds with theme-matched styling and fallback handling.
+
+- **Built-in Favicon Presets and Offline Embedding**:
+  - Added five crisp, self-contained 32x32 SVG favicon presets: `"default"`, `"markdown"`, `"terminal"`, `"book"`, and `"minimal"`.
+  - Standalone SVG assets in `templates/favicons/` and `templates/favicon.svg`.
+  - Offline distributable (`.dist/index.html`) automatically inlines SVG presets or local images as base64 data URIs for 100% self-contained offline viewing.
+  - Configurable via `theme.favicon` in `docs.json`.
+
+- **UI/UX, Micro-Animations & Accessibility (WCAG 2.1 AA)**:
+  - Integrated `motion` animation library for smooth layout shifts, mobile drawer gestures, and skeleton shimmers.
+  - Strict focus trapping, restoration, and skip-to-content navigation.
+  - Comprehensive contrast ratios across Atlas, Blueprint, Terminal, and Editorial theme families in light and dark modes.
+
+- **CLI Diagnostics (`dmd validate [dir]`)**:
+  - Deep Markdown link checking verifying relative file paths, local anchors (`#heading-id`), and cross-document anchors (`./other.md#heading`).
+  - Strict YAML frontmatter validation and `docs.json` configuration schema validation.
+
+- **CLI Doctor (`dmd doctor [dir]`) & Project Health Diagnostics**:
+  - `dmd doctor [dir]` and maintainer `doctor-project.mjs` running automated checks for Node runtime version (`>=20.19.0`), missing asset detection, template integrity, and ahead-of-time `.dmd` custom component compilation.
+
+- **MCP Server Productionization**:
+  - Added HTTP Server-Sent Events transport (`--transport sse`, `-p, --port`, `-H, --host`, `--allow-origins`) with CORS and DNS rebinding protection alongside stdio.
+  - Zero-install instant invocation via `npx -y docmedown mcp ./docs`.
+  - Comprehensive integration test suite across subprocess `StdioClientTransport`, HTTP `SSEClientTransport`, and memory transports.
+
+- **Comprehensive Architectural & Developer Guides**:
+  - Added 7 in-depth guides in `docs/guides/`: Architecture, Built-in Components, Developer Experience, MCP Server, Mermaid Diagrams, Migrations (from Docusaurus/VitePress), and Project Structure.
+
 ---
 
 ## 0.3.1 - 2026-09-21

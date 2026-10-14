@@ -10,6 +10,7 @@ import {
 import { renderCodeBlock } from "./highlighter";
 import { inlineHeadingToPlainText } from "./inline-text";
 import { renderMath } from "./katex";
+import { renderTableBlock, type TableAlign } from "./tables";
 
 export interface ParsedMarkdown {
   frontmatter: DocFrontmatter;
@@ -141,30 +142,19 @@ export function parseMarkdown(rawContent: string, currentSlug: string = ""): Par
   };
 
   // Custom Table Renderer
-  renderer.table = ({ header, rows }) => {
-    let headerHtml = "";
-    for (const cell of header) {
-      const parsedText = marked.parseInline(cell.text || "") as string;
-      headerHtml += `<th>${parsedText}</th>`;
-    }
-    let bodyHtml = "";
-    for (const row of rows) {
-      bodyHtml += "<tr>";
-      for (const cell of row) {
-        const parsedText = marked.parseInline(cell.text || "") as string;
-        bodyHtml += `<td>${parsedText}</td>`;
-      }
-      bodyHtml += "</tr>";
-    }
-
-    return `
-<div class="dmd-table-wrapper">
-  <table class="dmd-table">
-    <thead><tr>${headerHtml}</tr></thead>
-    <tbody>${bodyHtml}</tbody>
-  </table>
-</div>
-`;
+  renderer.table = (token) => {
+    return renderTableBlock({
+      header: token.header.map((cell, idx) => ({
+        html: marked.parseInline(cell.text || "") as string,
+        align: (cell.align || token.align?.[idx] || null) as TableAlign,
+      })),
+      rows: token.rows.map((row) =>
+        row.map((cell, idx) => ({
+          html: marked.parseInline(cell.text || "") as string,
+          align: (cell.align || token.align?.[idx] || null) as TableAlign,
+        })),
+      ),
+    });
   };
 
   // Custom Link Renderer

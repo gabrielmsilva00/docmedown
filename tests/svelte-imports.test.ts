@@ -28,6 +28,7 @@ test("every .dmd custom element has display:contents in the CSS", () => {
     "dmd-details",
     "dmd-item",
     "dmd-kbd",
+    "dmd-media",
     "dmd-mermaid",
     "dmd-step",
     "dmd-steps",

@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import chalk from "chalk";
+import { resolveFavicon } from "../runtime/favicons";
 import { parseMarkdown } from "../runtime/markdown/parser";
 import { renderSplashHead, renderSplashMarkup, type SplashOptions } from "../runtime/splash";
 import type { DocConfig, DocFileItem, DocManifest } from "../runtime/types";
@@ -18,6 +19,7 @@ export function resolveSplashOptions(config: DocConfig): SplashOptions {
     logoAlt: config.theme?.logo?.alt,
     accent: config.theme?.accentColor,
     accentDark: config.theme?.accentColorDark,
+    searchPlaceholder: config.search?.placeholder,
   };
 }
 
@@ -138,7 +140,14 @@ export function renderStaticPage({ config, doc, contentHtml }: StaticPageInput):
     head.push(`<link rel="canonical" href="${escapeHtml(pageUrl)}" />`);
   }
   head.push('<meta name="generator" content="DocMeDown" />');
-  head.push(`<link rel="icon" href="${escapeHtml(config.theme?.favicon || "data:,")}" />`);
+  const faviconHref = resolveFavicon(config.theme?.favicon);
+  let faviconType = ' type="image/svg+xml"';
+  if (faviconHref.startsWith("data:image/png") || /\.png($|\?)/i.test(faviconHref)) {
+    faviconType = ' type="image/png"';
+  } else if (faviconHref.startsWith("data:image/x-icon") || /\.ico($|\?)/i.test(faviconHref)) {
+    faviconType = ' type="image/x-icon"';
+  }
+  head.push(`<link rel="icon"${faviconType} href="${escapeHtml(faviconHref)}" />`);
   if (config.theme?.accentColor) {
     head.push(`<meta name="theme-color" content="${escapeHtml(config.theme.accentColor)}" />`);
   }

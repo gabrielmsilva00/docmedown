@@ -2,8 +2,8 @@
 declare module "*.svelte" {
   import type { Component } from "svelte";
 
-  const component: Component<Record<string, any>, Record<string, any>, string>;
-  export default component;
+  const _c: Component<Record<string, any>, Record<string, any>, string>;
+  export default _c;
 }
 
 /** Vite CSS raw imports used by the builtin shared styles. */

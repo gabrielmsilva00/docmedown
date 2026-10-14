@@ -119,6 +119,13 @@ test("CSS token architecture, responsive shell layout, and navbar typography", (
   assert.match(mainCss, /\.dmd-appearance-trigger\s*\{[^}]*white-space:\s*nowrap/);
   assert.match(mainCss, /\.dmd-appearance-panel\s*\{[^}]*white-space:\s*normal/);
   assert.match(mainCss, /\.dmd-offline-download-error\s*\{[^}]*white-space:\s*normal/);
+
+  // Navbar route bar and search icon replacement transition contracts
+  assert.match(mainCss, /\.dmd-navbar-center\s*\{[^}]*grid-template-areas:\s*"nav-center-slot"/);
+  assert.match(mainCss, /\.dmd-navbar-center\.has-route\s*\{[^}]*max-width:\s*720px/);
+  assert.match(mainCss, /\.dmd-navbar-search-full,\s*\.dmd-navbar-route-bar\s*\{[^}]*grid-area:\s*nav-center-slot/);
+  assert.match(mainCss, /\.dmd-navbar-route-bar\.dmd-visible\s*\{[^}]*opacity:\s*1/);
+  assert.match(mainCss, /\.dmd-nav-search-icon-btn\s*\{[^}]*cursor:\s*pointer/);
 });
 
 test("runtime mounting and diagram interactivity contracts", () => {
@@ -142,4 +149,36 @@ test("runtime mounting and diagram interactivity contracts", () => {
   const mountAt = entry.indexOf("mount(App, { target: container })");
   assert.ok(clearAt >= 0, "initDocMeDown must clear the container before mounting");
   assert.ok(mountAt > clearAt, "the clear must happen before mount()");
+});
+
+test("route transition exclusivity, interactive modals, and responsive viewport contracts", () => {
+  const mainCss = fs.readFileSync(path.resolve(__dirname, "../src/runtime/styles/main.css"), "utf-8");
+
+  // In-content header and navbar route bar mutual exclusivity:
+  // dmd-header-scrolled must disable pointer-events and zero opacity so both headers never show simultaneously
+  assert.match(mainCss, /\.dmd-content-header\.dmd-header-scrolled\s*\{[^}]*pointer-events:\s*none/);
+  assert.match(mainCss, /\.dmd-content-header\.dmd-header-scrolled\s*\{[^}]*opacity:\s*0/);
+
+  // Breadcrumb interactive popover contracts: 100% solid opaque background without transparency
+  assert.match(mainCss, /\.dmd-crumb-popover\s*\{[^}]*background-color:\s*var\(--dmd-bg-card\)/);
+  assert.match(mainCss, /\.dmd-crumb-popover\s*\{[^}]*opacity:\s*1\s*!important/);
+  assert.match(mainCss, /\.dmd-crumb-popover\s*\{[^}]*z-index:\s*500/);
+  assert.match(mainCss, /\.dmd-crumb-popover\s*\{[^}]*animation:\s*dmd-popover-in/);
+  assert.match(mainCss, /\.dmd-crumb-wrapper:last-child\s+\.dmd-crumb-popover\s*\{[^}]*right:\s*0/);
+
+  // Smooth, performance-minded transition contracts
+  assert.match(mainCss, /\.dmd-navbar-route-bar\s*\{[^}]*0\.22s/);
+  assert.match(mainCss, /\.dmd-content-header\s*\{[^}]*0\.2s/);
+
+  // Hashtag modal contracts
+  assert.match(mainCss, /\.dmd-clickable-tag\s*\{[^}]*cursor:\s*pointer/);
+  assert.match(mainCss, /\.dmd-tag-modal-backdrop\s*\{[^}]*z-index:\s*220/);
+  assert.match(mainCss, /\.dmd-tag-modal\s*\{[^}]*animation:\s*dmd-tag-modal-in/);
+
+  // Viewport adaptation contracts
+  assert.match(mainCss, /\.dmd-navbar-center:not\(\.has-route\)\s*\{[^}]*width:\s*44px/);
+  assert.match(
+    mainCss,
+    /@media\s*\(max-width:\s*640px\)\s*\{[\s\S]*?\.dmd-navbar\.dmd-navbar-scrolled\s+\.dmd-brand-title\s*\{[^}]*display:\s*none/,
+  );
 });

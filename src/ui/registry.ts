@@ -8,10 +8,26 @@
  * so nested component trees work without any framework mounting logic.
  */
 
+import {
+  type ComponentKind,
+  createElementBridge,
+  createReactBridge,
+  type DynamicComponent,
+  detectComponentKind,
+  registerWebComponent,
+} from "../runtime/bridges";
 import { dmdTag } from "../runtime/svelte-tag";
 
 export type DmdElementClass = new () => HTMLElement;
-export { dmdTag };
+export {
+  type ComponentKind,
+  createElementBridge,
+  createReactBridge,
+  type DynamicComponent,
+  detectComponentKind,
+  dmdTag,
+  registerWebComponent,
+};
 
 export class ComponentRegistry {
   private static instance: ComponentRegistry;
@@ -56,6 +72,24 @@ export class ComponentRegistry {
     this.tags.set(name.toLowerCase(), tagName);
     this.tags.set(tagName, tagName);
     return tagName;
+  }
+
+  /**
+   * Registers a React component function/class, wrapping it via ReactBridge.
+   */
+  public registerReact(name: string, component: any, tag?: string): string {
+    const tagName = tag || dmdTag(name);
+    const ElementClass = createReactBridge(component);
+    return this.register(name, ElementClass, tagName);
+  }
+
+  /**
+   * Registers a Web Component or Lit class, wrapping it via ElementBridge.
+   */
+  public registerWebComponent(name: string, elementClass: CustomElementConstructor, tag?: string): string {
+    const tagName = tag || dmdTag(name);
+    const ElementClass = createElementBridge(elementClass);
+    return this.register(name, ElementClass, tagName);
   }
 
   public registerMultiple(map: Record<string, DmdElementClass | string>): void {
@@ -119,16 +153,69 @@ export class ComponentRegistry {
 
     const prefix = basePath ? `${basePath.replace(/\/$/, "")}/.dmd` : ".dmd";
 
-    // In dynamic/serve mode, load raw .svelte components listed in the manifest
+    // In dynamic/serve mode, load raw components (.svelte, .tsx, .jsx, .ts) listed in the manifest
     const manifestComps: string[] = runtimeWindow.__DOCMEDOWN_DATA__?.manifest?.customComponents || [];
     if (manifestComps.length > 0) {
       const { loadAndRegisterSvelteComponent } = await import("../runtime/svelte-runtime");
       for (const compName of manifestComps) {
+        let loaded = false;
+
+        // 1. Try Svelte (.svelte)
         try {
-          const tag = await loadAndRegisterSvelteComponent(`${prefix}/${compName}.svelte`, compName);
-          this.register(compName, tag);
-        } catch (err) {
-          console.warn(`[DocMeDown] Could not dynamically compile ${compName}.svelte:`, err);
+          const res = await fetch(`${prefix}/${compName}.svelte`);
+          if (res.ok) {
+            const tag = await loadAndRegisterSvelteComponent(`${prefix}/${compName}.svelte`, compName);
+            this.register(compName, tag);
+            loaded = true;
+          }
+        } catch {
+          // not found or compilation error, try next format
+        }
+
+        // 2. Try React TSX / JSX (.tsx, .jsx)
+        if (!loaded) {
+          for (const ext of [".tsx", ".jsx"]) {
+            try {
+              const res = await fetch(`${prefix}/${compName}${ext}`);
+              if (res.ok) {
+                const source = await res.text();
+                const { compileTsx } = await import("../runtime/ts-compiler");
+                const compiledJs = await compileTsx(source, { filename: `${compName}${ext}` });
+                const blob = new Blob([compiledJs], { type: "text/javascript" });
+                const blobUrl = URL.createObjectURL(blob);
+                try {
+                  const mod = await import(/* @vite-ignore */ blobUrl);
+                  const ReactComp = mod.default || mod[compName] || mod;
+                  this.registerReact(compName, ReactComp);
+                  loaded = true;
+                  break;
+                } finally {
+                  URL.revokeObjectURL(blobUrl);
+                }
+              }
+            } catch (err) {
+              console.warn(`[DocMeDown] Could not dynamically load React component ${compName}${ext}:`, err);
+            }
+          }
+        }
+
+        // 3. Try Web Component / Lit (.ts, .js)
+        if (!loaded) {
+          for (const ext of [".ts", ".js"]) {
+            try {
+              const mod = await import(/* @vite-ignore */ `${prefix}/${compName}${ext}`);
+              if (mod) {
+                const ElementClass = mod.default || mod[compName] || mod;
+                if (typeof ElementClass === "function") {
+                  this.registerWebComponent(compName, ElementClass);
+                  loaded = true;
+                  break;
+                }
+              }
+            } catch {
+              // not present, continue
+            }
+          }
         }
       }
     }
@@ -157,7 +244,17 @@ export class ComponentRegistry {
   }
 }
 
-/** Convenience helper for `.dmd` component modules: `defineDmd("CounterWidget", CounterWidgetElement)`. */
+/** Convenience helper for `.dmd` Svelte component modules: `defineDmd("CounterWidget", CounterWidgetElement)`. */
 export function defineDmd(name: string, element: DmdElementClass | string, tag?: string): string {
   return ComponentRegistry.getInstance().register(name, element, tag);
+}
+
+/** Convenience helper for `.dmd` React component modules: `defineReactDmd("ReactMetric", ReactMetricComponent)`. */
+export function defineReactDmd(name: string, component: any, tag?: string): string {
+  return ComponentRegistry.getInstance().registerReact(name, component, tag);
+}
+
+/** Convenience helper for `.dmd` Web Component / Lit modules: `defineWebComponentDmd("UserBadge", UserBadgeElement)`. */
+export function defineWebComponentDmd(name: string, elementClass: CustomElementConstructor, tag?: string): string {
+  return ComponentRegistry.getInstance().registerWebComponent(name, elementClass, tag);
 }

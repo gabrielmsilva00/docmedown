@@ -1,14 +1,65 @@
 <svelte:options customElement={{ tag: "dmd-card" }} />
 <script lang="ts">
   import { onMount } from "svelte";
+  import { parseMarkdown } from "../../runtime/markdown/parser";
   import { inferCardOutline } from "./card-outline";
   import { adoptSharedStyles } from "./shared-styles";
 
   const CARD_COLORS = new Set(["blue", "green", "violet", "amber", "red", "neutral"]);
+  const contentCache = new Map<string, string>();
+
+  function isUrlOrFilePath(value: string): boolean {
+    const trimmed = value.trim();
+    if (!trimmed) return false;
+    if (trimmed.includes("\n") || trimmed.includes("\r")) return false;
+    if (/^<[a-z0-9-]+[\s>]/i.test(trimmed)) return false;
+    if (/^(#{1,6}\s|[-*+]\s|\d+\.\s|>\s|`{3,})/.test(trimmed)) return false;
+    if (/^https?:\/\//i.test(trimmed)) return true;
+    if (/\.(md|mdx|html)$/i.test(trimmed) && (trimmed.includes("/") || trimmed.includes(".") || !trimmed.includes(" "))) {
+      return true;
+    }
+    return false;
+  }
+
+  function getEmbeddedDoc(key: string): string | undefined {
+    if (typeof window === "undefined") return undefined;
+    const trimmed = key.trim();
+    const normalized = trimmed.replace(/^\.?\//, "").replace(/\.(md|mdx|html)$/i, "");
+    const candidates = [trimmed, normalized, trimmed.replace(/^\.?\//, "")];
+
+    const globalData = (window as any).__DOCMEDOWN_DATA__?.docs;
+    if (globalData && typeof globalData === "object") {
+      for (const c of candidates) {
+        if (globalData[c] !== undefined) return globalData[c];
+      }
+    }
+
+    const globalDocs = (window as any).__DOCMEDOWN_DOCS__;
+    if (globalDocs && typeof globalDocs === "object") {
+      for (const c of candidates) {
+        if (globalDocs[c] !== undefined) return globalDocs[c];
+      }
+    }
+
+    const docsEl = document.getElementById("dmd-docs");
+    if (docsEl?.textContent) {
+      try {
+        const parsed = JSON.parse(docsEl.textContent);
+        for (const c of candidates) {
+          if (parsed[c] !== undefined) return parsed[c];
+        }
+      } catch {
+        // ignore
+      }
+    }
+
+    return undefined;
+  }
 
   let {
     title = "",
     description = "",
+    content = "",
     href = "",
     icon = "",
     image = "",
@@ -21,6 +72,7 @@
   }: {
     title?: string;
     description?: string;
+    content?: string;
     href?: string;
     icon?: string;
     image?: string;
@@ -36,6 +88,96 @@
   let autoDescription = $state("");
   let autoFooter = $state("");
   let root = $state<HTMLElement>();
+  let bodyEl = $state<HTMLElement>();
+
+  function resolveContentSync(source: string): string {
+    const trimmed = source?.trim() || "";
+    if (!trimmed) return "";
+
+    if (!isUrlOrFilePath(trimmed)) {
+      const parsed = parseMarkdown(trimmed);
+      if (!title && !autoTitle && parsed.frontmatter?.title) {
+        autoTitle = String(parsed.frontmatter.title);
+      }
+      if (!description && !autoDescription && parsed.frontmatter?.description) {
+        autoDescription = String(parsed.frontmatter.description);
+      }
+      return parsed.html;
+    }
+
+    const cached = contentCache.get(trimmed);
+    if (cached !== undefined) {
+      const parsed = parseMarkdown(cached);
+      if (!title && !autoTitle && parsed.frontmatter?.title) {
+        autoTitle = String(parsed.frontmatter.title);
+      }
+      if (!description && !autoDescription && parsed.frontmatter?.description) {
+        autoDescription = String(parsed.frontmatter.description);
+      }
+      return parsed.html;
+    }
+
+    const embedded = getEmbeddedDoc(trimmed);
+    if (embedded !== undefined) {
+      contentCache.set(trimmed, embedded);
+      const parsed = parseMarkdown(embedded);
+      if (!title && !autoTitle && parsed.frontmatter?.title) {
+        autoTitle = String(parsed.frontmatter.title);
+      }
+      if (!description && !autoDescription && parsed.frontmatter?.description) {
+        autoDescription = String(parsed.frontmatter.description);
+      }
+      return parsed.html;
+    }
+
+    return "";
+  }
+
+  let resolvedHtml = $state("");
+
+  $effect(() => {
+    const current = content?.trim() || "";
+    if (!current) {
+      resolvedHtml = "";
+      return;
+    }
+
+    const syncResult = resolveContentSync(current);
+    if (syncResult) {
+      resolvedHtml = syncResult;
+      return;
+    }
+
+    if (typeof window === "undefined") return;
+    let active = true;
+
+    fetch(current)
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.text();
+      })
+      .then((text) => {
+        if (!active) return;
+        contentCache.set(current, text);
+        const parsed = parseMarkdown(text);
+        if (!title && !autoTitle && parsed.frontmatter?.title) {
+          autoTitle = String(parsed.frontmatter.title);
+        }
+        if (!description && !autoDescription && parsed.frontmatter?.description) {
+          autoDescription = String(parsed.frontmatter.description);
+        }
+        resolvedHtml = parsed.html;
+      })
+      .catch((err) => {
+        if (!active) return;
+        console.warn(`[DocMeDown] Failed to fetch card content from "${current}":`, err);
+        resolvedHtml = `<p class="dmd-card-error">Failed to load content: <code>${current}</code></p>`;
+      });
+
+    return () => {
+      active = false;
+    };
+  });
 
   function getHost(): HTMLElement | null {
     if (!root) return null;
@@ -138,7 +280,10 @@
         </div>
       </div>
     {/if}
-    <div class="dmd-card-body">
+    <div class="dmd-card-body" bind:this={bodyEl}>
+      {#if resolvedHtml}
+        {@html resolvedHtml}
+      {/if}
       <slot onslotchange={adoptOutline}></slot>
     </div>
     {#if footer}

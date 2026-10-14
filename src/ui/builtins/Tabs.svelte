@@ -1,7 +1,8 @@
 <svelte:options customElement={{ tag: "dmd-tabs" }} />
 <script lang="ts">
-  import { onMount, onDestroy } from "svelte";
+  import { onMount, onDestroy, tick } from "svelte";
   import { adoptSharedStyles } from "./shared-styles";
+  import { animate, prefersReducedMotion } from "../../runtime/motion";
 
   let {
     defaultindex = 0,
@@ -17,12 +18,17 @@
 
   let root = $state<HTMLElement>();
   let headerRef = $state<HTMLElement>();
+  let indicatorRef = $state<HTMLElement>();
+  let bodyRef = $state<HTMLElement>();
   let activeIndex = $state(0);
   let tabs = $state<Array<{ label: string; icon: string; value: string }>>([]);
   let initialized = false;
   let baseId = `dmd${Math.random().toString(36).slice(2, 10)}`;
   let resizeObserver: ResizeObserver | null = null;
   let measureRaf = 0;
+  let panelAnimation: { stop: () => void } | null = null;
+  let indicatorAnimation: { stop: () => void } | null = null;
+  let indicatorPosition: { x: number; width: number } | null = null;
 
   function getHost(): HTMLElement | null {
     if (!root) return null;
@@ -44,7 +50,7 @@
     const tabEls = readTabs();
     if (tabEls.length === 0) return;
     tabs = tabEls.map((tab, i) => ({
-      label: tab.getAttribute("label") || `Tab ${i + 1}`,
+      label: tab.getAttribute("label") || "",
       value: tab.getAttribute("value") || tab.getAttribute("label") || String(i),
       icon: tab.getAttribute("icon") || "",
     }));
@@ -71,11 +77,33 @@
   }
 
   function applyVisibility() {
+    panelAnimation?.stop();
+    panelAnimation = null;
     const tabEls = readTabs();
     tabEls.forEach((tab, index) => {
       if (index === activeIndex) {
         tab.style.display = "";
         tab.removeAttribute("hidden");
+        if (initialized && bodyRef && !prefersReducedMotion()) {
+          // Animate the actual panel surface, not the display:contents custom-element host.
+          const target = bodyRef;
+          const anim = animate(
+            target,
+            {
+              opacity: [0, 1],
+              transform: ["translate3d(0, 8px, 0)", "translate3d(0, 0, 0)"],
+            },
+            { duration: 0.22, ease: [0.16, 1, 0.3, 1] }
+          );
+          panelAnimation = anim;
+          anim.then(() => {
+            if (panelAnimation === anim) {
+              panelAnimation = null;
+              target.style.removeProperty("transform");
+              target.style.removeProperty("opacity");
+            }
+          });
+        }
       } else {
         tab.style.display = "none";
         tab.removeAttribute("hidden");
@@ -84,26 +112,71 @@
     scheduleMeasure();
   }
 
+  function getTabButtons(): HTMLButtonElement[] {
+    if (!headerRef) return [];
+    return Array.from(headerRef.querySelectorAll<HTMLButtonElement>(".dmd-tab-btn"));
+  }
+
+  function measureNow() {
+    if (!headerRef) return;
+    const buttons = getTabButtons();
+    const activeBtn = buttons[activeIndex];
+    if (!activeBtn) return;
+    if (activeBtn.offsetWidth === 0) return;
+    const x = activeBtn.offsetLeft;
+    const width = activeBtn.offsetWidth;
+    const previous = indicatorPosition;
+    if (previous?.x === x && previous.width === width) return;
+    indicatorAnimation?.stop();
+    indicatorPosition = { x, width };
+    headerRef.style.setProperty("--dmd-tab-ind-x", `${x}px`);
+    headerRef.style.setProperty("--dmd-tab-ind-w", `${width}px`);
+    // FLIP: one layout measurement, then compositor-only movement/resize.
+    if (previous && indicatorRef && effectiveVariant !== "postit" && !prefersReducedMotion()) {
+      const anim = animate(indicatorRef, {
+        transform: [
+          `translateX(${previous.x - x}px) scaleX(${previous.width / width})`,
+          "translateX(0) scaleX(1)",
+        ],
+      }, { duration: 0.26, ease: [0.16, 1, 0.3, 1] });
+      indicatorAnimation = anim;
+      anim.then(() => {
+        if (indicatorAnimation === anim) {
+          indicatorAnimation = null;
+          indicatorRef.style.removeProperty("transform");
+        }
+      });
+    }
+  }
+
   function scheduleMeasure() {
-    if (measureRaf) cancelAnimationFrame(measureRaf);
+    if (measureRaf) return;
     measureRaf = requestAnimationFrame(() => {
       measureRaf = 0;
-      if (!headerRef) return;
-      const activeBtn = headerRef.children[activeIndex] as HTMLElement;
-      if (!activeBtn) return;
-      const btnRect = activeBtn.getBoundingClientRect();
-      const headerRect = headerRef.getBoundingClientRect();
-      const left = btnRect.left - headerRect.left;
-      const width = btnRect.width;
-      headerRef.style.setProperty("--dmd-tab-ind-x", `${left}px`);
-      headerRef.style.setProperty("--dmd-tab-ind-w", `${width}px`);
+      measureNow();
     });
   }
 
-  function selectTab(index: number) {
+  function selectTab(index: number, focus = false) {
     if (index === activeIndex || index < 0 || index >= tabs.length) return;
     activeIndex = index;
     applyVisibility();
+    measureNow();
+
+    if (focus) {
+      const buttons = getTabButtons();
+      buttons[index]?.focus();
+    }
+
+    const buttons = getTabButtons();
+    const activeBtn = buttons[index];
+    if (activeBtn && typeof activeBtn.scrollIntoView === "function") {
+      activeBtn.scrollIntoView({
+        behavior: prefersReducedMotion() ? "auto" : "smooth",
+        block: "nearest",
+        inline: "nearest",
+      });
+    }
 
     if (groupid) {
       const activeTab = tabs[index];
@@ -127,20 +200,27 @@
     if (match !== -1 && match !== activeIndex) {
       activeIndex = match;
       applyVisibility();
+      measureNow();
     }
   }
 
   function onKeyDown(e: KeyboardEvent) {
-    if (e.key === "ArrowRight") {
+    const buttons = getTabButtons();
+    if (buttons.length === 0) return;
+    if (e.key === "ArrowRight" || e.key === "ArrowDown") {
       e.preventDefault();
-      selectTab((activeIndex + 1) % tabs.length);
-      const nextBtn = headerRef?.children[(activeIndex + 1) % tabs.length] as HTMLElement;
-      nextBtn?.focus();
-    } else if (e.key === "ArrowLeft") {
+      const next = (activeIndex + 1) % buttons.length;
+      selectTab(next, true);
+    } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
       e.preventDefault();
-      selectTab((activeIndex - 1 + tabs.length) % tabs.length);
-      const prevBtn = headerRef?.children[(activeIndex - 1 + tabs.length) % tabs.length] as HTMLElement;
-      prevBtn?.focus();
+      const prev = (activeIndex - 1 + buttons.length) % buttons.length;
+      selectTab(prev, true);
+    } else if (e.key === "Home") {
+      e.preventDefault();
+      selectTab(0, true);
+    } else if (e.key === "End") {
+      e.preventDefault();
+      selectTab(buttons.length - 1, true);
     }
   }
 
@@ -154,7 +234,7 @@
   );
 
   const wrapperClass = $derived(
-    `dmd-tabs dmd-tabs-${effectiveVariant}${groupid ? " dmd-tabs-grouped" : ""}`
+    `dmd-tabs dmd-tabs-wrapper dmd-tabs-${effectiveVariant}${groupid ? " dmd-tabs-grouped" : ""}`
   );
 
   onMount(() => {
@@ -164,12 +244,17 @@
       resizeObserver = new ResizeObserver(() => scheduleMeasure());
       if (headerRef) resizeObserver.observe(headerRef);
     }
-    void Promise.resolve().then(() => {
+    void Promise.resolve().then(async () => {
       initTabs();
+      await tick();
+      measureNow();
+      requestAnimationFrame(() => measureNow());
     });
   });
 
   onDestroy(() => {
+    panelAnimation?.stop();
+    indicatorAnimation?.stop();
     if (typeof window !== "undefined") {
       window.removeEventListener("dmd-tabs-change", onSync);
     }
@@ -187,25 +272,32 @@
     aria-label="Content tabs"
     onkeydown={onKeyDown}
   >
+    <span bind:this={indicatorRef} class="dmd-tab-indicator" aria-hidden="true"></span>
     {#each tabs as tab, index}
+      {@const active = index === activeIndex}
+      {@const name = tab.value || tab.label || `Tab ${index + 1}`}
+      {@const hasLabel = !!tab.label}
       <button
         type="button"
         role="tab"
         id="{baseId}-tab-{index}"
-        class="dmd-tab-btn{index === activeIndex ? ' active' : ''}"
-        aria-selected={index === activeIndex}
+        class="dmd-tab-btn{active ? ' active' : ''}{hasLabel ? '' : ' dmd-tab-btn-icon'}"
+        aria-selected={active}
         aria-controls="{baseId}-panel-{index}"
-        tabindex={index === activeIndex ? 0 : -1}
+        aria-label={hasLabel ? undefined : name}
+        tabindex={active ? 0 : -1}
         onclick={() => selectTab(index)}
       >
         {#if tab.icon}
           <span class="dmd-tab-icon" aria-hidden="true">{@html tab.icon}</span>
         {/if}
-        <span>{tab.label}</span>
+        {#if hasLabel}
+          <span class="dmd-tab-label">{tab.label}</span>
+        {/if}
       </button>
     {/each}
   </div>
-  <div class="dmd-tabs-body" role="tabpanel" id="{baseId}-panel-{activeIndex}" aria-labelledby="{baseId}-tab-{activeIndex}">
+  <div bind:this={bodyRef} class="dmd-tabs-body dmd-tab-panel" role="tabpanel" id="{baseId}-panel-{activeIndex}" aria-labelledby="{baseId}-tab-{activeIndex}">
     <slot onslotchange={onSlotChange}></slot>
   </div>
 </div>

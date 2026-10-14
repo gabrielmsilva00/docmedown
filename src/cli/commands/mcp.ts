@@ -1,14 +1,34 @@
 import fs from "node:fs";
+import http from "node:http";
 import path from "node:path";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
+import packageJson from "../../../package.json";
+import { normalizeConfig, parseDocConfigJson } from "../../runtime/config";
 import type { DocFileItem, DocManifest } from "../../runtime/types";
+import { generateManifest, scanDirectory } from "../utils/scanner";
 
 export interface DocToolkit {
   manifest: DocManifest;
-  /** Slug (and path) → raw markdown, extracted from the built _docs.js payload. */
+  /** Slug (and path) → raw markdown, extracted from the built _docs.js payload or source directory. */
   docs: Record<string, string>;
+}
+
+export interface McpOptions {
+  transport?: "stdio" | "sse";
+  port?: number | string;
+  host?: string;
+  allowOrigins?: string | string[];
+}
+
+export interface McpSseServerHandle {
+  server: http.Server;
+  port: number;
+  host: string;
+  url: string;
+  close: () => Promise<void>;
 }
 
 function parseDocsJs(source: string): Record<string, string> | null {
@@ -38,6 +58,47 @@ export function loadBuiltSite(targetDir: string): DocToolkit | null {
     if (fs.existsSync(docsJsPath)) {
       docs = parseDocsJs(fs.readFileSync(docsJsPath, "utf-8")) ?? {};
     }
+    return { manifest, docs };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Loads pre-built documentation artifacts if available, or dynamically scans
+ * and indexes source Markdown on-the-fly for zero-install npx invocation.
+ */
+export function loadOrCreateToolkit(targetDir: string): DocToolkit | null {
+  const built = loadBuiltSite(targetDir);
+  if (built) return built;
+
+  if (!fs.existsSync(targetDir)) return null;
+
+  try {
+    let config = normalizeConfig();
+    const docsJsonPath = path.join(targetDir, "docs.json");
+    const dmdJsonPath = path.join(targetDir, "dmd.json");
+
+    if (fs.existsSync(docsJsonPath)) {
+      config = normalizeConfig(parseDocConfigJson(fs.readFileSync(docsJsonPath, "utf-8"), docsJsonPath));
+    } else if (fs.existsSync(dmdJsonPath)) {
+      config = normalizeConfig(parseDocConfigJson(fs.readFileSync(dmdJsonPath, "utf-8"), dmdJsonPath));
+    }
+
+    const files = scanDirectory(targetDir);
+    if (files.length === 0) return null;
+
+    const manifest = generateManifest(targetDir, config);
+    const docs: Record<string, string> = {};
+    for (const file of files) {
+      const full = path.join(targetDir, file);
+      const raw = fs.readFileSync(full, "utf-8");
+      const slug = file.replace(/\.(md|mdx)$/i, "");
+      const cleanSlug = slug.toLowerCase() === "readme" || slug.toLowerCase() === "index" ? "README" : slug;
+      docs[cleanSlug] = raw;
+      docs[file] = raw;
+    }
+
     return { manifest, docs };
   } catch {
     return null;
@@ -260,20 +321,158 @@ export const registerDocTools: RegisterTools = (server, toolkit) => {
 export function createMcpServer(toolkit: DocToolkit): McpServer {
   const server = new McpServer({
     name: "docmedown",
-    version: "0.1.9",
+    version: packageJson.version,
   });
   registerDocTools(server, toolkit);
   return server;
 }
 
-export async function mcpCommand(targetDirArg: string = "./docs"): Promise<void> {
+function parseOrigins(allowOrigins?: string | string[]): string[] {
+  if (!allowOrigins) return ["*"];
+  if (Array.isArray(allowOrigins)) return allowOrigins;
+  return allowOrigins
+    .split(",")
+    .map((o) => o.trim())
+    .filter(Boolean);
+}
+
+function applyCors(req: http.IncomingMessage, res: http.ServerResponse, allowedOrigins: string[]) {
+  const origin = req.headers.origin;
+  let allowOriginHeader = "*";
+  if (allowedOrigins.length > 0) {
+    if (allowedOrigins.includes("*")) {
+      allowOriginHeader = "*";
+    } else if (origin && allowedOrigins.includes(origin)) {
+      allowOriginHeader = origin;
+    } else {
+      allowOriginHeader = allowedOrigins[0];
+    }
+  }
+  res.setHeader("Access-Control-Allow-Origin", allowOriginHeader);
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, x-session-id");
+  res.setHeader("Access-Control-Expose-Headers", "*");
+}
+
+/**
+ * Starts an HTTP server exposing an SSE transport for the Model Context Protocol.
+ */
+export async function startMcpSseServer(
+  toolkit: DocToolkit,
+  options: {
+    port?: number | string;
+    host?: string;
+    allowOrigins?: string | string[];
+  } = {},
+): Promise<McpSseServerHandle> {
+  const host = options.host || "localhost";
+  const requestedPort = options.port !== undefined ? Number(options.port) : 3001;
+  const allowedOrigins = parseOrigins(options.allowOrigins);
+
+  const sessions = new Map<string, SSEServerTransport>();
+
+  const httpServer = http.createServer(async (req, res) => {
+    applyCors(req, res, allowedOrigins);
+
+    if (req.method === "OPTIONS") {
+      res.writeHead(204).end();
+      return;
+    }
+
+    const hostHeader = req.headers.host || `${host}:${requestedPort}`;
+    const url = new URL(req.url || "", `http://${hostHeader}`);
+
+    // SSE Stream initiation endpoint
+    if (req.method === "GET" && (url.pathname === "/sse" || url.pathname === "/events")) {
+      const transport = new SSEServerTransport("/message", res, {
+        allowedOrigins: allowedOrigins.length > 0 && !allowedOrigins.includes("*") ? allowedOrigins : undefined,
+        enableDnsRebindingProtection: allowedOrigins.length > 0 && !allowedOrigins.includes("*"),
+      });
+
+      sessions.set(transport.sessionId, transport);
+      transport.onclose = () => {
+        sessions.delete(transport.sessionId);
+      };
+
+      const server = createMcpServer(toolkit);
+      await server.connect(transport);
+      return;
+    }
+
+    // Client POST messages to session
+    if (req.method === "POST" && url.pathname === "/message") {
+      const sessionId = url.searchParams.get("sessionId");
+      if (!sessionId || !sessions.has(sessionId)) {
+        res.writeHead(404, { "Content-Type": "text/plain" }).end("Session not found");
+        return;
+      }
+      const transport = sessions.get(sessionId)!;
+      await transport.handlePostMessage(req, res);
+      return;
+    }
+
+    // Default landing / 404
+    res.writeHead(404, { "Content-Type": "text/plain" }).end("Not Found. Connect to /sse for MCP SSE transport.");
+  });
+
+  await new Promise<void>((resolve, reject) => {
+    httpServer.listen(requestedPort, host, () => resolve());
+    httpServer.once("error", reject);
+  });
+
+  const address = httpServer.address();
+  const actualPort = typeof address === "object" && address ? address.port : requestedPort;
+  const serverUrl = `http://${host}:${actualPort}/sse`;
+
+  const close = async () => {
+    for (const transport of sessions.values()) {
+      try {
+        await transport.close();
+      } catch {}
+    }
+    sessions.clear();
+    await new Promise<void>((resolve, reject) => {
+      httpServer.close((err) => (err ? reject(err) : resolve()));
+    });
+  };
+
+  return {
+    server: httpServer,
+    port: actualPort,
+    host,
+    url: serverUrl,
+    close,
+  };
+}
+
+export async function mcpCommand(targetDirArg: string = "./docs", options: McpOptions = {}): Promise<void> {
   const targetDir = path.resolve(process.cwd(), targetDirArg);
-  const toolkit = loadBuiltSite(targetDir);
+  const toolkit = loadOrCreateToolkit(targetDir);
 
   if (!toolkit) {
     throw new Error(
-      `No built documentation found at ${targetDir}. Run "docmedown build ${targetDirArg}" first, then retry "docmedown mcp".`,
+      `No documentation found at ${targetDir}. Run "docmedown build ${targetDirArg}" or create Markdown files in that directory first.`,
     );
+  }
+
+  if (options.transport === "sse" || options.port !== undefined) {
+    const handle = await startMcpSseServer(toolkit, {
+      port: options.port,
+      host: options.host,
+      allowOrigins: options.allowOrigins,
+    });
+    console.error(
+      `[DocMeDown] MCP server ready over SSE at ${handle.url} — serving ${toolkit.manifest.docs.length} documents from ${targetDir}`,
+    );
+
+    const cleanup = async () => {
+      await handle.close();
+      process.exit(0);
+    };
+    process.once("SIGINT", cleanup);
+    process.once("SIGTERM", cleanup);
+
+    return new Promise(() => undefined);
   }
 
   const server = createMcpServer(toolkit);

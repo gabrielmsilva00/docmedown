@@ -11,7 +11,9 @@ const program = new Command();
 
 program
   .name("docmedown")
-  .description("DocMeDown - The simplest MarkDown documenter yet. CLI & Web Script React SPA.")
+  .description(
+    "DocMeDown - The simplest MarkDown documenter yet. CLI, web runtime, and static-site compiler with AI-native distribution.",
+  )
   .version(packageJson.version);
 
 // Default action when directory is passed: npx docmedown ./docs
@@ -49,6 +51,8 @@ program
   .description("Start local live-reload development server")
   .option("-p, --port <number>", "Port to listen on", "3000")
   .option("-H, --host <string>", "Host to bind server to", "localhost")
+  .option("--preview", "Serve .preview staging directory with fallback to production source")
+  .option("--mode <mode>", "Serving mode: preview or production", "production")
   .option("--no-open", "Do not automatically open browser")
   .action(async (dir = "./docs", options) => {
     await serveCommand(dir, options);
@@ -73,10 +77,34 @@ program
 // Subcommand: mcp
 program
   .command("mcp [dir]")
-  .description("Serve the built documentation as an MCP (Model Context Protocol) stdio server")
-  .action(async (dir = "./docs") => {
+  .description("Serve documentation as an MCP (Model Context Protocol) server")
+  .option("-t, --transport <type>", "Transport type: stdio or sse", "stdio")
+  .option("-p, --port <number>", "Port for SSE transport (default: 3001)")
+  .option("-H, --host <string>", "Host to bind SSE server to", "localhost")
+  .option("--allow-origins <origins>", "Allowed origins for SSE transport (comma-separated or '*')")
+  .action(async (dir = "./docs", options) => {
     const { mcpCommand } = await import("./commands/mcp");
-    await mcpCommand(dir);
+    await mcpCommand(dir, options);
+  });
+
+// Subcommand: validate
+program
+  .command("validate [dir]")
+  .description("Validate Markdown links, frontmatter, and docs.json schema")
+  .option("--json", "Output validation report as JSON")
+  .action(async (dir = "./docs", options) => {
+    const { validateCommand } = await import("./commands/validate");
+    await validateCommand(dir, { ...options, exitOnError: true });
+  });
+
+// Subcommand: doctor
+program
+  .command("doctor [dir]")
+  .description("Diagnose Node environment, missing assets, and .dmd custom component compilation")
+  .option("--json", "Output diagnostic report as JSON")
+  .action(async (dir = "./docs", options) => {
+    const { doctorCommand } = await import("./commands/doctor");
+    await doctorCommand(dir, { ...options, exitOnError: true });
   });
 
 // Subcommand: config

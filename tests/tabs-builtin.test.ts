@@ -25,12 +25,22 @@ test("Tabs component contract: label, value, icon, tab discovery, and state sync
   assert.match(tabsSrc, /dmd-tab-icon/);
   assert.match(tabsSrc, /tab\.icon/);
 
+  // Sliding indicator element is rendered in header
+  assert.match(tabsSrc, /dmd-tab-indicator/);
+
+  // Wrapper and panel classes match stylesheet selectors
+  assert.match(tabsSrc, /dmd-tabs-wrapper/);
+  assert.match(tabsSrc, /dmd-tab-panel/);
+
   // Group synchronization handles cross-tab updates
   assert.match(tabsSrc, /dmd-tabs-change/);
   assert.match(tabsSrc, /groupid/);
 });
 
 test("Tabs visual styling contracts across variants (postit, underline, pills, recessed)", () => {
+  // Common wrapper and panel contracts
+  assert.match(mainCss, /\.dmd-tabs-wrapper,\s*\.dmd-tabs/);
+
   // 1. Post-it variant: 6 pastel hues on a neutral desk pad with folder-tab docking
   assert.match(mainCss, /\.dmd-tabs-postit \.dmd-tab-btn:nth-of-type\(6n\+1\)/);
   assert.match(mainCss, /\.dmd-tabs-postit \.dmd-tab-btn:nth-of-type\(6n\+6\)/);
@@ -46,13 +56,18 @@ test("Tabs visual styling contracts across variants (postit, underline, pills, r
   assert.match(mainCss, /\.dmd-tabs-underline \.dmd-tab-btn\s*\{[^}]*text-transform:\s*uppercase/);
   assert.match(mainCss, /inset 0 -2\.5px 0 var\(--dmd-border-color\)/);
 
-  // 3. Pills variant: centered floating bar with solid accent pill
+  // 3. Pills variant: centered floating bar with solid accent pill and clear panel delimitation
   assert.match(mainCss, /\.dmd-tabs-pills \.dmd-tabs-header\s*\{[^}]*justify-content:\s*flex-start/);
   assert.match(mainCss, /\.dmd-tabs-pills \.dmd-tabs-header::before/);
   assert.match(mainCss, /\.dmd-tabs-pills \.dmd-tab-indicator\s*\{[^}]*background:\s*var\(--dmd-accent\)/);
   assert.match(mainCss, /\.dmd-tabs-pills \.dmd-tab-btn\.active\s*\{[^}]*color:\s*var\(--dmd-bg-card\)/);
+  assert.match(mainCss, /\.dmd-tabs-pills \.dmd-tab-panel\s*,\s*\.dmd-tabs-pills \.dmd-tabs-body\s*\{[^}]*border-top/);
 
-  // 4. Recessed variant: pressed well with raised chip
+  // 4. Recessed variant: pressed well with raised chip and clear panel delimitation
   assert.match(mainCss, /\.dmd-tabs-recessed \.dmd-tabs-header\s*\{[^}]*margin:\s*0\.55rem/);
   assert.match(mainCss, /inset 0 2px 8px -3px/);
+  assert.match(
+    mainCss,
+    /\.dmd-tabs-recessed \.dmd-tab-panel\s*,\s*\.dmd-tabs-recessed \.dmd-tabs-body\s*\{[^}]*border-top/,
+  );
 });

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <defs>
+    <linearGradient id="dmd-fav-min-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#18181b"/>
+      <stop offset="100%" stop-color="#09090b"/>
+    </linearGradient>
+    <linearGradient id="dmd-fav-min-accent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="100%" stop-color="#818cf8"/>
+    </linearGradient>
+  </defs>
+  <rect width="32" height="32" rx="7" fill="url(#dmd-fav-min-bg)" stroke="#27272a" stroke-width="1.2"/>
+  <polygon points="16,6 25,11.2 25,20.8 16,26 7,20.8 7,11.2" fill="none" stroke="url(#dmd-fav-min-accent)" stroke-width="2" stroke-linejoin="round"/>
+  <circle cx="16" cy="16" r="3.5" fill="url(#dmd-fav-min-accent)"/>
+</svg>

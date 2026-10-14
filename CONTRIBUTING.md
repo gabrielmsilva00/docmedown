@@ -10,12 +10,11 @@ npm run lint
 npm run typecheck
 npm test
 npm run build
-npm run build:docs
 ```
 
 ## Documentation roots
 
-A directory containing `docs.json` is an independent documentation root. Parent manifests must not scan its Markdown, configuration, or `.dmd/components.js` module. Run `npm run build:docs` after documentation changes to validate parent and nested outputs. The build also writes `.nojekyll` so direct GitHub Pages branch publishing does not discard `_docs.js`.
+A directory containing `docs.json` is an independent documentation root. Parent manifests must not scan its Markdown, configuration, or `.dmd/` component directory. Run `npm run build:docs` after documentation changes to validate parent and nested outputs. The build also writes `.nojekyll` so direct GitHub Pages branch publishing does not discard `_docs.js`.
 
 ## Configuration contract
 

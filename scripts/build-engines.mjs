@@ -1,7 +1,7 @@
 import { mkdirSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { buildSync } from "esbuild";
+import { build as esbuild } from "esbuild";
 
 /**
  * Builds the on-demand engine bundles the served runtime injects as classic
@@ -15,9 +15,8 @@ import { buildSync } from "esbuild";
  */
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const outDir = path.join(root, "dist");
-mkdirSync(outDir, { recursive: true });
 
-const engines = [
+export const engines = [
   {
     entry: "src/runtime/markdown/mermaid-engine.ts",
     outfile: "docmedown-mermaid.js",
@@ -30,20 +29,32 @@ const engines = [
   },
 ];
 
-for (const engine of engines) {
-  buildSync({
-    entryPoints: [path.join(root, engine.entry)],
-    outfile: path.join(outDir, engine.outfile),
-    bundle: true,
-    format: "iife",
-    globalName: engine.globalName,
-    platform: "browser",
-    target: "es2022",
-    minify: true,
-    treeShaking: true,
-    legalComments: "none",
-    define: { "process.env.NODE_ENV": JSON.stringify("production") },
-    logLevel: "warning",
-  });
-  console.log(`  ✔ Built on-demand engine: dist/${engine.outfile}`);
+export async function buildEngines() {
+  mkdirSync(outDir, { recursive: true });
+  await Promise.all(
+    engines.map((engine) =>
+      esbuild({
+        entryPoints: [path.join(root, engine.entry)],
+        outfile: path.join(outDir, engine.outfile),
+        bundle: true,
+        format: "iife",
+        globalName: engine.globalName,
+        platform: "browser",
+        target: "es2022",
+        minify: true,
+        treeShaking: true,
+        legalComments: "none",
+        define: { "process.env.NODE_ENV": JSON.stringify("production") },
+        logLevel: "warning",
+      }),
+    ),
+  );
+}
+
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  const t0 = Date.now();
+  await buildEngines();
+  console.log(
+    `  ✔ Built on-demand engines (${Date.now() - t0}ms): dist/docmedown-mermaid.js, dist/docmedown-compiler.js`,
+  );
 }

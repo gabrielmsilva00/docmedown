@@ -1,3 +1,5 @@
+import { prefersReducedMotion } from "./motion";
+
 export interface RouteInfo {
   slug: string;
   anchor: string;
@@ -20,6 +22,17 @@ export function getStaticRuntimeContext(): StaticRuntimeContext | null {
     base: typeof runtimeWindow.__DOCMEDOWN_STATIC_BASE__ === "string" ? runtimeWindow.__DOCMEDOWN_STATIC_BASE__ : "",
     slug: runtimeWindow.__DOCMEDOWN_STATIC_SLUG__,
   };
+}
+
+export function scrollToAndHighlight(element: HTMLElement) {
+  const reduced = prefersReducedMotion();
+  element.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "start" });
+  element.classList.remove("dmd-heading-targeted");
+  void element.offsetWidth;
+  element.classList.add("dmd-heading-targeted");
+  setTimeout(() => {
+    element.classList.remove("dmd-heading-targeted");
+  }, 1600);
 }
 
 /** True when the current page was prerendered by the static site build. */
@@ -151,7 +164,7 @@ export class HashRouter {
     const cleanId = decodeURIComponent(anchorId).toLowerCase().replace(/^[#]/, "");
     const element = document.getElementById(cleanId);
     if (element) {
-      element.scrollIntoView({ behavior: "smooth", block: "start" });
+      scrollToAndHighlight(element);
     }
   }
 
@@ -302,7 +315,11 @@ export class StaticRouter extends HashRouter {
       return;
     }
 
-    window.history.pushState({}, "", targetUrl);
+    try {
+      window.history.pushState({}, "", targetUrl);
+    } catch {
+      // Safe fallback for file:/// protocol where pushState is blocked by unique origin security policy
+    }
     this.emitRoute(this.getCurrentRoute());
     if (anchor) {
       setTimeout(() => this.scrollToAnchor(anchor), 100);
@@ -314,7 +331,7 @@ export class StaticRouter extends HashRouter {
     const cleanId = decodeURIComponent(anchorId).toLowerCase().replace(/^[#]/, "");
     const element = document.getElementById(cleanId);
     if (element) {
-      element.scrollIntoView({ behavior: "smooth", block: "start" });
+      scrollToAndHighlight(element);
     }
   }
 

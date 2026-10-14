@@ -9,6 +9,8 @@ export interface ServeOptions {
   port?: number;
   host?: string;
   open?: boolean;
+  preview?: boolean;
+  mode?: "preview" | "production";
 }
 
 export async function serveCommand(targetDirArg: string = "./docs", options: ServeOptions = {}) {
@@ -23,8 +25,15 @@ export async function serveCommand(targetDirArg: string = "./docs", options: Ser
     }
   }
 
+  const effectiveMode = options.preview ? "preview" : options.mode || "production";
+
   console.log(chalk.bold.magenta("\n⚡ DocMeDown Dev Server\n"));
   console.log(chalk.dim(`  Serving directory: ${targetDir}`));
+  console.log(
+    chalk.dim(
+      `  Mode: ${effectiveMode === "preview" ? chalk.yellow("Preview (.preview staging)") : chalk.green("Production (direct source)")}`,
+    ),
+  );
 
   try {
     console.log(chalk.dim("  Building serveable and offline documentation artifacts..."));
@@ -34,13 +43,15 @@ export async function serveCommand(targetDirArg: string = "./docs", options: Ser
       rootDir: targetDir,
       host: options.host || "localhost",
       port: options.port ? Number(options.port) : 3000,
+      mode: effectiveMode,
       onSourceChange: () => buildCommand(targetDir),
     });
 
     const url = `http://${options.host || "localhost"}:${devServer.port}`;
     console.log(chalk.bold.green(`\n✔ Live Documentation Server running at:`));
     console.log(chalk.bold.cyan(`  ➜  Local:   ${chalk.underline(url)}`));
-    console.log(chalk.dim(`  ➜  Watch: Source changes rebuild preview and .dist/index.html`));
+    console.log(chalk.dim(`  ➜  HMR:   In-place hot reloading active (no full page reload on markdown edits)`));
+    console.log(chalk.dim(`  ➜  2-Way: 2-Way Editor enabled (Ctrl+E on page to edit & save)`));
     console.log(chalk.dim(`\n  Press Ctrl+C to stop.\n`));
 
     if (options.open !== false) {

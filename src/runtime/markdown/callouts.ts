@@ -17,8 +17,39 @@ export const CALLOUT_ICONS = {
  * e.g. > [!NOTE] or > [!WARNING] Title
  */
 export function processAlerts(markdown: string): string {
-  const _alertRegex = /^>\s*\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\](?:\s+(.*))?$/gim;
+  // Only transform text outside fenced code blocks. Otherwise the `> [!NOTE]`
+  // examples inside a ```markdown fence get rewritten to raw callout HTML and
+  // the docs show markup instead of the syntax they are meant to teach.
+  const lines = markdown.split("\n");
+  const out: string[] = [];
+  let prose: string[] = [];
+  let fence: { char: string; len: number } | null = null;
 
+  const flush = () => {
+    if (prose.length) out.push(transformAlertBlocks(prose.join("\n")));
+    prose = [];
+  };
+
+  for (const line of lines) {
+    const m = /^ {0,3}(`{3,}|~{3,})/.exec(line);
+    if (fence) {
+      out.push(line);
+      if (m && m[1][0] === fence.char && m[1].length >= fence.len && /^ {0,3}[`~]+\s*$/.test(line)) {
+        fence = null;
+      }
+    } else if (m) {
+      flush();
+      fence = { char: m[1][0], len: m[1].length };
+      out.push(line);
+    } else {
+      prose.push(line);
+    }
+  }
+  flush();
+  return out.join("\n");
+}
+
+function transformAlertBlocks(markdown: string): string {
   return markdown.replace(/^((?:>[^\n]*\n?)+)/gm, (block) => {
     const lines = block.split("\n");
     const firstLine = lines[0];

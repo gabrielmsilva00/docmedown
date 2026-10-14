@@ -1,92 +1,200 @@
 ---
 title: Configuration Reference (docs.json)
-description: Complete reference for docs.json, theme families, navigation, and runtime options.
-order: 3
-tags: [config, reference, themes, json]
+description: Complete cookbook and schema reference for docs.json, theme families, navigation, branding, custom sidebars, and runtime options.
+order: 13
+category: Reference & Configuration
+tags: [config, reference, themes, json, customization, branding, sidebar]
 ---
 
-# Configuration Reference (`docs.json`)
+# Configuration Cookbook & Reference (`docs.json`) ⚙️
 
-While DocMeDown works zero-config out of the box, `docs.json` allows you to customize branding, complete theme families, reading density, navbar links, repository links, search behavior, and custom routes.
+While DocMeDown works with **zero configuration out of the box**, a `docs.json` file in your documentation directory unlocks complete control over themes, branding, navigation, search, custom sidebars, and dynamic Git sources.
 
----
-
-## Validation and editor support
-
-DocMeDown validates every configuration source (`docs.json`, `dmd.json`, inline configuration, and embedded manifests) with its Zod schema before use. Invalid configuration reports the exact field path and is never silently merged into the runtime configuration.
-
-For JSON-aware editors, add this as the first property of `docs.json` to enable completion and validation:
+Add the schema definition at the top of your `docs.json` for instant autocomplete and validation in VS Code, Cursor, and JetBrains IDEs:
 
 ```json
 {
   "$schema": "https://raw.githubusercontent.com/gabrielmsilva00/docmedown/main/schemas/docs.schema.json",
-  "name": "My documentation"
+  "name": "My Project"
 }
 ```
 
-The portable JSON Schema is included in the npm package at `schemas/docs.schema.json`. Runtime consumers can also import the executable Zod schema from `docmedown` as `docConfigSchema` or parse unknown configuration with `parseDocConfig`.
-
-Unknown properties are rejected. GitHub and GitLab sources require a `repo` in `owner/repository` form; raw sources require an absolute `baseUrl`. When loading in the browser, an invalid higher-precedence source is reported and skipped so DocMeDown can use the next valid source: global config, inline config, `docs.json`, `dmd.json`, `_manifest.json`, then defaults.
-
 ---
 
-## 📄 Full `docs.json` Example
+## 🍳 Configuration Archetypes (Copy & Paste)
 
+Choose the preset archetype closest to your project:
+
+<Tabs type="pills">
+  <Tab label="1. Open-Source Library (Atlas)" icon="📦">
 ```json title="docs.json"
 {
   "$schema": "https://raw.githubusercontent.com/gabrielmsilva00/docmedown/main/schemas/docs.schema.json",
-  "name": "DocMeDown",
-  "tagline": "The simplest MarkDown documenter yet",
-  "description": "Next-generation documentation toolkit",
+  "name": "SuperLib",
+  "tagline": "Next-generation state management for modern web apps",
   "version": "1.0.0",
-  "rootDoc": "README.md",
-  "home": "README.md",
+  "url": "https://superlib.dev",
   "theme": {
     "family": "atlas",
     "density": "comfortable",
     "defaultMode": "auto",
-    "codeTheme": "github",
-    "logo": {
-      "light": "/assets/logo-light.svg",
-      "dark": "/assets/logo-dark.svg",
-      "alt": "DocMeDown Logo"
-    }
+    "favicon": "default"
   },
   "nav": [
     { "label": "Overview", "href": "#/README" },
-    { "label": "Getting Started", "href": "#/getting-started" },
-    { "label": "API", "href": "#/api/overview" },
-    { "label": "GitHub", "href": "https://github.com/facebook/react", "external": true }
+    { "label": "Quickstart", "href": "#/getting-started" },
+    { "label": "API", "href": "#/api" },
+    { "label": "GitHub", "href": "https://github.com/my-org/superlib", "external": true }
   ],
   "socials": [
-    { "type": "github", "url": "https://github.com/facebook/react" },
-    { "type": "discord", "url": "https://discord.gg/react" }
+    { "type": "github", "url": "https://github.com/my-org/superlib" },
+    { "type": "discord", "url": "https://discord.gg/superlib" }
+  ]
+}
+```
+  </Tab>
+
+  <Tab label="2. CLI / DevOps Runbook (Terminal)" icon="💻">
+```json title="docs.json"
+{
+  "$schema": "https://raw.githubusercontent.com/gabrielmsilva00/docmedown/main/schemas/docs.schema.json",
+  "name": "KubeOps CLI",
+  "tagline": "Cluster orchestration and incident response manual",
+  "theme": {
+    "family": "terminal",
+    "density": "compact",
+    "defaultMode": "dark",
+    "codeTheme": "one-dark",
+    "favicon": "terminal"
+  },
+  "nav": [
+    { "label": "Runbooks", "href": "#/README" },
+    { "label": "Incidents", "href": "#/incidents" },
+    { "label": "Architecture", "href": "#/architecture" }
   ],
-  "autoIndex": {
-    "enabled": true,
-    "sort": "natural",
-    "defaultCollapsed": false,
-    "exclude": ["node_modules", ".git", ".dmd"]
-  },
   "search": {
-    "enabled": true,
-    "placeholder": "Search documentation (⌘K)...",
-    "maxResults": 10
+    "placeholder": "Search cluster runbooks & commands..."
+  }
+}
+```
+  </Tab>
+
+  <Tab label="3. Technical Architecture Spec (Blueprint)" icon="📐">
+```json title="docs.json"
+{
+  "$schema": "https://raw.githubusercontent.com/gabrielmsilva00/docmedown/main/schemas/docs.schema.json",
+  "name": "DataMesh Engine",
+  "tagline": "Distributed telemetry protocol specification",
+  "theme": {
+    "family": "blueprint",
+    "density": "comfortable",
+    "defaultMode": "auto",
+    "favicon": "minimal"
   },
-  "footer": {
-    "copyright": "© 2026 DocMeDown Team. All rights reserved.",
-    "showBuiltWith": true
+  "nav": [
+    { "label": "Specification", "href": "#/README" },
+    { "label": "Schemas", "href": "#/schemas" },
+    { "label": "RFCs", "href": "#/rfcs" }
+  ]
+}
+```
+  </Tab>
+
+  <Tab label="4. Product Manual & Handbook (Editorial)" icon="📖">
+```json title="docs.json"
+{
+  "$schema": "https://raw.githubusercontent.com/gabrielmsilva00/docmedown/main/schemas/docs.schema.json",
+  "name": "Engineering Handbook",
+  "tagline": "Principles, practices, and onboarding curriculum",
+  "theme": {
+    "family": "editorial",
+    "density": "comfortable",
+    "defaultMode": "light",
+    "favicon": "book"
+  },
+  "nav": [
+    { "label": "Welcome", "href": "#/README" },
+    { "label": "Values", "href": "#/values" },
+    { "label": "Engineering", "href": "#/engineering" }
+  ]
+}
+```
+  </Tab>
+
+  <Tab label="5. Live Remote GitHub Source" icon="🌐">
+```json title="docs.json"
+{
+  "$schema": "https://raw.githubusercontent.com/gabrielmsilva00/docmedown/main/schemas/docs.schema.json",
+  "name": "Remote Docs",
+  "source": {
+    "type": "github",
+    "repo": "owner/repository",
+    "branch": "main",
+    "docsDir": "docs"
+  },
+  "theme": {
+    "family": "blueprint",
+    "density": "comfortable"
+  }
+}
+```
+  </Tab>
+</Tabs>
+
+---
+
+## 🎨 Theme Families & Aesthetics
+
+DocMeDown ships **four complete visual systems**. A theme family is not a simple color toggle: it redefines canvas texture, borders, geometry, typography hierarchy, and diagram palettes:
+
+| Family | Vibe & Aesthetics | Geometry | Typography | Best For |
+| :--- | :--- | :--- | :--- | :--- |
+| **`atlas`** *(default)* | Clean mineral canvas, cobalt accents, subtle elevation shadows | Smooth 8px radius | Sans-serif (Inter) | Developer libraries, SaaS products, APIs |
+| **`blueprint`** | Technical drafting canvas, grid lines, vibrant coral signals | Squared corners | Sans-serif (System) | Architecture specs, protocol RFCs, frameworks |
+| **`terminal`** | High-contrast dark-first console, obsidian surfaces, emerald prompt | Sharp 0px corners | Monospace (Mono) | CLI tools, DevOps runbooks, system manuals |
+| **`editorial`** | Warm tactile paper surface, brick accents, generous rhythm | Soft 12px radius | Serif (Georgia/Merriweather) | Handbooks, essays, long-form guides, books |
+
+### Custom Brand Colors
+While each family selects harmonious colors automatically, you can override the action accent color:
+
+```json title="docs.json"
+{
+  "theme": {
+    "family": "atlas",
+    "accentColor": "#6366f1",
+    "accentColorDark": "#818cf8"
   }
 }
 ```
 
+### Built-in Favicon Presets
+Choose from five crisp, self-contained SVG favicons that scale across light and dark browser chrome and embed automatically into offline bundles:
+
+| Favicon | Description | Aesthetic |
+| :--- | :--- | :--- |
+| `"default"` | Modern folded document with signature downward arrow (`↓`) in indigo/violet gradient | DocMeDown official mark |
+| `"markdown"` | Deep squircle badge with crisp white `M` and sky-blue downward arrow | Markdown-centric documentation |
+| `"terminal"` | Obsidian console with window controls and emerald prompt (`>_`) | Developer CLIs & technical tools |
+| `"book"` | Open book in vibrant royal blue | Guides, handbooks, and reference libraries |
+| `"minimal"` | Geometric hexagon and spark in obsidian and cyan | Minimalist or enterprise toolkits |
+
 ---
 
-## 🏠 Documentation home
+## 📖 Comprehensive Parameter Reference
 
-The navbar exposes a **Home** action, and the brand link points to the same
-place, so readers can always return to the documentation home. Pin it to a
-specific document with `home`:
+### Root Properties
+
+| Field | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `name` | `string` | `"DocMeDown"` | Project name displayed in the top navbar and page title. |
+| `tagline` | `string` | `""` | Subtitle displayed in search modals and meta descriptions. |
+| `description` | `string` | `""` | Global fallback description used for SEO and social share cards. |
+| `version` | `string` | `""` | Release version displayed as a badge next to the site logo. |
+| `home` | `string` | `"README.md"` | Target document opened when users click the brand title or Home icon. |
+| `url` | `string` | `""` | Canonical production URL (enables `sitemap.xml` and `robots.txt` generation). |
+
+#### Documentation Home (`"home"`)
+Pin the site landing document explicitly with `"home"`:
 
 ```json title="docs.json"
 {
@@ -94,178 +202,145 @@ specific document with `home`:
 }
 ```
 
-`home` accepts a document path or slug (`"PROJECT.md"`, `"PROJECT"`,
-`"guides/intro"`). Documentation inside documentation may also set `home` to an
-explicit relative link — for example `"../../index.html#/"` — to send readers
-back to the site that contains it.
-
-When `home` is not configured, DocMeDown resolves it automatically from the
-files at the root of the documentation folder, in this order:
-
-1. `README.md`, `PROJECT.md`, `ABOUT.md`, or `INDEX.md` — a case-sensitive pass
-   over all four names first.
-2. The same names again case-insensitively (for example `readme.md` or
-   `Project.MD`).
+When `"home"` is not explicitly configured, DocMeDown resolves it automatically from files at the root of your documentation folder in this order:
+1. `README.md`, `PROJECT.md`, `ABOUT.md`, or `INDEX.md` (case-sensitive).
+2. The same names case-insensitively (`readme.md`, `index.md`).
 3. Otherwise, the alphabetically first Markdown document in the corpus.
 
-Nested documentation roots are covered automatically as well: when a nested
-documentation site is served inside an outer DocMeDown site, the Home action
-links to the **original** (outermost) documentation home instead of the nested
-one, so there is always a way back.
-
 ---
 
-## 📦 Offline documentation
+### `theme` Object
 
-`docmedown build` produces a self-contained `.dist/index.html` that embeds every
-page, the search index, diagrams, custom components, and the runtime. Nested
-documentation roots are embedded too, so subdocumentation opens directly from
-the same single file — no relative links, no external files, no
-`ERR_FILE_NOT_FOUND`.
-
-```json title="docs.json"
-{
-  "offline": {
-    "embedNestedDocs": true
-  }
-}
-```
-
-`offline.embedNestedDocs` defaults to `true`. Set it to `false` to keep the
-offline file smaller: links to other documentation files then render as
-disabled links instead of navigating to files that do not travel with the copy.
-
-Opening any offline copy shows a toast about its limitations; selecting it
-expands a modal with the full list. Offline copies never reach the network for
-documentation content — only explicit internet links (for example GitHub) need
-a connection.
-
----
-
-## 🎨 Theme Families
-
-DocMeDown ships four complete visual **families**. A family is not an accent
-color: it redefines canvas, surface structure, borders, geometry, typography
-rhythm, elevation strategy, and motion feel — consistently across light and
-dark modes.
-
-| Family | Character | Geometry | Display type |
+| Field | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `atlas` *(default)* | Neutral mineral canvas, cobalt actions | Medium radius, quiet shadows | Sans |
-| `blueprint` | Cool technical canvas, coral signals | Squared, visible drafting rules | Sans |
-| `terminal` | Dark-first operational console | Sharp corners, flat surfaces | Mono |
-| `editorial` | Warm paper reading surface, brick accents | Soft radius, generous rhythm | Serif |
+| `family` | `"atlas" \| "blueprint" \| "terminal" \| "editorial"` | `"atlas"` | Visual design system. |
+| `density` | `"comfortable" \| "compact"` | `"comfortable"` | Controls navbar height, sidebar padding, and content spacing. |
+| `defaultMode` | `"auto" \| "light" \| "dark"` | `"auto"` | Initial color mode for new visitors. |
+| `codeTheme` | `"github" \| "one-dark" \| "dracula" \| "synthwave"` | `"github"` | Syntax highlighting color theme. |
+| `favicon` | `string` | `"default"` | Built-in preset name or relative path to a local SVG/PNG file. |
+| `accentColor` | `string (CSS Hex)` | Family default | Light-mode accent color. |
+| `accentColorDark` | `string (CSS Hex)` | `accentColor` | Dark-mode accent color. |
+| `logo.light` | `string` | `""` | Path to light mode logo image. |
+| `logo.dark` | `string` | `""` | Path to dark mode logo image. |
+
+---
+
+### `nav` Array
+
+Define links appearing in the top navigation bar:
 
 ```json title="docs.json"
-{
-  "theme": {
-    "family": "terminal",
-    "density": "compact",
-    "defaultMode": "auto",
-    "codeTheme": "one-dark"
-  }
-}
+"nav": [
+  { "label": "Guides", "href": "#/guides/installation" },
+  { "label": "API", "href": "#/api" },
+  { "label": "GitHub", "href": "https://github.com/my-org/my-project", "external": true }
+]
 ```
 
-### Reading density
+---
 
-`theme.density` accepts `"comfortable"` (default) or `"compact"`. Compact trims
-the navbar height, panel widths, and section rhythm across every family. The
-**Appearance** menu in the navbar exposes family, mode, and density at runtime;
-preferences persist locally and invalid saved values are discarded safely.
+### `sidebar` Array (Explicit Custom Hierarchy)
 
-### Brand accent override
-
-Families choose a harmonious action color for you. To force your brand color:
+Define exact category groupings, icons, and badges:
 
 ```json title="docs.json"
-{
-  "theme": {
-    "family": "atlas",
-    "accentColor": "#0ea5e9",
-    "accentColorDark": "#38bdf8"
+"sidebar": [
+  {
+    "title": "Getting Started",
+    "icon": "🚀",
+    "children": [
+      { "title": "Overview", "path": "README.md", "icon": "⚡" },
+      { "title": "Quickstart", "path": "getting-started.md", "icon": "🚀", "badge": "Essential", "badgeType": "success" }
+    ]
+  },
+  {
+    "title": "Advanced",
+    "icon": "⚙️",
+    "collapsed": true,
+    "children": [
+      { "title": "CLI", "path": "guides/cli-reference.md", "icon": "💻" }
+    ]
   }
-}
+]
 ```
 
-`accentColorDark` applies while dark mode is resolved, falling back to
-`accentColor`.
+---
 
-### Theme field reference
+### `source` Object (Remote Git Repositories)
 
-| Field | Values | Default | Purpose |
+| Field | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `family` | `atlas`, `blueprint`, `terminal`, `editorial` | `atlas` | Selects the complete visual system. |
-| `defaultMode` | `auto`, `light`, `dark` | `auto` | Chooses the initial color mode; users may override it in Appearance. |
-| `density` | `comfortable`, `compact` | `comfortable` | Controls shell widths, control height, and reading rhythm. |
-| `codeTheme` | `github`, `one-dark`, `dracula`, `synthwave` | `github` | Selects syntax-highlight colors for fenced code. |
-| `accentColor` | CSS hex color | Family default | Overrides the action color in light mode and as the dark fallback. |
-| `accentColorDark` | CSS hex color | `accentColor` | Optional higher-contrast action color for dark mode. |
-
-The runtime writes the resolved state to `<html>` as `data-dmd-theme`,
-`data-dmd-mode`, and `data-dmd-density`. Custom components should consume the
-documented `--dmd-*` CSS tokens rather than hard-coding a family palette.
-
-### Legacy presets
-
-The old accent-only `preset` option is deprecated and accepted for one release
-cycle. It maps automatically onto the matching family:
-
-| Legacy preset | Resolved family |
-| :--- | :--- |
-| `indigo`, `emerald`, `violet` | `atlas` |
-| `slate` | `blueprint` |
-| `cyberpunk` | `terminal` |
-| `sunset`, `rose` | `editorial` |
+| `type` | `"github" \| "gitlab"` | `"github"` | Git hosting provider. |
+| `repo` | `string` | *(required)* | Repository in `"owner/repo-name"` format. |
+| `branch` | `string` | `"main"` | Target branch to pull documents from. |
+| `docsDir` | `string` | `""` | Subdirectory containing documentation (e.g. `"docs"`). |
+| `token` | `string` | `""` | Optional access token for private repositories. |
 
 ---
 
-## 🌐 Dynamic Remote Source Configuration
+### `autoIndex` Object
 
-To dynamically document a remote Git repository:
+| Field | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `enabled` | `boolean` | `true` | Automatically discover and index all Markdown files. |
+| `sort` | `"natural" \| "alphabetical" \| "frontmatter"` | `"natural"` | Sorting strategy for sidebar navigation. |
+| `defaultCollapsed`| `boolean` | `false` | Whether nested folder categories start collapsed in the sidebar. |
+| `exclude` | `string[]` | `["node_modules", ".git", ".dmd"]` | Directories ignored during scanning. |
+
+---
+
+### `search` Object
+
+| Field | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `enabled` | `boolean` | `true` | Enables fuzzy search command palette (<Kbd>⌘K</Kbd>). |
+| `placeholder` | `string` | `"Search documentation (⌘K)..."` | Input placeholder text. |
+| `maxResults` | `number` | `10` | Maximum search results displayed. |
+
+---
+
+### `offline` Object
+
+| Field | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `embedNestedDocs` | `boolean` | `true` | Whether to inline sub-documentation sites into the single-file offline bundle. |
+
+---
+
+### `footer` Object
 
 ```json title="docs.json"
 {
-  "name": "Live GitHub Docs",
-  "source": {
-    "type": "github",
-    "repo": "owner/repository-name",
-    "branch": "main",
-    "docsDir": "docs",
-    "token": "ghp_optionalTokenForPrivateRepos"
-  }
-}
-```
-
-For GitLab repositories:
-
-```json title="docs.json"
-{
-  "name": "Live GitLab Docs",
-  "source": {
-    "type": "gitlab",
-    "repo": "owner/repository-name",
-    "branch": "main",
-    "docsDir": "docs"
+  "footer": {
+    "copyright": "© 2026 My Team. Released under the MIT License.",
+    "showBuiltWith": true,
+    "links": [
+      { "label": "Privacy Policy", "href": "https://example.com/privacy", "external": true },
+      { "label": "Terms", "href": "https://example.com/terms", "external": true }
+    ]
   }
 }
 ```
 
 ---
 
-## 📝 Embedding Configuration in HTML
+## 🗺️ Next Steps
 
-If you prefer a single `index.html` file without a separate `docs.json`, you can embed your configuration directly in a `<script>` tag:
+Continue along the linear documentation journey:
 
-```html title="index.html"
-<script id="dmd-config" type="application/json">
-{
-  "name": "Embedded Docs",
-  "theme": {
-    "family": "editorial",
-    "density": "comfortable",
-    "defaultMode": "dark"
-  }
-}
-</script>
-```
+<CardGrid cols={2}>
+  <Card
+    title="CLI Command Reference"
+    description="Learn all command options and flags for init, serve, build, validate, and doctor."
+    href="#/guides/cli-reference"
+    badge="Next Up"
+    badgeType="info"
+  />
+  <Card
+    title="Model Context Protocol (MCP)"
+    description="Connect Cursor, Claude Desktop, and Windsurf to your documentation."
+    href="#/guides/mcp-server"
+    badge="Previous"
+    badgeType="success"
+  />
+</CardGrid>

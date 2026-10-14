@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import matter from "gray-matter";
+import packageJson from "../../../package.json";
 import { buildSidebarTree, formatTitleFromFilename } from "../../runtime/loader/auto-indexer";
 import { inlineHeadingToPlainText } from "../../runtime/markdown/inline-text";
 import type { DocConfig, DocFileItem, DocHeading, DocManifest } from "../../runtime/types";
@@ -100,15 +101,31 @@ export function generateManifest(docDir: string, config: DocConfig): DocManifest
   const tree = buildSidebarTree(files, frontmatters, config.sidebar);
 
   const dmdDir = path.join(docDir, ".dmd");
+  const COMPONENT_EXTS = [".svelte", ".tsx", ".jsx", ".ts", ".js"];
+  const EXCLUDED_DMD_SCRIPTS = [
+    "setup.js",
+    "setup.mjs",
+    "setup.ts",
+    "languages.js",
+    "languages.ts",
+    "components.js",
+    "index.js",
+  ];
   const customComponents = fs.existsSync(dmdDir)
     ? fs
         .readdirSync(dmdDir)
-        .filter((file) => file.endsWith(".svelte"))
-        .map((file) => path.basename(file, ".svelte"))
+        .filter((file) => {
+          if (file.startsWith(".") || EXCLUDED_DMD_SCRIPTS.includes(file) || file.endsWith(".d.ts")) return false;
+          return COMPONENT_EXTS.some((ext) => file.endsWith(ext));
+        })
+        .map((file) => {
+          const ext = path.extname(file);
+          return path.basename(file, ext);
+        })
     : [];
 
   return {
-    version: "0.1.9",
+    version: packageJson.version,
     generatedAt: new Date().toISOString(),
     config,
     docs: docItems,

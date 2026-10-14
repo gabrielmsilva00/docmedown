@@ -49,3 +49,7 @@ coverage/
 .DS_Store
 Thumbs.db
 .vscode/
+
+# Local scratch and preview directories
+scratch/
+.preview/

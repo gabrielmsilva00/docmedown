@@ -82,6 +82,10 @@ test("splash head rendering, critical styling, and branding overrides", () => {
   // Compact reading mode layout
   assert.ok(head.includes("data-dmd-density"));
   assert.ok(head.includes(":root[data-dmd-density=compact]"));
+  // OS-adaptive shortcut styling
+  assert.ok(head.includes("data-dmd-os"));
+  assert.ok(head.includes(':root[data-dmd-os=other] .dmd-splash-search kbd::before{content:"Ctrl K"}'));
+  assert.ok(head.includes(':root:not([data-dmd-os=other]) .dmd-splash-search kbd::before{content:"⌘K"}'));
 
   // Brand accent overrides per mode and safe fallback
   const branded = renderSplashHead({ accent: "#e0405f", accentDark: "#ff7089" });
@@ -147,6 +151,15 @@ test("splash markup generation, structure, and text escaping", () => {
   // Unsafe logo escaping
   const unsafeLogo = renderSplashMarkup({ name: "Docs", logo: 'x" onerror="alert(1)' });
   assert.ok(!unsafeLogo.includes("onerror="));
+
+  // Search placeholder adaptation
+  const withCustomPlaceholder = renderSplashMarkup({
+    name: "Docs",
+    searchPlaceholder: "Search Acme (⌘K)...",
+  });
+  assert.ok(withCustomPlaceholder.includes('<span class="dmd-splash-search-mac">Search Acme (⌘K)...</span>'));
+  assert.ok(withCustomPlaceholder.includes('<span class="dmd-splash-search-win">Search Acme (Ctrl K)...</span>'));
+  assert.ok(withCustomPlaceholder.includes("<kbd></kbd>"));
 });
 
 test("dismissSplash lifecycle, animation hold, and DOM state", () => {

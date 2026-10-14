@@ -1,14 +1,13 @@
 <script lang="ts">
   import { doc } from "../doc-context.svelte";
+  import BreadcrumbItem from "./BreadcrumbItem.svelte";
   import MarkdownBody from "./MarkdownBody.svelte";
 
-  let scrollProgress = $state(0);
+  let progressBarEl = $state<HTMLElement | null>(null);
 
   // Track scroll progress for the reading progress bar.
-  // Performance: the scroll event fires far more often than frames, and
-  // `scrollHeight` is a forced layout read — both are avoided by scheduling
-  // one update per animation frame and measuring the scrollable height only
-  // on resize (batched reads, no per-event layout work).
+  // Performance: directly mutate CSS variable on progressBarEl rather than
+  // triggering Svelte 5 component re-renders on every scroll tick.
   $effect(() => {
     let scrollTicking = false;
     let resizeTicking = false;
@@ -16,11 +15,13 @@
 
     const updateProgress = () => {
       scrollTicking = false;
+      if (!progressBarEl) return;
       if (maxScroll <= 0) {
-        scrollProgress = 0;
+        progressBarEl.style.setProperty("--dmd-scroll-progress", "0");
         return;
       }
-      scrollProgress = Math.min(100, Math.max(0, (window.scrollY / maxScroll) * 100));
+      const progress = Math.min(1, Math.max(0, window.scrollY / maxScroll));
+      progressBarEl.style.setProperty("--dmd-scroll-progress", String(progress));
     };
 
     const measureHeight = () => {
@@ -67,16 +68,38 @@
 </script>
 
 {#if doc.isLoading}
-  <main class="dmd-main-content">
-    <div class="dmd-loading-skeleton">
-      <div class="dmd-skeleton-title"></div>
-      <div class="dmd-skeleton-line"></div>
-      <div class="dmd-skeleton-line"></div>
-      <div class="dmd-skeleton-line short"></div>
+  <main class="dmd-main-content" id="dmd-main-content" tabindex="-1">
+    <div class="dmd-loading-skeleton" aria-label="Loading document" aria-busy="true">
+      <!-- Breadcrumb shimmer -->
+      <div class="dmd-skeleton-shimmer dmd-skeleton-header"></div>
+      <!-- Article title shimmer -->
+      <div class="dmd-skeleton-shimmer dmd-skeleton-title"></div>
+      <!-- Meta badges shimmer -->
+      <div class="dmd-skeleton-meta">
+        <div class="dmd-skeleton-shimmer dmd-skeleton-badge"></div>
+        <div class="dmd-skeleton-shimmer dmd-skeleton-badge"></div>
+      </div>
+      <!-- Lead paragraph shimmer -->
+      <div class="dmd-skeleton-paragraph">
+        <div class="dmd-skeleton-shimmer dmd-skeleton-line"></div>
+        <div class="dmd-skeleton-shimmer dmd-skeleton-line w-90"></div>
+        <div class="dmd-skeleton-shimmer dmd-skeleton-line w-80"></div>
+        <div class="dmd-skeleton-shimmer dmd-skeleton-line w-60"></div>
+      </div>
+      <!-- Callout card shimmer -->
+      <div class="dmd-skeleton-shimmer dmd-skeleton-card"></div>
+      <!-- Code block shimmer -->
+      <div class="dmd-skeleton-shimmer dmd-skeleton-code"></div>
+      <!-- Follow-up paragraph shimmer -->
+      <div class="dmd-skeleton-paragraph">
+        <div class="dmd-skeleton-shimmer dmd-skeleton-line"></div>
+        <div class="dmd-skeleton-shimmer dmd-skeleton-line w-90"></div>
+        <div class="dmd-skeleton-shimmer dmd-skeleton-line w-40"></div>
+      </div>
     </div>
   </main>
 {:else if doc.error || !currentDoc}
-  <main class="dmd-main-content">
+  <main class="dmd-main-content" id="dmd-main-content" tabindex="-1">
     <div class="dmd-error-container">
       <div class="dmd-error-code">!</div>
       <h2 class="dmd-error-title">{doc.error || "This page is unavailable."}</h2>
@@ -93,39 +116,66 @@
   {#if doc.isNavigating}
     <div class="dmd-nav-progress" role="progressbar" aria-label="Loading page"></div>
   {/if}
-  <div class="dmd-progress-bar" style="--dmd-scroll-progress: {scrollProgress / 100}" aria-hidden="true"></div>
+  <div class="dmd-progress-bar" bind:this={progressBarEl} aria-hidden="true"></div>
 
-  <main class="dmd-main-content">
+  <main class="dmd-main-content" id="dmd-main-content" tabindex="-1">
     <!-- Breadcrumbs & Metadata Bar -->
-    <div class="dmd-content-header">
+    <div
+      class="dmd-content-header"
+      class:dmd-header-scrolled={doc.isScrolled}
+    >
       <nav class="dmd-breadcrumbs" aria-label="Breadcrumb">
-        <button
-          type="button"
-          class="dmd-crumb"
-          onclick={() => doc.navigate(doc.home?.kind === "route" && doc.home.slug ? doc.home.slug : "README")}
-        >
-          Docs
-        </button>
+        <BreadcrumbItem label="Docs" index={0} isHome={true} isScrolled={!doc.isScrolled} />
         {#each breadcrumbs as crumb, idx (idx)}
           <span class="dmd-crumb-sep">/</span>
-          <span class="dmd-crumb {idx === breadcrumbs.length - 1 ? "current" : ""}">
-            {crumb.replace(/[-_]/g, " ")}
-          </span>
+          <BreadcrumbItem
+            label={crumb}
+            index={idx + 1}
+            isLast={idx === breadcrumbs.length - 1}
+            isScrolled={!doc.isScrolled}
+          />
         {/each}
       </nav>
 
       <div class="dmd-content-meta">
         {#if currentDoc.readingTimeMinutes}
-          <span class="dmd-meta-item">☕ {currentDoc.readingTimeMinutes} min read</span>
+          <span class="dmd-meta-item">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="10" />
+              <polyline points="12 6 12 12 16 14" />
+            </svg>
+            <span>{currentDoc.readingTimeMinutes} min read</span>
+          </span>
         {/if}
         {#if currentDoc.frontmatter?.category}
-          <span class="dmd-meta-item">{currentDoc.frontmatter.category}</span>
+          <span class="dmd-meta-item dmd-meta-category">{currentDoc.frontmatter.category}</span>
         {/if}
         {#if currentDoc.frontmatter?.tags && currentDoc.frontmatter.tags.length > 0}
           {#each currentDoc.frontmatter.tags as tag (tag)}
-            <span class="dmd-meta-tag">#{tag}</span>
+            <button
+              type="button"
+              class="dmd-meta-tag dmd-clickable-tag"
+              title="View documents tagged with #{tag}"
+              aria-label="View documents tagged with #{tag}"
+              onclick={() => doc.openTagModal(tag)}
+            >
+              #{tag}
+            </button>
           {/each}
         {/if}
+        <button
+          type="button"
+          class="dmd-meta-edit-btn"
+          title="Edit this document (Ctrl+E / ⌘E)"
+          aria-label="Edit document in 2-way editor"
+          onclick={() => (doc.isEditorOpen = true)}
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12 20h9" />
+            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+          </svg>
+          <span>Edit</span>
+        </button>
       </div>
     </div>
 

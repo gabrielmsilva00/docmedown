@@ -355,15 +355,22 @@
    ========================================================================== */
 
 @media (prefers-reduced-motion: reduce) {
-  :root {
-    --dmd-transition: 0s;
+  :root:not([data-dmd-motion="full"]):not([data-dmd-motion="on"]) {
+    --dmd-transition: 0.1s ease;
     scroll-behavior: auto;
   }
 
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    transition-duration: 0.01ms !important;
+  /* Soften looping decorative animations only, preserving UI interactive feedback */
+  :root:not([data-dmd-motion="full"]):not([data-dmd-motion="on"]) .dmd-nav-progress::after {
+    animation-duration: 3s;
   }
+}
+:root[data-dmd-motion="reduced"],
+:root[data-dmd-motion="off"] {
+  --dmd-transition: 0.1s ease;
+  scroll-behavior: auto;
+}
+:root[data-dmd-motion="reduced"] .dmd-nav-progress::after,
+:root[data-dmd-motion="off"] .dmd-nav-progress::after {
+  animation-duration: 3s;
 }

@@ -2,7 +2,7 @@
 ### *The simplest MarkDown documenter yet.*
 
 [![npm version](https://img.shields.io/npm/v/docmedown.svg?style=flat-square&color=6366f1)](https://www.npmjs.com/package/docmedown)
-[![License: MIT](https://img.shields.io/badge/License-MIT-emerald.svg?style=flat-square)](https://opensource.org/licenses/MIT)
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg?style=flat-square)](https://opensource.org/licenses/Apache-2.0)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Ready-blue.svg?style=flat-square)](https://www.typescriptlang.org/)
 [![CI](https://github.com/gabrielmsilva00/docmedown/actions/workflows/ci.yml/badge.svg)](https://github.com/gabrielmsilva00/docmedown/actions/workflows/ci.yml)
 
@@ -19,16 +19,20 @@ Drop a single `index.html` file into any directory of `.md` files, and you have 
 - 🚀 **Zero-Config Auto-Discovery**: Automatically parses and indexes all `.md` files & subfolders into categories, builds navigation sidebars, and powers instant search out of the box.
 - 🌐 **Dual Usage: CLI Tool & Web Script**:
   - Run via single-line CLI: `npx docmedown ./docs`
-  - Or drop `<script src="docmedown.js"></script>` into an `index.html` on any static host.
+  - Or drop `<script src="https://cdn.jsdelivr.net/npm/docmedown@latest/dist/docmedown.iife.js"></script>` into an `index.html` on any static host.
+- ✍️ **2-Way In-Browser Editor & Live HMR**: Press `Ctrl+E` / `⌘E` to edit documents in a split-view editor modal with live keystroke rendering, instant disk save, zero-page-reload WebSocket HMR, and staged preview support (`--preview`).
 - ⚡ **Dynamic Remote GitHub / GitLab Mode**: Document any GitHub or GitLab repository *live* without hosting markdown files statically! Changes pushed to your repo dynamically update the documentation website immediately.
 - 📦 **Compressed Offline Copies**: Generate or download a minified, self-extracting `index.html` containing the complete documentation corpus, custom components, Mermaid renderer, styles, and runtime. Double-click it under `file:///` without a web server.
-- 🎨 **Four Complete Theme Families**: Atlas, Blueprint, Terminal, and Editorial each redefine surfaces, geometry, typography, spacing, and diagram palettes—not merely the accent color. Every family supports light, dark, automatic mode, and comfortable or compact density.
+- 🎨 **Four Complete Theme Families & Favicon Presets**: Atlas, Blueprint, Terminal, and Editorial each redefine surfaces, geometry, typography, spacing, and diagram palettes. Choose from 5 crisp SVG favicon presets with automatic offline inlining.
+- 📊 **Interactive Data Tables & Delimited Text Toolbar**: Fenced `csv`, `tsv`, and standard GFM tables automatically render as interactive data tables with column/row descriptors and one-click copy export (Markdown, HTML, CSV).
 - 🌐 **Static + SEO Output**: every build prerenders complete static pages per document with canonical URLs, Open Graph, Twitter cards, JSON-LD structured data, `sitemap.xml`, and `robots.txt` — crawlers see everything, no JS required.
 - 🤖 **AI-Native Distribution**: auto-generated `llms.txt` / `llms-full.txt` / `SKILL.md` / `okf.json`, plus a built-in MCP server (`docmedown mcp`) so Claude, Cursor, and Windsurf can read and search your docs directly.
 - 🔍 **Instant Fuzzy Search**: Keyboard-driven command palette (`⌘K` / `Ctrl+K`) with real-time in-browser indexing.
-- 🧩 **Custom Element Components (.dmd)**: Framework-free custom elements inside `.dmd/` plus built-in components (`<Tabs>`, `<CardGrid>`, `<Badge>`, `<Steps>`).
+- 🧩 **Multi-Framework Custom Components (.dmd)**: Author custom components in **native Svelte 5**, **React TSX**, or **Web Elements (Lit)** inside `.dmd/`, plus built-in components (`<Tabs>`, `<CardGrid>`, `<Media>`, `<Badge>`, `<Steps>`).
+- 🩺 **Built-in CLI Doctor & Link Validator**: Run `docmedown doctor` and `docmedown validate` for automated environment diagnostics, missing asset detection, ahead-of-time component verification, and deep link/anchor integrity.
 - 📊 **Mermaid Diagrams & KaTeX Math**: Theme-aware diagrams with automatic Fit, zoom, 1:1 view, SVG export, expanded review, and offline parity, plus native LaTeX equations.
 - 💡 **GitHub-Style Callouts**: Full support for `[!NOTE]`, `[!TIP]`, `[!IMPORTANT]`, `[!WARNING]`, and `[!CAUTION]`.
+
 
 ---
 
@@ -174,31 +178,44 @@ The generated entrypoint uses same-directory relative URLs (`./_docs.js` and `./
 
 ## 🧩 Custom Components (.dmd)
 
-Define global components as **custom elements** in a browser-loadable `.dmd/components.js` module — no framework dependency, so they also work outside DocMeDown:
+DocMeDown provides a **Universal Component Compatibility Layer**. You can author custom widgets in **native Svelte 5**, **React with TypeScript (TSX)**, or standard **Web Elements (Lit)** with zero build setup:
 
-```js title=".dmd/components.js"
-export class CounterButton extends HTMLElement {
-  connectedCallback() {
-    let count = 0;
-    const button = document.createElement("button");
-    button.textContent = "Clicked 0 times";
-    button.addEventListener("click", () => {
-      count += 1;
-      button.textContent = `Clicked ${count} times`;
-    });
-    this.innerHTML = "";
-    this.appendChild(button);
-  }
-}
+### 1. Svelte 5 Component (`.dmd/CounterWidget.svelte`)
 
-export default {
-  CounterButton,
-};
+```svelte title=".dmd/CounterWidget.svelte"
+<script>
+  let { title = "Interactive Counter" } = $props();
+  let count = $state(0);
+</script>
+
+<div class="counter-widget">
+  <strong>{title}: {count}</strong>
+  <button onclick={() => count++}>+1</button>
+</div>
 ```
 
-You can now use `<CounterButton />` anywhere inside your Markdown documents! The runtime registers every export as `dmd-<name>` custom element and upgrades the PascalCase tags in your Markdown automatically.
+### 2. React TSX Component (`.dmd/ReactMetricCard.tsx`)
 
-The standard build embeds `.dmd/components.js` in `docs/.dist/index.html`, so the same custom components work in the distributable offline bundle.
+```tsx title=".dmd/ReactMetricCard.tsx"
+import React, { useState } from "react";
+
+export default function ReactMetricCard({ label = "Query Rate", initial = 100 }) {
+  const [val, setVal] = useState(initial);
+  return (
+    <div className="metric-panel">
+      <strong>{label}: {val} req/s</strong>
+      <button onClick={() => setVal(val + 10)}>Boost</button>
+    </div>
+  );
+}
+```
+
+Use `<CounterWidget />` or `<ReactMetricCard />` directly inside any Markdown document!
+
+- **Build-Time AOT Compilation**: Standard React TSX components are compiled Ahead-of-Time into native Svelte 5 custom elements during `docmedown build`, eliminating React runtime overhead.
+- **Runtime Bridge Fallback**: Complex React components mount cleanly via `ReactBridge` (`createRoot`), preserving hook fidelity.
+- **Offline Parity**: All `.dmd/` components are pre-compiled and embedded in `./docs/.dist/index.html` for 100% self-contained offline functionality.
+- **Legacy Compatibility**: Standard `.dmd/components.js` custom element modules remain fully supported.
 
 ### Ready-to-Use Built-in Markdown Components
 
@@ -288,23 +305,20 @@ Use the **Appearance** menu to switch family, color mode, and reading density at
 ---
 
 ## 🛠️ CLI Command Reference
-
+ 
 | Command | Description |
 | :--- | :--- |
 | `docmedown [dir]` | Auto-initializes if empty, or starts local preview server |
 | `docmedown init [dir]` | Scaffolds starter docs, `index.html`, `docs.json`, and `.dmd` folder |
-| `docmedown serve [dir]` (or `dev`) | Starts local live-reloading dev server on `http://localhost:3000` |
+| `docmedown serve [dir]` (or `dev`) | Starts local live-reloading dev server with WebSocket HMR and in-browser editor (`Ctrl+E`) |
+| `docmedown serve [dir] --preview` | Starts dev server in staged `.preview/` overlay mode |
 | `docmedown build [dir]` | Builds serveable files, prerendered static pages with SEO metadata, AI context files (`llms.txt`, `llms-full.txt`, `SKILL.md`, `okf.json`), and `./<dir>/.dist/index.html` for offline use |
 | `docmedown build [dir] --no-single-file` | Builds serveable files only |
 | `docmedown build [dir] --no-static` | Skips static page prerendering and SEO/AI context files |
-| `docmedown mcp [dir]` | Serves the built documentation as an MCP (Model Context Protocol) stdio server for AI assistants |
+| `docmedown mcp [dir]` | Serves documentation as an MCP (Model Context Protocol) server over stdio or SSE |
+| `docmedown validate [dir]` | Validates Markdown links, anchors, frontmatter, and `docs.json` schema |
+| `docmedown doctor [dir]` | Diagnoses Node environment, missing assets, and `.dmd` component compilation |
 | `docmedown config [path]` | Launches interactive TUI configuration wizard |
-
----
-
-## 📄 License
-
-MIT © DocMeDown Contributors
 
 ---
 
@@ -318,16 +332,44 @@ npm run deploy
 
 It validates the release, pushes `main` and `v<version>` to GitHub, publishes to npm, and verifies the npm registry. Run `npm run deploy:dry-run` to validate without changing GitHub or npm.
 
-## 🧹 Quality checks
+## 🧹 Quality checks & local MCP testing
 
 DocMeDown uses [Biome](https://biomejs.dev/) for formatting, import organization, and linting, and Zod for runtime configuration validation.
 
 ```bash
-npm run lint       # check formatting, imports, and lint rules
-npm run lint:fix   # apply Biome fixes
-npm run format     # format maintained source files
-npm run typecheck
-npm test
+npm run lint          # check formatting, imports, and lint rules
+npm run lint:fix      # apply Biome fixes
+npm run format        # format maintained source files
+npm run typecheck     # static type analysis
+npm test              # full unit test suite
+npm run test:mcp      # dedicated MCP protocol test suite
+npm run dev:mcp       # launch local MCP server over stdio
+npm run test:mcp:client # test MCP queries interactively from CLI
 ```
 
 `npm run test:release` runs all of these checks plus production, documentation, and package smoke builds.
+
+---
+
+## 📄 License
+
+DocMeDown is open-source software licensed under the [Apache License, Version 2.0](LICENSE).
+
+Copyright © 2026 Gabriel M. P. da Silva and DocMeDown Contributors.
+
+### Rationale for Apache License 2.0
+
+DocMeDown is licensed under the **Apache License, Version 2.0**. While both MIT and Apache 2.0 are permissive open-source licenses granting full freedom to use, modify, distribute, and commercialize the software, Apache 2.0 provides key legal and practical advantages:
+
+1. **Explicit Patent License Grant (Section 3)**:
+   MIT provides a general copyright license but does not explicitly address software patents. Apache 2.0 includes an express, royalty-free, perpetual patent license granted by all contributors to any user, eliminating legal ambiguity and providing total confidence when adopting DocMeDown in enterprise environments.
+
+2. **Defensive Patent Retaliation**:
+   Apache 2.0 contains a mutual termination clause: if an entity files a patent infringement lawsuit against the project or its users claiming the work infringes their patents, any patent licenses granted to that entity under Apache 2.0 are automatically terminated. This prevents predatory patent litigation and protects the community.
+
+3. **Trademark Protection (Section 6)**:
+   Apache 2.0 explicitly clarifies that the license does not grant trademark rights to use the project’s name, logo, or branding without permission, preventing malicious or misleading impersonation of DocMeDown while keeping the code 100% open.
+
+4. **Contributor Clarity & Enterprise Adoption**:
+   Apache 2.0 standardizes intellectual property and contribution guidelines (Sections 4 & 5). It is the recognized standard across modern developer infrastructure (such as Kubernetes, Apache Software Foundation projects, LLVM runtimes, Android, and TypeScript components), ensuring frictionless compliance for corporate legal teams and independent developers alike.
+

@@ -102,6 +102,26 @@
           {/each}
         </div>
       </fieldset>
+
+      <fieldset class="dmd-appearance-section">
+        <legend class="dmd-appearance-label">Animations</legend>
+        <div class="dmd-segmented-control">
+          <button
+            type="button"
+            class={theme.motion === "full" ? "active" : ""}
+            onclick={() => theme.setMotion("full")}
+          >
+            Smooth
+          </button>
+          <button
+            type="button"
+            class={theme.motion === "reduced" ? "active" : ""}
+            onclick={() => theme.setMotion("reduced")}
+          >
+            Reduced
+          </button>
+        </div>
+      </fieldset>
     </div>
   {/if}
 </div>

@@ -34,6 +34,7 @@ test("serveable docs entrypoint uses same-directory relative generated assets", 
       `Script reference must be same-directory relative: ${url}`,
     );
   }
-  assert.ok(indexHtml.includes('<link rel="icon" href="data:," />'));
+  assert.match(indexHtml, /<link rel="icon" type="image\/svg\+xml" href="data:image\/svg\+xml;base64,[^"]+" \/>/);
+  assert.doesNotMatch(indexHtml, /<link rel="icon" href="data:,"/);
   assert.ok(fs.existsSync(path.join(packageRoot, "docs/.nojekyll")));
 });

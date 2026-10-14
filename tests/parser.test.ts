@@ -20,8 +20,16 @@ import {
   readDiagramSize,
 } from "../src/runtime/markdown/mermaid";
 import { extractFrontmatter, parseMarkdown, slugifyHeading } from "../src/runtime/markdown/parser";
+import {
+  detectDelimiter,
+  formatTable,
+  parseDelimited,
+  tableToCsv,
+  tableToHtml,
+  tableToMarkdown,
+} from "../src/runtime/markdown/tables";
 import { HashRouter } from "../src/runtime/router";
-import { buildWrapClones, carouselWindow } from "../src/ui/builtins/carousel";
+import { carouselWindow } from "../src/ui/builtins/carousel";
 
 test("Frontmatter extraction", () => {
   const md = `---
@@ -56,6 +64,14 @@ test("GitHub Alerts / Callouts processing", () => {
   assert.ok(processed.includes("dmd-callout-note"));
   assert.ok(processed.includes("dmd-callout-warning"));
   assert.ok(processed.includes("Danger Zone"));
+});
+
+test("GitHub Alerts are not transformed inside fenced code blocks", () => {
+  const raw = ["```markdown", "> [!NOTE]", "> Example", "```", "", "> [!TIP]", "> Real"].join("\n");
+  const processed = processAlerts(raw);
+  assert.ok(processed.includes("```markdown\n> [!NOTE]\n> Example\n```"));
+  assert.ok(!processed.includes("dmd-callout-note"));
+  assert.ok(processed.includes("dmd-callout-tip"));
 });
 
 test("LaTeX Math rendering", () => {
@@ -115,6 +131,27 @@ test("highlighter aliases languages and never fakes highlighting", () => {
   const unknown = renderCodeBlock("plain text here", "notalanguage");
   assert.ok(unknown.includes("plain text here"));
   assert.doesNotMatch(unknown, /token keyword/);
+});
+
+test("highlighter tokenizes Svelte component fences", () => {
+  const svelte = renderCodeBlock(
+    [
+      '<svelte:options customElement={{ tag: "dmd-counter-widget" }} />',
+      "",
+      "<script>",
+      '  let { title = "Counter" } = $props();',
+      "  let count = $state(0);",
+      "</script>",
+      "",
+      "<button onclick={() => count++}>{title}: {count}</button>",
+    ].join("\n"),
+    "svelte",
+  );
+
+  assert.ok(svelte.includes('data-lang="svelte"'));
+  assert.match(svelte, /token keyword[^>]*>let<\/span>/);
+  assert.match(svelte, /token tag/);
+  assert.match(svelte, /token function[^>]*>\$state<\/span>/);
 });
 
 test("code blocks wrap lines, reopen tokens, visualize whitespace, and render active lines", () => {
@@ -293,6 +330,12 @@ test("diagram camera reads SVG bounds and fits without clipping", () => {
   assert.equal(calculateDiagramFit(diagram!, { width: 720, height: 600 }), 0.5);
   assert.equal(calculateDiagramFit({ width: 400, height: 300 }, { width: 800, height: 600 }), 1);
   assert.equal(readDiagramSize("<svg></svg>"), null);
+
+  const sequenceDiagram = readDiagramSize(
+    '<svg id="test-svg" width="100%" style="max-width: 1267px;" viewBox="-24 -16 1267 464"></svg>',
+  );
+  assert.deepEqual(sequenceDiagram, { width: 1267, height: 464 });
+  assert.equal(calculateDiagramFit(sequenceDiagram!, { width: 700, height: 500 }), 700 / 1267);
 });
 
 test("diagram camera returns bounded pan remainder for document scroll handoff", () => {
@@ -385,50 +428,29 @@ test("heading plain text keeps snake_case and decodes badge-link labels", () => 
   assert.match(parsed.headings[0].html!, /<img src="https:\/\/ci\.example\/badge\.svg"/);
 });
 
-test("carouselWindow loops one position per card with a wrapping window", () => {
-  // 5 cards, 2 per view: 5 positions, every window stays full
+test("carouselWindow is linear: it clamps at both ends and never wraps", () => {
+  // 5 cards, 2 per view: 4 positions, the last window ends on the final card
   assert.deepEqual(carouselWindow(5, 2, 0).indices, [0, 1]);
   assert.deepEqual(carouselWindow(5, 2, 3).indices, [3, 4]);
-  assert.equal(carouselWindow(5, 2, 0).positions, 5);
-  // The last position wraps the window around to the first card (five-one)
-  assert.deepEqual(carouselWindow(5, 2, 4).indices, [4, 0]);
-  // Wraps backwards from the first position to the last one
-  assert.deepEqual(carouselWindow(5, 2, -1).indices, [4, 0]);
-  // Three per view: the last position shows the last card plus the first two
+  assert.equal(carouselWindow(5, 2, 0).positions, 4);
+  // Out-of-range starts clamp instead of looping
+  assert.deepEqual(carouselWindow(5, 2, 4).indices, [3, 4]);
+  assert.deepEqual(carouselWindow(5, 2, -1).indices, [0, 1]);
+  assert.deepEqual(carouselWindow(5, 2, 8).indices, [3, 4]);
+  // Three per view
   assert.deepEqual(carouselWindow(5, 3, 1).indices, [1, 2, 3]);
-  assert.deepEqual(carouselWindow(5, 3, 4).indices, [4, 0, 1]);
-  assert.equal(carouselWindow(5, 3, 4).positions, 5);
-  // Single column: one card per view, one position per card
+  assert.equal(carouselWindow(5, 3, 4).positions, 3);
+  // Single column: one position per card
   assert.deepEqual(carouselWindow(3, 1, 2).indices, [2]);
   assert.equal(carouselWindow(3, 1, 2).positions, 3);
-  // Every card visible at once: a single, non-looping position
+  // Every card visible at once: a single position
   assert.deepEqual(carouselWindow(2, 3, 0).indices, [0, 1]);
   assert.equal(carouselWindow(2, 3, 0).positions, 1);
-  assert.deepEqual(carouselWindow(3, 3, 2).indices, [0, 1, 2]);
   assert.equal(carouselWindow(3, 3, 2).positions, 1);
   // Degenerate inputs stay safe
   assert.deepEqual(carouselWindow(0, 2, 0).indices, []);
   assert.equal(carouselWindow(0, 2, 0).positions, 1);
-  // Negative and fractional starts normalize into range
-  assert.deepEqual(carouselWindow(5, 2, -5.7).indices, [4, 0]);
-  assert.deepEqual(carouselWindow(5, 2, 8).indices, [3, 4]);
-});
-
-test("buildWrapClones duplicates exactly the cards a wrapped window needs", () => {
-  // 5 cards, 2 per view: only the first card trails the real slides
-  assert.deepEqual(buildWrapClones(5, 2), [0]);
-  // 3 per view: the last position needs the first two cards
-  assert.deepEqual(buildWrapClones(5, 3), [0, 1]);
-  assert.deepEqual(buildWrapClones(5, 4), [0, 1, 2]);
-  // A one-card window never wraps around, so nothing is cloned
-  assert.deepEqual(buildWrapClones(5, 1), []);
-  // Everything on screen at once → no loop, no duplicates
-  assert.deepEqual(buildWrapClones(3, 3), []);
-  assert.deepEqual(buildWrapClones(3, 4), []);
-  assert.deepEqual(buildWrapClones(0, 2), []);
-  // Never more than a window's worth — the copies are not a second grid
-  assert.deepEqual(buildWrapClones(4, 2), [0]);
-  assert.deepEqual(buildWrapClones(6, 4), [0, 1, 2]);
+  assert.deepEqual(carouselWindow(5, 2, Number.NaN).indices, [0, 1]);
 });
 
 test("card grid carousel renders real slide wrappers (broken-carousel guard)", () => {
@@ -443,24 +465,21 @@ test("card grid carousel renders real slide wrappers (broken-carousel guard)", (
   assert.match(cardGridSrc, /setAttribute\("slot", `dmd-carousel-\$\{i\}`\)/);
   // Offsets are measured from the slides, not the boxless card hosts.
   assert.match(cardGridSrc, /querySelectorAll<HTMLElement>\("\.dmd-carousel-slide"\)/);
-  // Prev/next scroll the viewport to the cached offset (scrollIntoView on a
-  // display:contents host has no box to align).
-  assert.match(cardGridSrc, /viewport\.scrollTo\(\{ left: offset, behavior \}\)/);
+  // Prev/next animate cached slide offsets, not boxless display:contents hosts.
+  // A single cancelable scroll owner must avoid fighting native smooth scrolling.
+  assert.match(cardGridSrc, /smoothScroll\(viewport, offset, \{ duration: 320 \}\)/);
+  assert.match(cardGridSrc, /navigation\?\.stop\(\)/);
   // Named-slot re-fires after render are ignored so cardCount never resets.
   assert.match(cardGridSrc, /if \(slot\.name\) return;/);
   // The viewport must be bound in Svelte.
   assert.match(cardGridSrc, /bind:this=\{viewport\}/);
-  // The loop closes with duplicated slides: the wrapped window (five-one) needs
-  // the first cards again after the real ones, so they are cloned onto clone
-  // slides and kept out of the tab order / accessibility tree.
-  assert.match(cardGridSrc, /buildWrapClones\(cardCount, perView\)/);
-  assert.match(cardGridSrc, /slot\.name = `dmd-carousel-clone-\$\{k\}`/);
-  assert.match(cardGridSrc, /setAttribute\("slot", `dmd-carousel-clone-\$\{slotIndex\}`\)/);
-  assert.match(cardGridSrc, /clone\.setAttribute\("inert", ""\)/);
-  assert.match(cardGridSrc, /clone\.setAttribute\("aria-hidden", "true"\)/);
-  // The duplicates are never counted as slides or scrolled to.
+  // The carousel is linear: no cloned wrap-around slides, and the prev/next
+  // buttons disable at the ends instead of rewinding across every card.
+  assert.doesNotMatch(cardGridSrc, /buildWrapClones|dmd-carousel-clone/);
+  assert.match(cardGridSrc, /disabled=\{active <= 0\}/);
+  assert.match(cardGridSrc, /disabled=\{active >= positions - 1\}/);
+  // Offsets are measured from the real slides only.
   assert.match(cardGridSrc, /slice\(0, cardCount\)\.map\(\(slide\) => slide\.offsetLeft\)/);
-  assert.match(cardGridSrc, /clearClones\(\);/);
 });
 
 test("block-level custom components are not wrapped in <p> tags", () => {
@@ -653,4 +672,145 @@ test("custom language registration with custom color and code block rendering", 
   assert.ok(parsed.html.includes('class="token string"'));
   assert.ok(parsed.html.includes("color:#06b6d4"));
   assert.ok(parsed.html.includes("scene.testdsl"));
+});
+
+test("showcase mylang grammar tokenizes every advertised token type", () => {
+  registerLanguage(
+    "mylang",
+    {
+      comment: /#.*/,
+      string: /"(?:[^"\\]|\\.)*"/,
+      keyword: /\b(?:pipeline|draw|plot|render|at|transform|scale|rotate)\b/,
+      boolean: /\b(?:true|false)\b/,
+      number: /-?\b\d+(?:\.\d+)?\b/,
+      operator: /[+\-*/=<>!:]+/,
+      punctuation: /[{}[\];(),.]/,
+    },
+    "#06b6d4",
+  );
+
+  const rendered = renderCodeBlock(
+    '# Custom graphics pipeline\npipeline "RaymarchRenderer" {\n  draw "Sphere" at (0.0, 1.5, -3.0)\n}',
+    'mylang title="pipeline.mylang" {2,3}',
+  );
+
+  assert.match(rendered, /token comment/);
+  assert.match(rendered, /token keyword/);
+  assert.match(rendered, /token string/);
+  assert.match(rendered, /token number/);
+  assert.match(rendered, /token punctuation/);
+  assert.ok(rendered.includes("color:#06b6d4"));
+});
+
+test("delimited text parsing and delimiter detection", () => {
+  assert.equal(detectDelimiter("name,score,grade\nAlice,95,A"), ",");
+  assert.equal(detectDelimiter("name;score;grade\nAlice;95;A"), ";");
+  assert.equal(detectDelimiter("name\tscore\tgrade\nAlice\t95\tA"), "\t");
+
+  const csv = 'Name,"Full Description",Value\nAlice,"Engineer, Lead",100\nBob,"Says ""hello""",200';
+  const rows = parseDelimited(csv, ",");
+  assert.equal(rows.length, 3);
+  assert.deepEqual(rows[0], ["Name", "Full Description", "Value"]);
+  assert.deepEqual(rows[1], ["Alice", "Engineer, Lead", "100"]);
+  assert.deepEqual(rows[2], ["Bob", 'Says "hello"', "200"]);
+});
+
+test("table export formats: Markdown, HTML, and CSV", () => {
+  const data = {
+    headers: ["Metric", "Value", "Status"],
+    rows: [
+      ["Coverage", "95.5%", "Good"],
+      ["Latency", "42ms", "Fast"],
+    ],
+    aligns: ["left", "right", "center"] as const,
+  };
+
+  const md = tableToMarkdown(data);
+  assert.ok(md.includes("| Metric | Value | Status |"));
+  assert.ok(md.includes("| :--- | ---: | :---: |"));
+  assert.ok(md.includes("| Coverage | 95.5% | Good |"));
+
+  const html = tableToHtml(data);
+  assert.ok(html.includes("<thead>"));
+  assert.ok(html.includes('<th style="text-align: right">Value</th>'));
+  assert.ok(html.includes('<td style="text-align: center">Good</td>'));
+
+  const csv = tableToCsv(data);
+  assert.equal(csv, "Metric,Value,Status\nCoverage,95.5%,Good\nLatency,42ms,Fast");
+
+  assert.equal(formatTable(data, "csv"), csv);
+  assert.equal(formatTable(data, "html"), html);
+  assert.equal(formatTable(data, "markdown"), md);
+});
+
+test("markdown GFM tables render table block with copy toolbar", () => {
+  const md = `| Endpoint | Method | Latency |
+| :--- | :---: | ---: |
+| /api/docs | GET | 12ms |
+| /api/search | POST | 45ms |`;
+
+  const parsed = parseMarkdown(md, "test");
+  assert.ok(parsed.html.includes('class="dmd-table-block"'));
+  assert.ok(parsed.html.includes('class="dmd-table-toolbar"'));
+  assert.ok(parsed.html.includes("data-dmd-table-toggle"));
+  assert.ok(parsed.html.includes('data-dmd-table-copy="markdown"'));
+  assert.ok(parsed.html.includes('data-dmd-table-copy="html"'));
+  assert.ok(parsed.html.includes('data-dmd-table-copy="csv"'));
+  assert.ok(parsed.html.includes('data-align="left"'));
+  assert.ok(parsed.html.includes('data-align="center"'));
+  assert.ok(parsed.html.includes('data-align="right"'));
+});
+
+test("fenced csv and tsv code blocks render as interactive tables", () => {
+  const csvMd = `\`\`\`csv title="Response Times"
+Endpoint,Requests,Latency
+/api/v1,1200,45ms
+/api/v2,3500,18ms
+\`\`\``;
+
+  const parsedCsv = parseMarkdown(csvMd, "test");
+  assert.ok(parsedCsv.html.includes('class="dmd-table-block"'));
+  assert.ok(parsedCsv.html.includes("Response Times"));
+  assert.ok(parsedCsv.html.includes("<th>Endpoint</th>"));
+  // Numeric column auto-aligns right
+  assert.ok(parsedCsv.html.includes('<td data-align="right">1200</td>'));
+  assert.ok(parsedCsv.html.includes("<td>/api/v1</td>"));
+
+  const tsvMd = `\`\`\`tsv title="Tabular Data"
+ID\tName\tScore
+1\tAlpha\t99
+\`\`\``;
+
+  const parsedTsv = parseMarkdown(tsvMd, "test");
+  assert.ok(parsedTsv.html.includes("Tabular Data"));
+  assert.ok(parsedTsv.html.includes("<td>Alpha</td>"));
+  assert.ok(parsedTsv.html.includes('<td data-align="right">99</td>'));
+});
+
+test("fenced csv options: delimiter, header=false, and markdown=true", () => {
+  const customCsv = `\`\`\`csv delimiter=";" header=false markdown=true
+**Bold Text**;*Italic*;https://example.com;100
+\`\`\``;
+
+  const parsed = parseMarkdown(customCsv, "test");
+  assert.ok(parsed.html.includes('class="dmd-table-block"'));
+  // No thead when header=false
+  assert.ok(!parsed.html.includes("<thead>"));
+  // Markdown parsed inside cells when markdown=true
+  assert.ok(parsed.html.includes("<strong>Bold Text</strong>"));
+  assert.ok(parsed.html.includes("<em>Italic</em>"));
+  assert.ok(parsed.html.includes('<td data-align="right">100</td>'));
+});
+
+test("inline Kbd and Badge inside Callout do not fragment paragraphs", () => {
+  const md = `<Callout type="tip">
+Press <Kbd>Ctrl+P</Kbd> or click <Badge type="info">Search</Badge> to find pages quickly.
+</Callout>`;
+
+  const parsed = parseMarkdown(md, "test");
+  assert.ok(
+    parsed.html.includes(
+      "<p>Press <Kbd>Ctrl+P</Kbd> or click <Badge type=" + '"info">Search</Badge> to find pages quickly.</p>',
+    ),
+  );
 });

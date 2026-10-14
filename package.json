@@ -1,13 +1,46 @@
 {
   "name": "docmedown",
-  "version": "0.3.1",
+  "version": "0.9.0",
   "description": "The simplest MarkDown documenter yet. CLI, web script, and static-site compiler with AI-native distribution.",
+  "author": "Gabriel M. P. da Silva",
+  "license": "Apache-2.0",
+  "homepage": "https://github.com/gabrielmsilva00/docmedown#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gabrielmsilva00/docmedown.git"
+  },
+  "bugs": {
+    "url": "https://github.com/gabrielmsilva00/docmedown/issues"
+  },
+  "keywords": [
+    "markdown",
+    "documentation",
+    "docs",
+    "docusaurus",
+    "docsify",
+    "svelte",
+    "spa",
+    "cli",
+    "offline-docs",
+    "github-docs",
+    "mcp",
+    "model-context-protocol"
+  ],
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "packageManager": "npm@11.16.0",
   "main": "./dist/docmedown.cjs",
   "module": "./dist/docmedown.mjs",
   "types": "./dist/types/ui/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/types/ui/index.d.ts",
+      "import": "./dist/docmedown.mjs",
+      "require": "./dist/docmedown.cjs"
+    },
+    "./motion": {
+      "types": "./dist/types/runtime/motion.d.ts",
       "import": "./dist/docmedown.mjs",
       "require": "./dist/docmedown.cjs"
     },
@@ -28,61 +61,34 @@
     "LICENSE"
   ],
   "scripts": {
+    "build": "node ./scripts/build.mjs",
+    "build:fast": "node ./scripts/build.mjs --fast",
+    "build:docs": "node ./bin/docmedown.js build ./docs",
+    "build:docs:watch": "node ./bin/docmedown.js build ./docs --watch",
+    "dev": "node ./bin/docmedown.js serve ./docs",
     "dev:runtime": "vite build --watch",
-    "build:runtime": "vite build",
-    "build:web": "vite build --config vite.config.web.mts",
-    "build:engines": "node ./scripts/build-engines.mjs",
-    "build:cli": "tsup",
+    "dev:mcp": "node ./bin/docmedown.js mcp ./docs",
+    "serve": "node ./bin/docmedown.js serve ./docs",
+    "check": "npm run typecheck && npm run lint",
     "typecheck": "tsc --noEmit",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
     "format": "biome format --write .",
-    "build:types": "tsc -p tsconfig.runtime.json",
-    "build": "npm run build:runtime && npm run build:web && npm run build:engines && npm run build:cli && npm run build:types",
-    "docmedown": "node ./bin/docmedown.js",
-    "dmd": "node ./bin/docmedown.js",
-    "init:docs": "node ./bin/docmedown.js init",
-    "serve": "node ./bin/docmedown.js serve ./docs",
-    "dev": "node ./bin/docmedown.js serve ./docs",
-    "build:docs": "node ./bin/docmedown.js build ./docs",
-    "build:docs:watch": "node ./bin/docmedown.js build ./docs --watch",
-    "build:offline": "node ./bin/docmedown.js build ./docs",
-    "config:docs": "node ./bin/docmedown.js config ./docs/docs.json",
-    "test": "npx tsx --test tests/parser.test.ts tests/scanner.test.ts tests/theme-schema.test.ts tests/runtime-integration.test.ts tests/package-smoke.test.ts tests/hosting.test.ts tests/deploy.test.ts tests/home.test.ts tests/svelte-imports.test.ts tests/static-site.test.ts tests/static-router.test.ts tests/mcp.test.ts tests/tabs-builtin.test.ts tests/card-builtin.test.ts tests/component-body.test.ts tests/mermaid-loader.test.ts tests/splash.test.ts tests/navigation.test.ts",
+    "test": "node ./scripts/test-unit.mjs",
+    "test:mcp": "npx tsx --test tests/mcp.test.ts",
+    "test:mcp:client": "node ./scripts/test-mcp-client.mjs",
     "test:artifacts": "npx tsx --test tests/offline-artifact.test.ts",
     "test:bundle": "npx tsx --test tests/bundle-size.test.ts",
-    "test:release": "npm run typecheck && npm run lint && npm run test && npm run build && npm run build:docs && npm run test:artifacts && npm run test:bundle && npm pack --dry-run",
-    "login": "npm login",
+    "test:release": "npm run typecheck && npm run lint && npm run test && npm run test:mcp && npm run build && npm run build:docs && npm run test:artifacts && npm run test:bundle && npm pack --dry-run",
+    "doctor": "node ./bin/docmedown.js doctor ./docs",
+    "doctor:project": "node ./scripts/doctor-project.mjs",
+    "validate": "node ./bin/docmedown.js validate ./docs",
+    "config:docs": "node ./bin/docmedown.js config ./docs/docs.json",
+    "clean": "node -e \"fs.rmSync('dist', { recursive: true, force: true }); fs.rmSync('docs/.dist', { recursive: true, force: true })\"",
     "deploy": "node ./scripts/deploy.mjs",
     "deploy:dry-run": "npm run deploy -- --dry-run",
     "prepublishOnly": "npm run test:release"
   },
-  "keywords": [
-    "markdown",
-    "documentation",
-    "docs",
-    "docusaurus",
-    "docsify",
-    "svelte",
-    "spa",
-    "cli",
-    "offline-docs",
-    "github-docs"
-  ],
-  "author": "Gabriel M. Silva",
-  "license": "MIT",
-  "engines": {
-    "node": ">=20.19.0"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/gabrielmsilva00/docmedown.git"
-  },
-  "bugs": {
-    "url": "https://github.com/gabrielmsilva00/docmedown/issues"
-  },
-  "homepage": "https://github.com/gabrielmsilva00/docmedown#readme",
-  "packageManager": "npm@11.16.0",
   "overrides": {
     "tsup": {
       "esbuild": "0.28.2"
@@ -90,7 +96,6 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.30.0",
-    "@sveltejs/vite-plugin-svelte": "^7.3.0",
     "chalk": "^4.1.2",
     "chokidar": "^3.6.0",
     "commander": "^12.1.0",
@@ -105,15 +110,21 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.10",
+    "@sveltejs/vite-plugin-svelte": "^7.3.0",
     "@types/node": "^22.5.0",
     "@types/prismjs": "^1.26.6",
     "@types/prompts": "^2.4.9",
+    "@types/react": "^18.3.31",
+    "@types/react-dom": "^18.3.7",
     "@types/ws": "^8.5.12",
     "katex": "^0.16.11",
     "marked": "^14.1.1",
     "mermaid": "^11.17.2",
     "minisearch": "^7.1.0",
+    "motion": "^13.4.4",
     "prismjs": "^1.29.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
     "tsup": "^8.2.4",
     "tsx": "^4.19.0",
     "typescript": "^5.5.4",

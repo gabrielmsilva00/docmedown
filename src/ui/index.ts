@@ -6,6 +6,7 @@ import "./components/MermaidDiagram.svelte";
 import { loadDocConfig, normalizeConfig } from "../runtime/config";
 import { registerLanguage } from "../runtime/markdown/highlighter";
 import { configureMermaidEngine } from "../runtime/markdown/mermaid-loader";
+import * as MotionUtils from "../runtime/motion";
 import { getStaticRuntimeContext } from "../runtime/router";
 import { configureCompilerEngine } from "../runtime/svelte-compiler-loader";
 import type { DocMeDownInitOptions, DocMeDownInstance } from "../runtime/types";
@@ -21,6 +22,7 @@ if (typeof window !== "undefined") {
       client: SvelteInternalClient,
     },
   };
+  (window as any).__DOCMEDOWN_MOTION__ = MotionUtils;
 }
 if (typeof globalThis !== "undefined" && !(globalThis as any).__DOCMEDOWN_SVELTE__) {
   (globalThis as any).__DOCMEDOWN_SVELTE__ = {
@@ -30,6 +32,7 @@ if (typeof globalThis !== "undefined" && !(globalThis as any).__DOCMEDOWN_SVELTE
       client: SvelteInternalClient,
     },
   };
+  (globalThis as any).__DOCMEDOWN_MOTION__ = MotionUtils;
 }
 
 // Svelte builtin custom elements: self-register on import (<svelte:options customElement>).
@@ -52,6 +55,7 @@ import "./builtins/Tab.svelte";
 import "./builtins/Tabs.svelte";
 import "./builtins/Timeline.svelte";
 import "./builtins/TimelineItem.svelte";
+import "./builtins/Media.svelte";
 
 export { loadDocConfig, normalizeConfig } from "../runtime/config";
 export {
@@ -66,6 +70,21 @@ export {
   sidebarItemSchema,
   socialLinkSchema,
 } from "../runtime/config-schema";
+export * as motionLib from "../runtime/motion";
+export {
+  animate,
+  collapse,
+  expand,
+  fade,
+  getMotionOptions,
+  motion,
+  prefersReducedMotion,
+  scale,
+  slide,
+  smoothScroll,
+  stagger,
+  useMotion,
+} from "../runtime/motion";
 export {
   createOfflineDownload,
   downloadOfflineCopy,
@@ -81,7 +100,17 @@ export {
 } from "../runtime/router";
 export * from "../runtime/types";
 export { doc } from "./doc-context.svelte";
-export { ComponentRegistry, defineDmd, dmdTag } from "./registry";
+export {
+  ComponentRegistry,
+  createElementBridge,
+  createReactBridge,
+  defineDmd,
+  defineReactDmd,
+  defineWebComponentDmd,
+  detectComponentKind,
+  dmdTag,
+  registerWebComponent,
+} from "./registry";
 export { theme } from "./theme.svelte";
 
 // Map PascalCase markdown names onto the builtin custom element tags so the
@@ -106,6 +135,7 @@ const BUILTIN_NAMES = [
   "Timeline",
   "TimelineItem",
   "Item",
+  "Media",
 ];
 for (const name of BUILTIN_NAMES) {
   ComponentRegistry.getInstance().register(name, dmdTag(name));
@@ -184,6 +214,8 @@ export async function initDocMeDown(options: DocMeDownInitOptions = {}): Promise
 if (typeof window !== "undefined") {
   (window as any).DocMeDown = {
     init: initDocMeDown,
+    theme,
+    motion: MotionUtils,
     /** Registers a markdown component as a custom element: defineDmd(name, ElementClass, tag?). */
     registerComponent: (name: string, element: unknown, tag?: string) => defineDmd(name, element as never, tag),
     registerComponents: (map: Record<string, unknown>) =>

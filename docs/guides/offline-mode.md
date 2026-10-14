@@ -1,66 +1,146 @@
 ---
 title: Offline & Single-File Mode
-description: Learn how to generate 100% self-contained offline documentation bundles.
+description: Build 100% self-contained, air-gapped single-file HTML documentation bundles that open directly via file:/// without a server.
 order: 3
-tags: [offline, single-file, file-protocol, standalone]
+tags: [offline, single-file, air-gapped, file-protocol, standalone, distribution]
 ---
 
 # Offline & Single-File Bundles 📦
 
-DocMeDown is engineered to work anywhere — including air-gapped environments, secure internal networks, embedded device manuals, and local offline filesystems.
+DocMeDown is engineered to run anywhere — including air-gapped secure networks, embedded hardware device manuals, defense environments, field laptops, and local filesystems.
 
 ---
 
 ## 💻 The Problem with Traditional Doc Generators
 
-Most modern documentation engines (Docusaurus, VitePress, etc.) produce hundreds of separate HTML and JS files with relative chunk loaders. Opening these via `file:///` causes browser CORS errors because browsers restrict `fetch()` requests on local file systems.
+Most modern static documentation generators (Docusaurus, VitePress, MkDocs, etc.) produce hundreds of separate HTML, JavaScript chunk files, and CSS stylesheets.
+
+When you attempt to double-click and open these generated files directly from Windows File Explorer or macOS Finder via `file:///C:/my-docs/index.html`:
+- The browser triggers **CORS and cross-origin security errors**.
+- Browsers explicitly block JavaScript `fetch()` calls to neighboring local files on `file:///` URLs.
+- The documentation appears as a broken, blank page with missing styles and unrendered navigation.
 
 ---
 
 ## ⚡ The DocMeDown Single-File Solution
 
-DocMeDown can bundle your entire documentation website, complete with all Markdown documents, configuration, styles, and interactive Svelte 5 runtime into **a single `index.html` file**:
+DocMeDown bundles your entire documentation website — including all Markdown documents, configuration, styles, diagrams, custom components, and Svelte 5 runtime — into **one standalone, self-extracting `index.html` file**:
 
 ```bash
 npx docmedown build ./docs
 ```
 
-### What Happens During Build:
-1. **Manifest Inlining**: Scans all `.md` files and extracts headings and metadata.
-2. **Compact Serialization**: Serializes the manifest and Markdown corpus as compact JSON instead of development-formatted output.
-3. **Component Bundling**: Bundles `.dmd/components.js` and its relative JavaScript imports before inlining, so custom components remain available from a `file:///` URL.
-4. **Gzip Compression**: Compresses the complete corpus, custom-component module, production Svelte runtime, Mermaid renderer, and CSS into one base64-encoded gzip envelope.
-5. **Minified Self-Extractor**: Adds a small inline bootstrap that uses the browser's native `DecompressionStream` to restore and start DocMeDown locally.
+### The Build Pipeline:
+1. **Corpus Extraction**: Crawls all Markdown documents, extracts headings, and indexes content for fuzzy search.
+2. **Component Compilation**: Discovers `.dmd/*.{svelte,tsx,ts}` components and precompiles them Ahead-of-Time into self-contained custom elements.
+3. **Lossless Media Embedding**: Scans all `<Media>` tags and standard Markdown images, converting raster images, vector SVGs, audio, and video losslessly into self-contained Base64 Data URIs.
+4. **Gzip Envelope Serialization**: Compresses the entire documentation corpus, runtime, embedded media, and assets into a compact, base64-encoded gzip payload.
+5. **Self-Extracting Bootstrap**: Inlines a tiny bootstrap script using the browser's native `DecompressionStream` to restore and initialize DocMeDown locally in milliseconds.
 
-Mermaid support still accounts for most of the uncompressed runtime because every diagram renderer is available offline. Gzip removes most of that repetition while retaining the no-network guarantee: no chart, component, font, or syntax-rendering behavior depends on a request when the bundle is opened from `file:///`.
+```
+┌─────────────────────────────────────────────────────────────┐
+│  standalone index.html (~1.2 MB Gzip)                       │
+│  ├─ Self-Extracting DecompressionStream Bootstrap          │
+│  ├─ Production Svelte 5 Runtime & Router                    │
+│  ├─ Theme Tokens (Atlas, Blueprint, Terminal, Editorial)   │
+│  ├─ Offline Mermaid Diagram Engine                         │
+│  ├─ Compiled .dmd Custom Components                         │
+│  ├─ Losslessly Embedded Media (Images, SVGs, Audio, Video)  │
+│  └─ Base64 Gzip Compressed Markdown Corpus & Search Index   │
+└─────────────────────────────────────────────────────────────┘
+```
 
 ---
 
-## 🚀 How to Use Single-File Docs
+## 🚀 How to Distribute & Use Single-File Docs
 
-Once built, simply **double-click `index.html`**:
-- Opens seamlessly in any modern browser via `file:///C:/.../index.html`.
-- Full navigation, built-in and custom components, interactive Mermaid viewers, all four theme families, light/dark/automatic modes, reading density, typography, and instant search work **100% offline without a web server**.
-- Serveable and `.dist/index.html` output use the same local font stacks, so they do not depend on Google Fonts or another network font provider.
-- Ideal for:
-  - Software release attachments (`.zip` / `.tar.gz`)
-  - Embedded hardware device user manuals
-  - Internal defense or air-gapped enterprise environments
-  - Portable documentation on USB flash drives
+Once compiled, simply distribute `docs/.dist/index.html`:
 
-## Download from the serveable site
+### 1. The Double-Click Guarantee
+- Double-click `index.html` directly from Windows Explorer, macOS Finder, or Linux file managers.
+- Opens seamlessly in any modern browser via `file:///.../index.html`.
+- **Zero web server required**: Instant search (<Kbd>⌘K</Kbd>), full navigation, interactive Mermaid diagrams, and theme toggles work **100% offline**.
 
-Every built serveable site includes a **Download** button in the navbar. Selecting it:
+### 2. Primary Use Cases
+- **Software Release Attachments**: Attach `my-project-docs.html` directly to GitHub or GitLab releases so users can download and read the manual offline.
+- **Embedded Hardware Appliances**: Store on local device memory (routers, NAS units, medical hardware) accessible without an internet connection.
+- **Defense & Air-Gapped Intranets**: Deploy in secure environments where outward internet access is strictly prohibited.
+- **Field Engineering Manuals**: Distribute on USB thumb drives for off-grid operations.
 
-1. Reads `window.__DOCMEDOWN_DATA__`, which is the documentation corpus already loaded by the current page.
-2. Reads the current `docmedown.web.js` runtime identified by `data-docmedown-runtime`.
-3. Serializes and gzip-compresses both locally in the browser.
-4. Downloads `<documentation-name>-offline.html` directly.
+---
 
-The action does **not** fetch or proxy `.dist/index.html`. A downloaded file marks itself as an offline copy before DocMeDown starts; its navbar shows a greyed-out **Offline copy** control with an explanation that no second download is needed.
+## 📥 In-Browser Offline Export
 
-Browser-side export requires native `CompressionStream("gzip")` support. Opening an offline copy requires `DecompressionStream("gzip")`; current Chromium, Firefox, and Safari releases provide these stream APIs.
+Every built DocMeDown documentation site includes an automatic **Download** option in the navbar.
 
-## Nested sites
+When a visitor clicks **Download Offline Copy**:
+1. The browser reads the active documentation corpus (`window.__DOCMEDOWN_DATA__`).
+2. Compresses the data client-side using `CompressionStream("gzip")`.
+3. Downloads a self-contained `<doc-name>-offline.html` file directly to the user's computer.
 
-Each directory with its own `docs.json` is built as an independent site. A parent build does not merge its Markdown into the parent search index; instead, it generates that nested site's own `index.html` and `.dist/index.html`.
+> [!NOTE]
+> The downloaded copy marks itself as an offline artifact; opening it shows an "Offline Copy" indicator in the navbar and disables duplicate download actions.
+
+---
+
+## 🖼️ Media Embedding & Offline Asset Self-Containment
+
+In conventional documentation systems, linked images (`![alt](./image.png)`), audio files, and videos fail to display when an offline HTML file is double-clicked due to browser security restrictions on the `file:///` protocol.
+
+DocMeDown solves this by integrating **lossless offline embedding**:
+- **Lossless Fidelity**: Every referenced asset (raster images, vector SVGs, audio clips, and video files) is converted into Base64 Data URIs without re-encoding or lossy compression, preserving byte-for-byte fidelity.
+- **Fine-Grained Embedding Control**: The `<Media>` component gives authors explicit control over how embedding is handled:
+  - `embed="base64"` *(default)*: embeds the exact file contents as a Base64 Data URI into the standalone bundle.
+  - `embed="inline"`: decodes vector SVGs directly into inline `<svg>` elements inside the DOM for theme-adaptive CSS styling.
+  - `embed="none"` or `embed={false}`: opts out of embedding, preserving external streaming URLs or live remote endpoints.
+- **Fallback Recovery**: If a particular video codec or format is not natively supported by a reader's browser, `<Media fallback="...">` ensures alternative sources or user-facing fallback cards display gracefully.
+
+---
+
+## ⚙️ Configuration Options
+
+In `docs.json`, you can customize offline bundle behavior:
+
+```json title="docs.json"
+{
+  "name": "Air-Gapped Reference",
+  "offline": {
+    "embedNestedDocs": true
+  }
+}
+```
+
+- `offline.embedNestedDocs`: If `true` (default), nested documentation sites (directories with their own `docs.json`) are inlined directly into the single-file bundle so sub-sites can be navigated without external file links. Set to `false` if you wish to minimize file size.
+
+### CLI Build Flags:
+```bash
+# Output offline bundle to custom directory:
+npx docmedown build ./docs --out-dir ./dist
+
+# Skip single-file bundle (build static server assets only):
+npx docmedown build ./docs --no-single-file
+```
+
+---
+
+## 🗺️ Next Steps
+
+Continue along the linear documentation journey:
+
+<CardGrid cols={2}>
+  <Card
+    title="Dynamic Remote Git"
+    description="Stream live documentation directly from GitHub or GitLab without build steps."
+    href="#/guides/remote-github"
+    badge="Next Up"
+    badgeType="info"
+  />
+  <Card
+    title="Static Site (SSG) & SEO"
+    description="Learn how static pages are prerendered with full SEO tags and social cards."
+    href="#/guides/static-site"
+    badge="Previous"
+    badgeType="success"
+  />
+</CardGrid>
+

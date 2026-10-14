@@ -1,18 +1,9 @@
 <svelte:options customElement={{ tag: "dmd-card-grid" }} />
 <script lang="ts">
   import { onMount, onDestroy } from "svelte";
-  import { buildWrapClones, carouselWindow, clampCarouselCols, resolveCarouselPerView } from "./carousel";
+  import { carouselWindow, clampCarouselCols, resolveCarouselPerView } from "./carousel";
   import { adoptSharedStyles } from "./shared-styles";
-
-  const CAROUSEL_CLONE_ATTR = "data-dmd-carousel-clone";
-
-  function cloneSlideCard(source: HTMLElement): HTMLElement {
-    const cloneable = source as HTMLElement & { cloneCard?: () => HTMLElement };
-    const clone =
-      typeof cloneable.cloneCard === "function" ? cloneable.cloneCard() : (source.cloneNode(true) as HTMLElement);
-    clone.querySelectorAll("[id]").forEach((el) => el.removeAttribute("id"));
-    return clone;
-  }
+  import { prefersReducedMotion, smoothScroll } from "../../runtime/motion";
 
   let {
     cols = 2,
@@ -28,31 +19,25 @@
   let perView = $state(2);
   let active = $state(0);
   let cards: HTMLElement[] = [];
-  let clones: HTMLElement[] = [];
-  let cloneKey = "";
   let childOffsets: number[] = [];
   let offsetsKey = "";
   let scrollRaf = 0;
+  let navigation: { stop: () => void; finished: Promise<void> } | null = null;
+  let navigationIndex: number | null = null;
+  let offsetRetry = 0;
   let trackRef = $state<HTMLElement>();
   let resizeObserver: ResizeObserver | null = null;
 
   function syncSlideSlots() {
     if (!trackRef) return;
-    trackRef.querySelectorAll(".dmd-carousel-slide").forEach((s) => s.remove());
+    const existing = trackRef.querySelectorAll(".dmd-carousel-slide");
+    if (existing.length === cardCount && cardCount > 0) return;
+    existing.forEach((s) => s.remove());
     for (let i = 0; i < cardCount; i++) {
       const slide = document.createElement("div");
       slide.className = "dmd-carousel-slide";
       const slot = document.createElement("slot");
       slot.name = `dmd-carousel-${i}`;
-      slide.appendChild(slot);
-      trackRef.appendChild(slide);
-    }
-    for (let k = 0; k < cloneCount; k++) {
-      const slide = document.createElement("div");
-      slide.className = "dmd-carousel-slide";
-      slide.setAttribute("aria-hidden", "true");
-      const slot = document.createElement("slot");
-      slot.name = `dmd-carousel-clone-${k}`;
       slide.appendChild(slot);
       trackRef.appendChild(slide);
     }
@@ -62,7 +47,7 @@
   const gridCols = $derived(clampCarouselCols(Number(cols) || 2, 2));
   const maxPerView = $derived(clampCarouselCols(Number(carouselcols) || Number(cols) || 2, 2));
   const isCarousel = $derived(cardCount > gridCols);
-  const cloneCount = $derived(buildWrapClones(cardCount, perView).length);
+  const positions = $derived(carouselWindow(cardCount, perView, active).positions);
 
   const windowLabel = $derived.by(() => {
     const shown = carouselWindow(cardCount, perView, active).indices.map((index) => index + 1);
@@ -81,57 +66,36 @@
   function lightCards(): HTMLElement[] {
     const host = getHost();
     if (!host) return [];
-    return Array.from(host.children).filter(
-      (child): child is HTMLElement => !child.hasAttribute(CAROUSEL_CLONE_ATTR)
-    );
-  }
-
-  function clearClones() {
-    for (const clone of clones) clone.remove();
-    clones = [];
-    cloneKey = "";
-  }
-
-  function syncClones() {
-    const host = getHost();
-    if (!host) return;
-    const key = `${cardCount}:${perView}`;
-    if (key === cloneKey) return;
-    clearClones();
-    cloneKey = key;
-    buildWrapClones(cardCount, perView).forEach((cardIndex, slotIndex) => {
-      const source = cards[cardIndex];
-      if (!source) return;
-      const clone = cloneSlideCard(source);
-      clone.setAttribute(CAROUSEL_CLONE_ATTR, "");
-      clone.setAttribute("slot", `dmd-carousel-clone-${slotIndex}`);
-      clone.setAttribute("aria-hidden", "true");
-      clone.setAttribute("inert", "");
-      host.appendChild(clone);
-      clones.push(clone);
-    });
-    offsetsKey = "";
+    return Array.from(host.children).filter((child): child is HTMLElement => child instanceof HTMLElement);
   }
 
   function cacheOffsets() {
-    const shadow = root?.getRootNode() as ShadowRoot | undefined;
+    const shadow = (trackRef || (root?.getRootNode() as ShadowRoot | undefined));
     const slides = shadow?.querySelectorAll<HTMLElement>(".dmd-carousel-slide");
     if (!slides || slides.length === 0 || !viewport) return;
     const key = `${slides.length}:${perView}:${viewport.clientWidth}`;
-    if (key === offsetsKey) return;
+    if (key === offsetsKey && childOffsets.length > 0 && (slides.length <= 1 || childOffsets[1] > 0)) return;
+    const offsets = [...slides].slice(0, cardCount).map((slide) => slide.offsetLeft);
+    if (offsets.length > 1 && offsets[1] === 0) {
+      // The slotted slides may not have laid out yet; never schedule an unbounded RAF loop.
+      if (!offsetRetry) offsetRetry = requestAnimationFrame(() => { offsetRetry = 0; cacheOffsets(); });
+      return;
+    }
     offsetsKey = key;
-    childOffsets = [...slides].slice(0, cardCount).map((slide) => slide.offsetLeft);
+    childOffsets = offsets;
   }
 
   function updatePerView() {
     if (!viewport) return;
+    navigation?.stop();
+    navigation = null;
+    navigationIndex = null;
     const next = resolveCarouselPerView(maxPerView, viewport.clientWidth);
     if (perView !== next) {
       perView = next;
     }
     if (isCarousel) {
       syncSlideSlots();
-      syncClones();
     }
     cacheOffsets();
     if (resizeObserver && viewport && !observing) {
@@ -142,18 +106,37 @@
 
   function scrollToSlide(index: number, behavior: ScrollBehavior = "smooth") {
     if (!viewport) return;
-    const offset = childOffsets[index];
-    if (offset == null) return;
+    if (childOffsets.length === 0) cacheOffsets();
+    const rawOffset = childOffsets[index];
+    if (rawOffset == null) return;
+    navigation?.stop();
+    navigation = null;
+    navigationIndex = null;
     active = index;
-    viewport.scrollTo({ left: offset, behavior });
+    const baseOffset = childOffsets[0] || 0;
+    const offset = Math.max(0, rawOffset - baseOffset);
+    if (prefersReducedMotion() || behavior === "instant" || behavior === "auto") {
+      viewport.scrollLeft = offset;
+      return;
+    }
+    navigationIndex = index;
+    const handle = smoothScroll(viewport, offset, { duration: 320 });
+    navigation = handle;
+    void handle.finished.then(() => {
+      if (navigation === handle) {
+        navigation = null;
+        navigationIndex = null;
+        onScroll();
+      }
+    });
   }
 
   function goPrev() {
-    scrollToSlide(active <= 0 ? cardCount - 1 : active - 1);
+    scrollToSlide(Math.max(0, active - 1));
   }
 
   function goNext() {
-    scrollToSlide(active >= cardCount - 1 ? 0 : active + 1);
+    scrollToSlide(Math.min(positions - 1, active + 1));
   }
 
   function onScroll() {
@@ -161,11 +144,16 @@
     scrollRaf = requestAnimationFrame(() => {
       scrollRaf = 0;
       if (!viewport) return;
+      if (navigationIndex !== null) return;
+      if (childOffsets.length === 0) cacheOffsets();
+      if (childOffsets.length === 0) return;
+      const baseOffset = childOffsets[0] || 0;
       const viewportLeft = viewport.scrollLeft;
       let closest = 0;
       let closestDist = Infinity;
-      for (let i = 0; i < childOffsets.length; i++) {
-        const dist = Math.abs(childOffsets[i] - viewportLeft);
+      for (let i = 0; i < Math.min(positions, childOffsets.length); i++) {
+        const slidePos = Math.max(0, childOffsets[i] - baseOffset);
+        const dist = Math.abs(slidePos - viewportLeft);
         if (dist < closestDist) {
           closestDist = dist;
           closest = i;
@@ -197,13 +185,14 @@
     cards = currentCards;
     cardCount = currentCards.length;
     if (!sameCards) {
+      navigation?.stop();
+      navigation = null;
+      navigationIndex = null;
       offsetsKey = "";
       childOffsets = [];
-      cloneKey = "";
     }
 
     if (!isCarousel) {
-      clearClones();
       cards.forEach((el) => el.removeAttribute("slot"));
       perView = gridCols;
       return;
@@ -213,6 +202,37 @@
     updatePerView();
   }
 
+  $effect(() => {
+    if (cards.length === 0) {
+      const current = lightCards();
+      if (current.length > 0) {
+        cards = current;
+        cardCount = current.length;
+      }
+    }
+    if (isCarousel) {
+      if (trackRef && viewport && cardCount > 0) {
+        cards.forEach((el, i) => el.setAttribute("slot", `dmd-carousel-${i}`));
+        const next = resolveCarouselPerView(maxPerView, viewport.clientWidth);
+        if (perView !== next) {
+          perView = next;
+        }
+        syncSlideSlots();
+        cacheOffsets();
+        if (resizeObserver && !observing) {
+          resizeObserver.observe(viewport);
+          observing = true;
+        }
+      }
+    } else {
+      cards.forEach((el) => el.removeAttribute("slot"));
+      if (resizeObserver && observing) {
+        resizeObserver.disconnect();
+        observing = false;
+      }
+    }
+  });
+
   onMount(() => {
     adoptSharedStyles(root);
     const host = getHost();
@@ -220,22 +240,16 @@
 
     if (typeof ResizeObserver !== "undefined") {
       resizeObserver = new ResizeObserver(() => updatePerView());
-    }
-
-    void Promise.resolve().then(() => {
-      const initialCards = lightCards();
-      if (initialCards.length > 0) {
-        cardCount = initialCards.length;
-        cards = initialCards;
-        if (isCarousel) {
-          cards.forEach((el, i) => el.setAttribute("slot", `dmd-carousel-${i}`));
-          updatePerView();
-        }
+      if (viewport && isCarousel && !observing) {
+        resizeObserver.observe(viewport);
+        observing = true;
       }
-    });
+    }
   });
 
   onDestroy(() => {
+    navigation?.stop();
+    if (offsetRetry) cancelAnimationFrame(offsetRetry);
     const host = getHost();
     if (host) host.removeEventListener("keydown", onKeyDown);
     if (resizeObserver) resizeObserver.disconnect();
@@ -258,16 +272,22 @@
         onscroll={onScroll}
       >
         <div bind:this={trackRef} class="dmd-carousel-track" style="--dmd-carousel-per-view: {perView};">
-          <slot onslotchange={onSlotChange}></slot>
+          <slot onslotchange={onSlotChange} style="display: contents;"></slot>
         </div>
       </div>
       <div class="dmd-sr-only" aria-live="polite">Showing {windowLabel} of {cardCount}</div>
       <div class="dmd-carousel-controls">
-        <button type="button" class="dmd-carousel-btn" onclick={goPrev} aria-label="Previous cards">
+        <button
+          type="button"
+          class="dmd-carousel-btn"
+          onclick={goPrev}
+          disabled={active <= 0}
+          aria-label="Previous cards"
+        >
           <span aria-hidden="true">‹</span>
         </button>
         <div class="dmd-carousel-dots" role="tablist" aria-label="Choose card">
-          {#each Array.from({ length: cardCount }) as _, i}
+          {#each Array.from({ length: positions }) as _, i}
             <button
               type="button"
               class="dmd-carousel-dot{i === active ? ' active' : ''}"
@@ -278,7 +298,13 @@
             ></button>
           {/each}
         </div>
-        <button type="button" class="dmd-carousel-btn" onclick={goNext} aria-label="Next cards">
+        <button
+          type="button"
+          class="dmd-carousel-btn"
+          onclick={goNext}
+          disabled={active >= positions - 1}
+          aria-label="Next cards"
+        >
           <span aria-hidden="true">›</span>
         </button>
       </div>

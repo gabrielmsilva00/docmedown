@@ -1,3 +1,4 @@
+import { resolveFavicon } from "./favicons";
 import {
   renderSplashHead,
   renderSplashMarkup,
@@ -16,6 +17,7 @@ export interface OfflineDocumentationData {
   docs: Record<string, string>;
   componentsSource?: string;
   nestedSites?: Record<string, OfflineNestedSiteData>;
+  media?: Record<string, string>;
 }
 
 /** A nested documentation root embedded inside a parent offline bundle. */
@@ -24,6 +26,7 @@ export interface OfflineNestedSiteData {
   manifest: DocManifest;
   docs: Record<string, string>;
   componentsSource?: string;
+  media?: Record<string, string>;
 }
 
 /** Emitted when a reader selects a file link a self-contained copy cannot fulfill. */
@@ -82,9 +85,21 @@ function escapeHtml(value: string): string {
  * opens on the branded loader instead of a blank canvas while the runtime is
  * decompressed and booted.
  */
-export function createCompressedOfflineHtml(encodedGzip: string, title: string, splash: SplashOptions = {}): string {
+export function createCompressedOfflineHtml(
+  encodedGzip: string,
+  title: string,
+  splash: SplashOptions = {},
+  favicon?: string,
+): string {
   const bootstrap = `(async()=>{try{const b=Uint8Array.from(atob(document.getElementById("d").textContent.trim()),c=>c.charCodeAt(0)),s=await new Response(new Blob([b]).stream().pipeThrough(new DecompressionStream("gzip"))).text(),e=JSON.parse(s);if(e.version!==${OFFLINE_FORMAT_VERSION})throw new Error("Unsupported offline format");window.__DOCMEDOWN_OFFLINE__=true;window.__DOCMEDOWN_DATA__=e.data;window.__DOCMEDOWN_CONFIG__=e.data.manifest.config;const u=URL.createObjectURL(new Blob([e.runtime],{type:"text/javascript"}));window.__DOCMEDOWN_RUNTIME_URL__=u;const j=document.createElement("script");j.src=u;j.onerror=()=>{URL.revokeObjectURL(u);throw new Error("Runtime bootstrap failed")};document.head.appendChild(j)}catch(e){var p=document.getElementById("${SPLASH_ID}");if(p){p.className+=" ${SPLASH_HIDDEN_CLASS}";p.setAttribute("aria-hidden","true");setTimeout(function(){p.parentNode&&p.parentNode.removeChild(p)},600)}var h=document.documentElement;h.className=h.className.replace(" ${SPLASH_ACTIVE_CLASS}","");document.getElementById("dmd-app").textContent="Could not open this offline documentation copy: "+e.message}})();`;
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="icon" href="data:,"><title>${escapeHtml(title)}</title>${renderSplashHead(splash)}</head><body>${renderSplashMarkup({ name: title, ...splash })}<div id="dmd-app"></div><script id="d" type="application/octet-stream">${encodedGzip}</script><script>${bootstrap}</script></body></html>`;
+  const resolvedFavicon = escapeHtml(resolveFavicon(favicon));
+  let faviconType = ' type="image/svg+xml"';
+  if (resolvedFavicon.startsWith("data:image/png") || /\.png($|\?)/i.test(resolvedFavicon)) {
+    faviconType = ' type="image/png"';
+  } else if (resolvedFavicon.startsWith("data:image/x-icon") || /\.ico($|\?)/i.test(resolvedFavicon)) {
+    faviconType = ' type="image/x-icon"';
+  }
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="icon"${faviconType} href="${resolvedFavicon}"><title>${escapeHtml(title)}</title>${renderSplashHead(splash)}</head><body>${renderSplashMarkup({ name: title, ...splash })}<div id="dmd-app"></div><script id="d" type="application/octet-stream">${encodedGzip}</script><script>${bootstrap}</script></body></html>`;
 }
 
 async function compressGzip(value: string): Promise<Uint8Array> {
@@ -147,7 +162,21 @@ export async function createOfflineDownload(): Promise<{ blob: Blob; filename: s
   const runtime = await readRuntimeSource(hasDiagrams);
   const envelope: OfflineEnvelope = { version: OFFLINE_FORMAT_VERSION, data, runtime };
   const compressed = await compressGzip(JSON.stringify(envelope));
-  const html = createCompressedOfflineHtml(bytesToBase64(compressed), data.manifest.config.name || "Documentation");
+  const favicon = resolveFavicon(data.manifest.config.theme?.favicon);
+  const html = createCompressedOfflineHtml(
+    bytesToBase64(compressed),
+    data.manifest.config.name || "Documentation",
+    {
+      tagline: data.manifest.config.tagline,
+      version: data.manifest.config.version,
+      logo: data.manifest.config.theme?.logo?.light,
+      logoDark: data.manifest.config.theme?.logo?.dark,
+      logoAlt: data.manifest.config.theme?.logo?.alt,
+      accent: data.manifest.config.theme?.accentColor,
+      accentDark: data.manifest.config.theme?.accentColorDark,
+    },
+    favicon,
+  );
   return {
     blob: new Blob([html], { type: "text/html;charset=utf-8" }),
     filename: sanitizeDownloadName(data.manifest.config.name || "Documentation"),
@@ -237,7 +266,21 @@ export async function openEmbeddedNestedSite(siteKey: string, href?: string): Pr
       runtime,
     };
     const compressed = await compressGzip(JSON.stringify(envelope));
-    const html = createCompressedOfflineHtml(bytesToBase64(compressed), site.name || "Documentation");
+    const siteFavicon = resolveFavicon(site.manifest.config?.theme?.favicon);
+    const html = createCompressedOfflineHtml(
+      bytesToBase64(compressed),
+      site.name || "Documentation",
+      {
+        tagline: site.manifest.config?.tagline,
+        version: site.manifest.config?.version,
+        logo: site.manifest.config?.theme?.logo?.light,
+        logoDark: site.manifest.config?.theme?.logo?.dark,
+        logoAlt: site.manifest.config?.theme?.logo?.alt,
+        accent: site.manifest.config?.theme?.accentColor,
+        accentDark: site.manifest.config?.theme?.accentColorDark,
+      },
+      siteFavicon,
+    );
     blobUrl = URL.createObjectURL(new Blob([html], { type: "text/html;charset=utf-8" }));
     nestedSiteBlobUrls.set(siteKey, blobUrl);
   }

@@ -111,12 +111,30 @@ def promote(changelog: str, version: str) -> str:
     return changelog.replace("## Unreleased", f"## {version}")
 ```
 
-```rust
+````md
+```rust title="main.rs" {2,3}
 fn main() {
     let docs = vec!["fast", "offline", "beautiful"];
     for d in &docs { println!("{}", d); }
 }
 ```
+````
+
+```rust title="main.rs" {2,3}
+fn main() {
+    let docs = vec!["fast", "offline", "beautiful"];
+    for d in &docs { println!("{}", d); }
+}
+```
+
+````md
+```css title="tokens.css"
+:root {
+  --dmd-accent: #315cf5;
+  --dmd-radius-md: 10px;
+}
+```
+````
 
 ```css title="tokens.css"
 :root {
@@ -313,6 +331,38 @@ blockquote the footer — an explicit prop always wins for its own slot.
     ```
     > **Info**: This is a blockquote acting like a footer!
   </Card>
+</CardGrid>
+
+Card with the `content` prop (direct Markdown, HTML, or local/online `.md` sources):
+
+```html
+<CardGrid cols={2}>
+  <Card
+    title="Direct Markdown Prop"
+    badge="Prop"
+    content="The body of this card was supplied through the **content** prop as raw Markdown!"
+  />
+  <Card
+    title="Direct HTML Prop"
+    badge="HTML"
+    badgetype="success"
+    content="<p>This card was rendered from <strong>HTML string content</strong> via the <code>content</code> prop.</p>"
+  />
+</CardGrid>
+```
+
+<CardGrid cols={2}>
+  <Card
+    title="Direct Markdown Prop"
+    badge="Prop"
+    content="The body of this card was supplied through the **content** prop as raw Markdown!"
+  />
+  <Card
+    title="Direct HTML Prop"
+    badge="HTML"
+    badgetype="success"
+    content="<p>This card was rendered from <strong>HTML string content</strong> via the <code>content</code> prop.</p>"
+  />
 </CardGrid>
 
 A single accent-colored card, no title required:
@@ -604,6 +654,125 @@ it becomes a plain `<li>`. Here it drives a `Timeline`, a `Steps`, and an `Accor
   <Item title="Does it work offline?">Fully. One HTML file, zero network.</Item>
 </Accordion>
 
+### 13. `<Media>` Component
+
+The `<Media>` primitive provides fine-grained control over raster images, vector graphics, video players, and audio players, complete with fallback recovery and **lossless offline embedding**.
+
+#### 13.1 Styled Image with Caption & Shadow
+```html
+<Media
+  src="./favicon.svg"
+  alt="DocMeDown Logo"
+  width="120px"
+  rounded="lg"
+  shadow="md"
+  align="center"
+  caption="DocMeDown Brand Mark (Rounded + Shadow + Center Alignment)"
+/>
+```
+
+<Media
+  src="./favicon.svg"
+  alt="DocMeDown Logo"
+  width="120px"
+  rounded="lg"
+  shadow="md"
+  align="center"
+  caption="DocMeDown Brand Mark (Rounded + Shadow + Center Alignment)"
+/>
+
+#### 13.2 Inline Vector SVG (`embed="inline"`)
+Embeds clean vector SVG directly into the DOM tree for CSS currentColor inheritance and pixel-perfect scaling:
+
+```html
+<Media
+  src="./favicon.svg"
+  format="svg"
+  embed="inline"
+  width="64px"
+  align="center"
+  caption="Inline SVG element rendered directly into DOM"
+/>
+```
+
+<Media
+  src="./favicon.svg"
+  format="svg"
+  embed="inline"
+  width="64px"
+  align="center"
+  caption="Inline SVG element rendered directly into DOM"
+/>
+
+#### 13.3 HTML5 Video Player
+```html
+<Media
+  src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4"
+  type="video/mp4"
+  poster="./favicon.svg"
+  controls={true}
+  width="100%"
+  maxWidth="640px"
+  aspectRatio="16/9"
+  rounded="md"
+  shadow="md"
+  caption="HTML5 Video player with controls, 16:9 ratio, and custom poster"
+/>
+```
+
+<Media
+  src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4"
+  type="video/mp4"
+  poster="./favicon.svg"
+  controls={true}
+  width="100%"
+  maxWidth="640px"
+  aspectRatio="16/9"
+  rounded="md"
+  shadow="md"
+  caption="HTML5 Video player with controls, 16:9 ratio, and custom poster"
+/>
+
+#### 13.4 HTML5 Audio Player
+```html
+<Media
+  src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
+  format="audio/mpeg"
+  controls={true}
+  maxWidth="540px"
+  caption="HTML5 Audio player with controls"
+  fallback="Audio playback is not supported on this browser."
+/>
+```
+
+<Media
+  src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
+  format="audio/mpeg"
+  controls={true}
+  maxWidth="540px"
+  caption="HTML5 Audio player with controls"
+  fallback="Audio playback is not supported on this browser."
+/>
+
+#### 13.5 Resilient Fallback UI
+When a media asset fails to load, `<Media>` automatically presents a clear fallback indicator matching the media category:
+
+```html
+<Media
+  src="https://example.com/unreachable-sample-video.mp4"
+  type="video/mp4"
+  maxWidth="540px"
+  fallbackText="Sample video stream is currently unreachable. Check your network connection."
+/>
+```
+
+<Media
+  src="https://example.com/unreachable-sample-video.mp4"
+  type="video/mp4"
+  maxWidth="540px"
+  fallbackText="Sample video stream is currently unreachable. Check your network connection."
+/>
+
 ---
 
 ## Part 3 — Your Own Components (`.dmd/`)
@@ -651,7 +820,20 @@ window.DocMeDown.registerLanguage("mylang", {
 
 Use it with `mylang` fenced code blocks anywhere in your documentation. DocMeDown automatically tints the language pill or filename badge and syntax-highlights every token:
 
-```mylang title="pipeline.mylang" {2,4}
+````md
+```mylang title="pipeline.mylang" {1-3,6}
+# Custom graphics pipeline in mylang
+pipeline "RaymarchRenderer" {
+  draw "Sphere" at (0.0, 1.5, -3.0)
+  transform scale: 1.25, rotate: 45
+  plot 120.5
+  render "VectorField"
+}
+```
+
+````
+
+```mylang title="pipeline.mylang" {1-3,6}
 # Custom graphics pipeline in mylang
 pipeline "RaymarchRenderer" {
   draw "Sphere" at (0.0, 1.5, -3.0)
@@ -664,5 +846,58 @@ pipeline "RaymarchRenderer" {
 
 ---
 
+## Part 4 — Multi-Framework Custom Components (`.dmd/`)
+
+DocMeDown serves as a universal host and component translation layer. You can seamlessly embed **Svelte 5**, **React TSX**, and **Web Elements (Lit)** side-by-side:
+
+### Native Svelte 5 (`.dmd/CounterWidget.svelte`)
+
+````markdown
+<CounterWidget title="Reactive Runes Counter" />
+````
+
+<CounterWidget title="Reactive Runes Counter" />
+
+### React TSX Component (`.dmd/ReactMetricCard.tsx`)
+
+````markdown
+<ReactMetricCard label="Latency Benchmark" initial={42} unit="ms" />
+````
+
+<ReactMetricCard label="Latency Benchmark" initial={42} unit="ms" />
+
+### Web Element / Lit (`.dmd/LitStatusBadge.ts`)
+
+````markdown
+<LitStatusBadge label="Database Cluster" status="operational" />
+````
+
+<LitStatusBadge label="Database Cluster" status="operational" />
+
+---
+
 > [!TIP]
 > Copy any source block above straight into your own docs — every component and syntax feature on this page works identically in serveable sites and single-file offline bundles.
+
+---
+
+## 🗺️ Next Steps
+
+Continue along the linear documentation journey:
+
+<CardGrid cols={2}>
+  <Card
+    title="Runnable Reference Examples"
+    description="Explore three complete reference documentation sites nested inside DocMeDown."
+    href="#/examples"
+    badge="Next Up"
+    badgeType="info"
+  />
+  <Card
+    title="Built-in UI Primitives"
+    description="Reference for all 20 elements: CardGrid, Tabs, Badges, Callouts, Media, and Buttons."
+    href="#/guides/built-in-components"
+    badge="Previous"
+    badgeType="success"
+  />
+</CardGrid>

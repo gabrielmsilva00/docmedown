@@ -132,3 +132,47 @@ test("offline.embedNestedDocs: false keeps the single-file bundle free of nested
     fs.rmSync(workspace, { recursive: true, force: true });
   }
 });
+
+test("buildCommand inlines Card online sources into both _docs.js and single-file offline index.html", async () => {
+  const workspace = fs.mkdtempSync(path.join(os.tmpdir(), "docmedown-card-offline-"));
+  const originalFetch = globalThis.fetch;
+  try {
+    globalThis.fetch = (async (input: string | URL | Request) => {
+      const url = String(input);
+      if (url === "https://example.com/remote-card.md") {
+        return new Response("# Remote Card Content\n\n- Inlined offline item", { status: 200 });
+      }
+      return new Response("Not found", { status: 404 });
+    }) as typeof fetch;
+
+    fs.writeFileSync(path.join(workspace, "docs.json"), JSON.stringify({ name: "Card Offline Test" }), "utf-8");
+    fs.writeFileSync(
+      path.join(workspace, "README.md"),
+      `# Card Offline Test
+
+<Card
+  title="Remote Spec"
+  content="https://example.com/remote-card.md"
+/>
+`,
+      "utf-8",
+    );
+
+    await buildCommand(workspace);
+
+    // 1. Verify in _docs.js
+    const docsJs = fs.readFileSync(path.join(workspace, "_docs.js"), "utf-8");
+    assert.ok(docsJs.includes("https://example.com/remote-card.md"));
+    assert.ok(docsJs.includes("Remote Card Content"));
+
+    // 2. Verify in single-file offline index.html payload
+    const offlineHtml = fs.readFileSync(path.join(workspace, ".dist", "index.html"), "utf-8");
+    const envelope = decodeOfflineArtifact(offlineHtml);
+    assert.ok(envelope.data.docs["https://example.com/remote-card.md"]);
+    assert.ok(envelope.data.docs["https://example.com/remote-card.md"].includes("Remote Card Content"));
+    assert.ok(envelope.data.docs["https://example.com/remote-card.md"].includes("Inlined offline item"));
+  } finally {
+    globalThis.fetch = originalFetch;
+    fs.rmSync(workspace, { recursive: true, force: true });
+  }
+});

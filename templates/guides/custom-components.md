@@ -7,46 +7,59 @@ tags: [components, custom-elements, dmd]
 
 # Custom Components (.dmd)
 
-DocMeDown supports embedding **custom elements** directly into your documentation — framework-free, so components work in any host page, the offline bundle, and even outside DocMeDown.
+DocMeDown supports embedding **custom elements and multi-framework components** directly into your documentation. You can author components using **native Svelte 5**, **React with TypeScript (TSX)**, or standard **Web Elements (Lit)** inside `.dmd/`.
 
 ---
 
-## 1. Defining Global Components
+## 1. Defining Components in `.dmd/`
 
-Place a browser-loadable module at `.dmd/components.js` exporting a map of component name → `HTMLElement` subclass:
+Any component placed in the `.dmd/` folder is automatically discovered, compiled, and registered for use in your Markdown.
 
-```js title=".dmd/components.js"
-export class InteractiveButton extends HTMLElement {
-  connectedCallback() {
-    let count = 0;
-    const button = document.createElement("button");
-    button.textContent = "Click Me: 0";
-    button.addEventListener("click", () => {
-      count += 1;
-      button.textContent = `Click Me: ${count}`;
-    });
-    this.innerHTML = "";
-    this.appendChild(button);
-  }
-}
+### Svelte 5 Component (`.dmd/CounterWidget.svelte`)
 
-export default {
-  InteractiveButton,
-};
+Your scaffolded project includes a starter Svelte 5 component:
+
+```svelte title=".dmd/CounterWidget.svelte"
+<svelte:options customElement={{ tag: "dmd-counter-widget" }} />
+<script lang="ts">
+  let { title = "Interactive Counter" }: { title?: string } = $props();
+  let count = $state(0);
+</script>
+
+<div class="dmd-counter-panel">
+  <button type="button" class="dmd-counter-btn" onclick={() => count++}>
+    {title}: {count}
+  </button>
+</div>
 ```
 
-The runtime registers each export as `dmd-<name>` (for example `dmd-interactive-button`) and upgrades the PascalCase tags you write in Markdown automatically.
+### React TSX Component (`.dmd/ReactMetricCard.tsx`)
 
-`docmedown build` bundles this module and its relative JavaScript imports into both `_docs.js` and `.dist/index.html`, so the same component behavior works from a static host and `file:///` offline bundle.
+You can also drop standard React TSX components into `.dmd/`:
+
+```tsx title=".dmd/ReactMetricCard.tsx"
+import React, { useState } from "react";
+
+export default function ReactMetricCard({ label = "Query Rate", initial = 100 }) {
+  const [val, setVal] = useState(initial);
+  return (
+    <button onClick={() => setVal(val + 10)}>
+      {label}: {val}
+    </button>
+  );
+}
+```
+
+The runtime registers each component as `dmd-<name>` and upgrades PascalCase tags in your Markdown automatically.
 
 ---
 
 ## 2. Using Custom and Built-in Components
 
-DocMeDown comes with built-in interactive components ready to use:
+Use your custom component directly inside any Markdown file:
 
 ```html
-<InteractiveButton label="Count clicks" />
+<CounterWidget title="Clicks" />
 ```
 
 ### Tabbed Code Snippets

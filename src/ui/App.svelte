@@ -6,21 +6,27 @@
   import "katex/dist/katex.min.css";
   import "../runtime/styles/main.css";
   import Content from "./components/Content.svelte";
+  import EditorModal from "./components/EditorModal.svelte";
   import Navbar from "./components/Navbar.svelte";
   import OfflineNotice from "./components/OfflineNotice.svelte";
   import SearchModal from "./components/SearchModal.svelte";
   import Sidebar from "./components/Sidebar.svelte";
   import TableOfContents from "./components/TableOfContents.svelte";
+  import TagModal from "./components/TagModal.svelte";
   import { doc } from "./doc-context.svelte";
   import { theme } from "./theme.svelte";
   import { dismissSplash } from "../runtime/splash";
+  import { resolveFavicon } from "../runtime/favicons";
 
-  // Keyboard shortcut for search (Cmd+K / Ctrl+K)
+  // Keyboard shortcut for search (Cmd+K / Ctrl+K) and editor (Cmd+E / Ctrl+E)
   $effect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
         doc.isSearchOpen = !doc.isSearchOpen;
+      } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "e") {
+        e.preventDefault();
+        doc.isEditorOpen = !doc.isEditorOpen;
       }
     };
     window.addEventListener("keydown", handleKeyDown);
@@ -69,11 +75,27 @@
     setAttribute("data-dmd-mode", theme.resolvedMode);
     setAttribute("data-dmd-theme", theme.family);
     setAttribute("data-dmd-density", theme.density);
+    setAttribute("data-dmd-motion", theme.motion);
     setAttribute("data-theme", theme.resolvedMode);
     // Config-driven brand color: applied as an inline override so it wins over
     // family tokens without mutating the token layer itself.
     setStyleProperty("--dmd-accent", resolvedAccent);
     setStyleProperty("--dmd-accent-hover", resolvedAccent);
+  });
+
+  // Keep the document favicon synchronized with theme configuration
+  $effect(() => {
+    if (typeof document === "undefined") return;
+    const resolved = resolveFavicon(doc.config?.theme?.favicon);
+    let link = document.querySelector<HTMLLinkElement>('link[rel~="icon"]');
+    if (!link) {
+      link = document.createElement("link");
+      link.rel = "icon";
+      document.head.appendChild(link);
+    }
+    if (link.getAttribute("href") !== resolved) {
+      link.setAttribute("href", resolved);
+    }
   });
 
   // The generated shells ship an inline splash so the first paint is branded
@@ -85,6 +107,7 @@
 </script>
 
 <div class="dmd-root">
+  <a href="#dmd-main-content" class="dmd-skip-to-content">Skip to content</a>
   <Navbar />
 
   <div class="dmd-layout-body">
@@ -107,6 +130,10 @@
     onSelect={(slug: string) => doc.navigate(slug)}
     placeholder={doc.config?.search?.placeholder}
   />
+
+  <EditorModal />
+
+  <TagModal />
 
   <OfflineNotice />
 </div>

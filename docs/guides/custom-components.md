@@ -1,283 +1,422 @@
 ---
 title: Custom Components (.dmd)
-description: Deep dive into custom elements, the .dmd directory, and built-in interactive widgets.
+description: Author interactive custom components in Svelte 5, React TSX, or Web Elements, and explore built-in UI primitives.
 order: 4
-tags: [components, custom-elements, dmd, interactive, widgets]
+tags: [components, custom-elements, svelte, react, tsx, lit, builtins, interactive]
 ---
 
 # Custom Components (`.dmd`) 🧩
 
-DocMeDown lets you bring full interactivity into your documentation with **native Svelte 5 custom components** — no complex bundler configurations, no React or Lit dependencies, and zero overhead in production.
+DocMeDown provides a **Universal Component Compatibility Layer** that lets you bring interactive widgets into your documentation using **Svelte 5**, **React with TypeScript (TSX)**, or standard **Web Elements (Lit)** — with automatic registration, shared CSS variables, and zero build configuration.
 
 ---
 
-## 1. Creating Custom Components in `.dmd/`
+## 🏗️ 1. The `.dmd/` Directory
 
-Custom components are authored as standard Svelte 5 single-file components (`.svelte`) inside the `.dmd/` directory of your documentation folder.
+To create a custom component, drop any `.svelte`, `.tsx`, or `.ts` file into the `.dmd/` folder inside your documentation directory:
 
-Create your component file, such as `.dmd/InteractiveMetric.svelte`:
+```
+docs/
+├── docs.json
+├── README.md
+└── .dmd/
+    ├── StatusWidget.svelte       # Svelte 5 component -> <StatusWidget />
+    ├── MetricCard.tsx            # React TSX component  -> <MetricCard />
+    └── ClusterPill.ts            # Web Element / Lit   -> <ClusterPill />
+```
 
-```svelte title=".dmd/InteractiveMetric.svelte"
-<svelte:options customElement={{ tag: "dmd-interactive-metric" }} />
+Any component created in `.dmd/` is **immediately available as an HTML-like tag in any Markdown document**:
 
-<script>
-  let { label = "API Success Rate", target = 100 } = $props();
-  let value = $state(10);
+```markdown
+# Live Dashboard
+
+Check our cluster status below:
+
+<StatusWidget environment="production" />
+<MetricCard label="Throughput" initial={4500} unit="req/s" />
+<ClusterPill status="healthy" region="us-east-1" />
+```
+
+---
+
+## 🎨 2. Authoring in Svelte 5 (Native Runes)
+
+Svelte 5 components offer the fastest performance and smallest bundle footprint. Use modern runes (`$state`, `$derived`, `$props`) and declare the custom element tag name:
+
+```svelte title="docs/.dmd/InteractiveCounter.svelte"
+<svelte:options customElement="dmd-interactive-counter" />
+
+<script lang="ts">
+  let { title = "Counter", step = 1 }: { title?: string; step?: number } = $props();
+  let count = $state(0);
+  let doubled = $derived(count * 2);
 </script>
 
-<div class="metric-panel">
-  <div class="metric-readout">
-    <strong>{label}</strong>: {value}%
+<div class="counter-box">
+  <div class="readout">
+    <strong>{title}</strong>: {count} (Doubled: {doubled})
   </div>
-  <input
-    type="range"
-    min="0"
-    max={target}
-    bind:value
-    class="metric-slider"
-  />
+  <div class="actions">
+    <button onclick={() => count += step}>+{step}</button>
+    <button onclick={() => count = 0}>Reset</button>
+  </div>
 </div>
 
 <style>
-  .metric-panel {
-    padding: 1rem;
+  .counter-box {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.25rem;
     border-radius: 8px;
-    border: 1px solid var(--dmd-border-color);
-    background: var(--dmd-bg-card);
-    margin: 1rem 0;
+    background: var(--dmd-bg-card, #1e1e2e);
+    border: 1px solid var(--dmd-border-color, #333);
+    margin: 1.5rem 0;
   }
-  .metric-readout {
-    font-weight: 600;
-    color: var(--dmd-text-primary);
+  .readout {
+    color: var(--dmd-text-primary, #fff);
+    font-size: 0.95rem;
   }
-  .metric-slider {
-    width: 100%;
-    margin-top: 8px;
+  .actions {
+    display: flex;
+    gap: 8px;
+  }
+  button {
+    padding: 6px 14px;
+    border-radius: 6px;
+    background: var(--dmd-primary, #6366f1);
+    color: white;
+    border: none;
+    cursor: pointer;
+    font-weight: 500;
+  }
+  button:hover {
+    filter: brightness(1.1);
   }
 </style>
 ```
 
-You can now use `<InteractiveMetric label="API Success Rate" />` directly in any `.md` file! The runtime upgrades your PascalCase tags to `dmd-<name>` custom elements automatically.
+---
 
-### Ahead-of-Time (AOT) vs. In-Browser Runtime Compilation
+## ⚛️ 3. Authoring in React TSX (`.tsx`)
 
-DocMeDown gives you the best of both worlds:
+You can write custom components directly in React using TypeScript. DocMeDown automatically parses props, attaches event listeners, and mounts the component into the page:
 
-1. **Ahead-of-Time (AOT) Production Builds**:
-   When you run `docmedown build`, all `.dmd/*.svelte` components are compiled ahead-of-time during bundling. The compiled code is embedded directly into `_docs.js` and `.dist/index.html`. In production, your documentation loads instantly with **zero runtime compiler overhead**.
+```tsx title="docs/.dmd/ReactMetricCard.tsx"
+import React, { useState } from "react";
 
-2. **In-Browser Runtime Compilation**:
-   In local preview or dynamic serve mode (`docmedown serve`), raw `.svelte` components can be fetched dynamically. DocMeDown loads its lightweight compiler engine on-demand (`dist/docmedown-compiler.js`) and compiles components in-browser, linking them directly to active Svelte 5 runtime primitives.
+export interface MetricCardProps {
+  label?: string;
+  initial?: number;
+  unit?: string;
+}
 
-3. **Tag Auto-Derivation**:
-   If you omit `<svelte:options customElement={{ tag: "..." }} />`, DocMeDown automatically assigns the canonical `dmd-<kebab-name>` tag matching your component's file name (e.g. `MyWidget.svelte` becomes `<dmd-my-widget>`).
+export default function ReactMetricCard({
+  label = "Latency",
+  initial = 42,
+  unit = "ms",
+}: MetricCardProps) {
+  const [val, setVal] = useState(initial);
 
-4. **Legacy Compatibility**:
-   If you still have existing custom element classes in `.dmd/components.js` or `.dmd/index.js`, DocMeDown continues to bundle and register them seamlessly alongside Svelte components.
+  return (
+    <div style={{
+      padding: "1rem 1.25rem",
+      borderRadius: "8px",
+      background: "var(--dmd-bg-card, #1e1e2e)",
+      border: "1px solid var(--dmd-border-color, #333)",
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      margin: "1.5rem 0"
+    }}>
+      <div>
+        <span style={{ color: "var(--dmd-text-muted, #888)", fontSize: "0.85rem" }}>{label}</span>
+        <div style={{ fontSize: "1.5rem", fontWeight: "bold", color: "var(--dmd-text-primary, #fff)" }}>
+          {val} <small style={{ fontSize: "0.85rem" }}>{unit}</small>
+        </div>
+      </div>
+      <button
+        onClick={() => setVal(val + 5)}
+        style={{
+          padding: "6px 14px",
+          borderRadius: "6px",
+          background: "var(--dmd-primary, #6366f1)",
+          color: "#fff",
+          border: "none",
+          cursor: "pointer"
+        }}
+      >
+        Simulate Spike
+      </button>
+    </div>
+  );
+}
+```
 
-5. **Custom Syntax Highlighting (`.dmd/setup.js`)**:
-   Register custom Prism grammars for unbundled languages or custom DSLs. DocMeDown executes `.dmd/setup.js` at build-time to prerender syntax tokens in static HTML and in the browser runtime for dynamic navigation:
-   ```js title=".dmd/setup.js"
-   window.DocMeDown.registerLanguage("mylang", {
-     comment: /#.*/,
-     string: /"(?:[^"\\]|\\.)*"/,
-     keyword: /\b(?:pipeline|draw|plot|render)\b/,
-     number: /-?\b\d+(?:\.\d+)?\b/,
-   }, "#06b6d4");
-   ```
-
+### How React Components Compile:
+- **Build-Time AOT Conversion**: During `docmedown build`, standard React components are converted directly into **native Svelte 5 custom elements**. This completely strips the React runtime from your production bundle, delivering zero-runtime overhead!
+- **Runtime React Bridge**: For complex components with external React dependencies, DocMeDown automatically falls back to an isolated `createRoot()` bridge, synchronizing props to HTML attributes.
 
 ---
 
-## 2. Ready-to-Use Built-in Components
+## 🌐 4. Authoring Web Elements / Lit (`.ts`, `.js`)
 
-DocMeDown includes a rich suite of built-in components ready for use:
+Any standard Custom Element can be registered directly:
 
-### `<Tabs>` and `<Tab>`
+```ts title="docs/.dmd/LitStatusBadge.ts"
+export class LitStatusBadgeElement extends HTMLElement {
+  static get observedAttributes() {
+    return ["status", "label"];
+  }
 
-Tabs support four visual treatments via the `type` prop — `recessed` (default,
-a pressed well with a raised active tab), `underline` (chromeless uppercase
-micro-label tabs with a sliding accent bar), `pills` (a centered floating
-segmented control with a sliding accent pill), or `postit` (warm amber-tinted
-tilted folder tabs that straighten and dock into the panel when active).
-`label` is optional: a tab may be icon-only (an accessible
-name is derived from `value`/index). The universal `<Item>` works as a `<Tab>`
-and forwards its `label`/`icon`:
+  connectedCallback() {
+    this.render();
+  }
 
-```html
-<Tabs type="postit">
-  <Tab label="npm">
-    npm install docmedown
-  </Tab>
-  <Tab label="yarn" icon="🌀">
-    yarn add docmedown
-  </Tab>
-  <Tab icon="⚙️">
-    Icon-only tab, no label.
-  </Tab>
-</Tabs>
+  attributeChangedCallback() {
+    this.render();
+  }
 
-<!-- <Item> resolves to a Tab inside <Tabs> -->
-<Tabs>
-  <Item label="npm">npm install docmedown</Item>
-  <Item label="pnpm">pnpm add docmedown</Item>
-</Tabs>
+  render() {
+    const status = this.getAttribute("status") || "operational";
+    const label = this.getAttribute("label") || "Service";
+    const isOk = status === "operational" || status === "healthy";
+
+    this.innerHTML = `
+      <div style="display:inline-flex; align-items:center; gap:8px; padding:4px 10px; border-radius:12px; background:${isOk ? "rgba(16,185,129,0.15)" : "rgba(239,68,68,0.15)"}; border:1px solid ${isOk ? "#10b981" : "#ef4444"}; font-size:0.85rem; color:${isOk ? "#10b981" : "#ef4444"};">
+        <span style="width:8px; height:8px; border-radius:50%; background:currentColor;"></span>
+        <strong>${label}</strong>: ${status}
+      </div>
+    `;
+  }
+}
+
+if (typeof customElements !== "undefined" && !customElements.get("dmd-lit-status-badge")) {
+  customElements.define("dmd-lit-status-badge", LitStatusBadgeElement);
+}
+
+export default LitStatusBadgeElement;
 ```
 
 ---
 
-### `<CardGrid>` and `<Card>`
+## 🎬 5. Performance-Minded Animation Hooks (`docmedown/motion`)
 
-Cards can be fully prop-driven (self-closing) or container-style with arbitrary
-Markdown/HTML bodies. `title` is optional; `color` accepts a named variant
-(`blue`, `green`, `violet`, `amber`, `red`, `neutral`) or any CSS color, and
-`shadow={false}` opts out of the default drop shadow. Grids containing more
-cards than columns automatically become a carousel with prev/next controls,
-position dots, and wrap-around cycling: one position per card, so the last card
-leads its own window and wraps back to the first.
+DocMeDown includes a lightweight, hardware-accelerated motion engine powered by `motion/mini`. It allows you to animate your custom components with declarative Svelte actions, React hooks, or imperative helpers — with built-in accessibility compliance.
 
-Container-style cards can also name themselves. When `title`, `description`, and
-`footer` are left out, the first heading above `###` (an `#` or `##`) becomes the
-card title, the deeper heading right after it becomes the subtitle, and a
-trailing blockquote — or an `######` heading — becomes the footer. Everything
-else, including `###` and deeper headings, stays in the body; an explicit prop
-always wins for its own slot.
+<MotionDemoWidget />
+
+### Key Features:
+- 🚀 **Composite-friendly presets**: `fade`, `slide`, and `scale` animate opacity and transforms. Expanding/collapsing height and scrolling still require layout work; use those only when needed.
+- ♿ **Reduced motion**: System `prefers-reduced-motion` is respected; `data-dmd-motion="reduced"`/`"full"` on `<html>` overrides it, followed by the `dmd-motion` localStorage setting.
+- ⚡ **Shared runtime**: Custom components reuse the motion helpers shipped with DocMeDown instead of bundling another copy.
+
+---
+
+### 1. Animating Svelte Components (Actions)
+
+Import declarative motion actions directly from `"docmedown/motion"`:
+
+```svelte title="docs/.dmd/AnimatedCard.svelte"
+<script lang="ts">
+  import { motion, fade, slide, scale } from "docmedown/motion";
+</script>
+
+<!-- Custom motion action with initial, animate, and transition options -->
+<div use:motion={{
+  initial: { opacity: 0, transform: "translateY(20px)" },
+  animate: { opacity: 1, transform: "translateY(0px)" },
+  transition: { duration: 0.4, ease: [0.25, 1, 0.5, 1] }
+}}>
+  <h4>Smooth Card</h4>
+</div>
+
+<!-- Or fast presets -->
+<div use:fade={{ duration: 0.3 }}>Fades in</div>
+<div use:slide={{ direction: "up", distance: 16 }}>Slides up</div>
+<div use:scale={{ from: 0.9 }}>Scales up</div>
+```
+
+Presets accept `duration` and `delay` in **seconds**; `slide` also accepts `direction` and `distance` in pixels. Actions support Svelte's `update` lifecycle, so changing their options restarts the animation and cancels the previous one. Use `inView: true` with any preset or `motion` to defer a reveal until it enters the viewport (and disconnect its observer afterward). On reduced-motion devices, the final state appears immediately without an observer or delay.
+
+---
+
+### 2. Animating React TSX Components (`useMotion`)
+
+For React components in `.dmd/`, use the `useMotion` ref callback hook:
+
+```tsx title="docs/.dmd/ReactAnimatedStats.tsx"
+import React from "react";
+import { useMotion } from "docmedown/motion";
+
+export default function ReactAnimatedStats() {
+  const containerRef = useMotion({
+    initial: { opacity: 0, transform: "scale(0.95)" },
+    animate: { opacity: 1, transform: "scale(1)" },
+    transition: { duration: 0.35, ease: "easeOut" }
+  });
+
+  return (
+    <div ref={containerRef} className="stats-box">
+      <h3>Active Clusters</h3>
+      <p>99.99% Availability</p>
+    </div>
+  );
+}
+```
+
+---
+
+### 3. Imperative Helpers: Expand, Collapse, Smooth Scroll, Stagger
+
+For disclosures, accordions, or smooth scrolling, use performance-minded utility functions:
+
+```ts
+import { expand, collapse, smoothScroll, stagger, animate } from "docmedown/motion";
+
+// Smooth accordion expand/collapse measuring real content height (no 1000px max-height hack!)
+expand(panelElement, { duration: 250 });
+collapse(panelElement, { duration: 200 });
+
+// Cancelable, interruptible smooth scrolling for carousels
+smoothScroll(viewportElement, 480, { duration: 380, direction: "x" });
+
+// Stagger a list of elements
+stagger(badgeElements, { opacity: [0, 1], transform: ["scale(0.8)", "scale(1)"] }, {
+  staggerDelay: 0.05,
+  duration: 0.3
+});
+```
+
+`expand`, `collapse`, and `smoothScroll` take durations in **milliseconds**. Each returns `{ stop, finished }`; `stop()` cancels work, and `finished` resolves after completion or cancellation. Scrolling also stops when the user wheels, touches, clicks, or presses a key in the container. `onComplete` runs only for completed animations.
+
+---
+
+## 🎯 6. Shared Theme Design Tokens (CSS Variables)
+
+To ensure custom components match the active theme family (`atlas`, `blueprint`, `terminal`, `editorial`) and light/dark modes, use DocMeDown's standard CSS tokens:
+
+| Token | Description | Example Value |
+| :--- | :--- | :--- |
+| `var(--dmd-primary)` | Current family accent/action color | `#6366f1` / `#38bdf8` |
+| `var(--dmd-bg-canvas)` | Background canvas color | `#ffffff` / `#0f172a` |
+| `var(--dmd-bg-card)` | Surface container / card background | `#f8fafc` / `#1e293b` |
+| `var(--dmd-text-primary)` | Primary text color | `#0f172a` / `#f8fafc` |
+| `var(--dmd-text-muted)` | Subdued secondary text color | `#64748b` / `#94a3b8` |
+| `var(--dmd-border-color)` | Standard border stroke | `#e2e8f0` / `#334155` |
+| `var(--dmd-font-sans)` | Primary typography font stack | System Sans / Inter |
+| `var(--dmd-font-mono)` | Monospace code font stack | JetBrains Mono / Fira Code |
+
+---
+
+## 🧰 7. Built-in Interactive Components
+
+DocMeDown ships **20 built-in elements** that you can use out of the box without importing anything:
+
+### 1. `<Tabs>` and `<Tab>`
+Organize commands or instructions across variants (`recessed`, `pills`, `underline`, `postit`):
+
+```html
+<Tabs type="pills">
+  <Tab label="npm" icon="📦">npm install docmedown</Tab>
+  <Tab label="pnpm" icon="⚡">pnpm add docmedown</Tab>
+  <Tab label="yarn" icon="🧶">yarn add docmedown</Tab>
+</Tabs>
+```
+
+### 2. `<CardGrid>` and `<Card>`
+Highlight features or links in responsive grids (auto-converts to a carousel when items exceed columns):
 
 ```html
 <CardGrid cols={2}>
   <Card
-    title="Instant Scaffolding"
-    description="npx docmedown init ./docs"
-    badge="CLI"
-    badgeType="info"
+    title="Zero Config"
+    description="Drop index.html and browse instantly."
+    badge="Instant"
+    badgeType="success"
   />
   <Card
-    title="Hot Live Reloading"
-    description="npx docmedown serve ./docs"
-    badge="Dev"
-    badgeType="success"
+    title="100% Offline"
+    description="Double-click file:/// HTML manual."
+    badge="Air-Gapped"
+    badgeType="info"
   />
 </CardGrid>
 ```
 
-Container-style card with a Markdown body:
-
-```html
-<Card color="blue" title="Quick start">
-  Install with **npm**, then write Markdown:
-
-  - zero config
-  - hot reload
-
-  <Badge type="success">STABLE</Badge>
-</Card>
-```
-
-A heading-led body is adopted as card chrome, so no props are needed at all:
-
-```html
-<Card color="blue">
-  ## Quick start
-  ### Install with **npm**, then write Markdown
-
-  - zero config
-  - hot reload
-
-  > Ships as a single `docmedown.web.js` file.
-</Card>
-```
-
----
-
-### `<Steps>` and `<Step>`
-
-Step numbers are optional — `<Steps>` auto-numbers each step in order.
+### 3. `<Steps>` and `<Step>`
+Document sequential tutorials with auto-incrementing numbers:
 
 ```html
 <Steps>
-  <Step title="Initialize Documentation">
-    Run <code>npx docmedown ./docs</code> in your terminal.
-  </Step>
-  <Step title="Customize Branding">
-    Run <code>npx docmedown config</code> or edit <code>docs.json</code>.
-  </Step>
-  <Step title="Deploy Anywhere">
-    Host on GitHub Pages, Vercel, or bundle single-file offline.
-  </Step>
+  <Step title="Run Scaffolder">Run <code>npx docmedown init ./docs</code></Step>
+  <Step title="Preview Changes">Run <code>npx docmedown dev</code></Step>
+  <Step title="Deploy Anywhere">Host on GitHub Pages or bundle single-file</Step>
 </Steps>
 ```
 
----
-
-### `<Badge>`
+### 4. `<Badge>`
+Label release statuses, stability flags, or tags:
 
 ```html
 <Badge type="success">STABLE</Badge>
-<Badge type="warning">DEPRECATED</Badge>
-<Badge type="danger">CRITICAL</Badge>
-<Badge type="new">v1.0 NEW</Badge>
+<Badge type="warning">BETA</Badge>
+<Badge type="danger">DEPRECATED</Badge>
+<Badge type="new">v0.9.0</Badge>
 ```
 
----
-
-### The Universal `<Item>`
-
-`<Item>` is a single child element that works across every paired container. Inside a
-container it behaves exactly like that container's designated child — inheriting all its
-props — and it resolves to the **nearest** container ancestor, even through intermediate
-wrappers. With no container ancestor it renders as an `<li>` (the child of an unordered
-list).
+### 5. Universal `<Item>`
+`<Item>` works across all containers (`<Tabs>`, `<CardGrid>`, `<Steps>`, `<Accordion>`, `<Timeline>`, `<Columns>`) automatically adapting to the nearest parent!
 
 ```html
-<Accordion>
-  <Item title="Is DocMeDown free?" defaultOpen>
-    Yes — MIT licensed, forever.
-  </Item>
-</Accordion>
-
-<Timeline>
-  <Item title="0.1.7 — Offline self-containment" subtitle="2026-08-30">
-    Nested sites embed into the single-file bundle.
-  </Item>
-</Timeline>
-
 <Steps>
-  <Item>Run <code>npx docmedown ./docs</code></Item>
-  <Item>Write Markdown, get navigation and search for free.</Item>
+  <Item>Install with npm</Item>
+  <Item>Write Markdown</Item>
+  <Item>Deploy</Item>
 </Steps>
-
-<Columns cols={3} type="card">
-  <Item>**Author** in plain Markdown.</Item>
-  <Item>**Theme** with four complete families.</Item>
-</Columns>
-
-<!-- Inside a CardGrid, Item behaves as a Card: -->
-<CardGrid cols={2}>
-  <Item title="Zero Build Friction" badge="Fast">Drop an index.html and browse.</Item>
-  <Item color="blue">No title required.</Item>
-</CardGrid>
-
-<!-- Bare Item with no container → list item -->
-<ul>
-  <Item>First</Item>
-  <Item>Second</Item>
-</ul>
 ```
 
-`<Item>` inherits every property of the child it resolves to (e.g. `title`, `subtitle`,
-`defaultOpen`, `step`, `color`, …) and works exactly like writing the concrete child
-directly. Inside `<Steps>` it is auto-numbered like `<Step>`.
+### 6. `<Media>`
+Embed raster images, vector SVGs, HTML5 video and audio players with full styling, fallbacks, and lossless offline compilation:
+
+```html
+<Media
+  src="./assets/hero.png"
+  alt="Architecture Overview"
+  width="100%"
+  maxWidth="640px"
+  rounded="md"
+  shadow="sm"
+  caption="DocMeDown high-performance architecture pipeline"
+/>
+```
 
 ---
 
-## 3. Pure Svelte 5 Built-in Architecture
+## 🚀 Explore the Showcase
 
-As of **v0.3.1**, DocMeDown has completely evicted Lit in favor of a pure **Svelte 5** architecture. All 19 built-in elements (`Tabs`, `Tab`, `CardGrid`, `Card`, `Steps`, `Step`, `Badge`, `Alert`, `Callout`, `Button`, `Kbd`, `Details`, `Accordion`, `AccordionItem`, `Columns`, `Column`, `Timeline`, `TimelineItem`, and `Item`) are compiled natively with `<svelte:options customElement={{ tag: "dmd-..." }} />` using modern runes (`$state`, `$derived`, `$props`).
-
-Built-ins automatically adopt global CSS variables and theme tokens via `adoptSharedStyles()`, ensuring pixel-perfect contrast, instant transitions across Atlas/Blueprint/Terminal/Editorial theme families, and zero dual-framework overhead.
+For live, side-by-side interactive demonstrations of all 20 built-in elements, visit the **[Markdown Syntax & Component Showcase](../showcase.md)**!
 
 ---
 
-## 4. Full Library & Live Showcase
+## 🗺️ Next Steps
 
-DocMeDown ships 19 built-in components — `Tabs`/`Tab`, `CardGrid`/`Card`, `Steps`/`Step`, `Badge`, `Alert`/`Callout`, `Button`, `Kbd`, `Details`, `Accordion`/`AccordionItem`, `Columns`/`Column`, `Timeline`/`TimelineItem`, and `Item` — every one documented with copy-paste sources next to live renders in the **[Markdown Syntax & Component Showcase](../showcase.md)**.
+Continue along the linear documentation journey:
+
+<CardGrid cols={2}>
+  <Card
+    title="Next-Gen DX & Editor"
+    description="True in-place HMR, split-view in-browser editor (Ctrl+E), and staged previews."
+    href="#/guides/developer-experience"
+    badge="Next Up"
+    badgeType="info"
+  />
+  <Card
+    title="Built-in UI Primitives"
+    description="Reference for all 20 elements: CardGrid, Tabs, Badges, Callouts, Media, and Buttons."
+    href="#/guides/built-in-components"
+    badge="Previous"
+    badgeType="success"
+  />
+</CardGrid>
+

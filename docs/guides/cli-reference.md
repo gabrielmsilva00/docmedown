@@ -1,146 +1,253 @@
 ---
 title: CLI Command Reference
-description: Complete guide to DocMeDown CLI commands, options, and flags.
+description: Complete, real-world reference for every DocMeDown CLI command, options, flags, and CI/CD automation recipes.
 order: 1
-tags: [cli, commands, terminal, tui]
+tags: [cli, commands, terminal, tui, ci-cd, automation]
 ---
 
 # CLI Command Reference 🛠️
 
-The DocMeDown CLI is designed for speed and simplicity. You can run it directly with `npx` or install it globally with `npm install -g docmedown`.
+The DocMeDown command-line interface provides everything you need to scaffold, develop, validate, bundle, and distribute documentation.
+
+You can run any command directly with `npx -y docmedown <command>` or install it globally:
+
+```bash
+npm install -g docmedown
+```
 
 ---
 
-## 1. Quickstart / Default Command
+## ⚡ Command Matrix Overview
 
-```bash
-npx docmedown [dir]
-```
-
-- **Arguments**: `[dir]` (default: `./docs`)
-- **Behavior**:
-  - If the directory does not exist or has no docs, automatically runs the **`init`** command.
-  - If the directory already exists and contains docs, automatically launches the **`serve`** development server.
+| Command | Shorthand | Purpose | Key Flags |
+| :--- | :--- | :--- | :--- |
+| **[`init`](#1-init-instant-scaffolding)** | — | Scaffold starter documentation directory | `--no-start` |
+| **[`serve`](#2-serve-alias-dev-hot-live-reload)** | `dev` | High-speed local dev server with WebSocket hot reload | `-p, --port`, `-H, --host`, `--no-open` |
+| **[`build`](#3-build-static-compiler-bundler)** | — | Prerender static HTML, SEO, AI context, and offline bundle | `-w, --watch`, `--no-single-file`, `-o, --out-dir` |
+| **[`validate`](#4-validate-link-frontmatter-linter)** | — | Deep linter for broken links, missing anchors, and YAML errors | `--json` |
+| **[`doctor`](#5-doctor-system-component-diagnostics)** | — | Environmental health, missing assets, and .dmd component testing | `--json` |
+| **[`mcp`](#6-mcp-model-context-protocol-server)** | — | Expose docs to AI assistants (Cursor, Claude Desktop, Windsurf) | `-t, --transport`, `-p, --port`, `--allow-origins` |
+| **[`config`](#7-config-interactive-terminal-tui)** | — | Visual terminal wizard for theme, branding, and navigation | — |
 
 ---
 
-## 2. `init` — Scaffold Documentation
+## 1. `init` — Instant Scaffolding
+
+Scaffold a complete, modern documentation workspace with sensible defaults.
 
 ```bash
-npx docmedown init [dir] [options]
+# Scaffold in ./docs:
+npx docmedown init ./docs
+
+# Scaffold without launching the preview server immediately:
+npx docmedown init ./docs --no-start
 ```
 
-Scaffolds a new documentation site with template files (`index.html`, `docs.json`, `README.md`, `getting-started.md`, `guides/`, `.dmd/`).
+### What gets created:
+```
+docs/
+├── docs.json                 # Core configuration (theme, navigation, branding)
+├── README.md                 # Documentation home page (#/README)
+├── getting-started.md        # Starter guide (#/getting-started)
+├── guides/
+│   ├── installation.md       # Category page (#/guides/installation)
+│   └── advanced.md           # Category page (#/guides/advanced)
+└── .dmd/
+    └── CounterWidget.svelte  # Svelte 5 runes component starter
+```
+
+---
+
+## 2. `serve` (alias: `dev`) — Hot Live Reload
+
+Launch an ultra-fast local development server with instant WebSocket-backed live reloading.
+
+```bash
+# Serve default ./docs folder on http://localhost:3000:
+npx docmedown serve ./docs
+
+# Use the short alias:
+npx docmedown dev
+
+# Custom port and host:
+npx docmedown serve ./docs --port 8080 --host 0.0.0.0 --no-open
+```
 
 ### Options:
-- `--no-start`: Do not prompt or start the local preview server after scaffolding.
-
----
-
-## 3. `serve` (alias: `dev`) — Live Preview Server
-
-```bash
-npx docmedown serve [dir] [options]
-```
-
-Starts an ultra-fast local development server with WebSocket-based live reloading. It builds serveable documentation and `<dir>/.dist/index.html` at startup; source changes rebuild both outputs before the preview reloads.
-
-### Options:
-- `-p, --port <number>`: Port to listen on (default: `3000`, auto-increments if in use).
+- `-p, --port <number>`: Port to listen on (default: `3000`; auto-increments if already in use).
 - `-H, --host <string>`: Host to bind server to (default: `localhost`).
-- `--no-open`: Prevents automatically opening your default web browser.
+- `--no-open`: Prevents automatically opening your default web browser on startup.
+
+> [!TIP]
+> **Preserved Reading Position**: When you edit any Markdown file or `.dmd/` custom component, DocMeDown pushes updates over WebSocket and re-renders the document **without losing your current scroll position**.
 
 ---
 
-## 4. `build` — Static Indexing & Single-File Bundler
+## 3. `build` — Static Compiler & Bundler
+
+Recursively scans all Markdown documents, extracts headings, generates navigation trees, prerenders static pages with full SEO metadata, emits AI context files, and produces an air-gapped offline bundle.
 
 ```bash
-npx docmedown build [dir] [options]
+# Build production assets and offline bundle in ./docs/.dist:
+npx docmedown build ./docs
+
+# Watch mode (automatically rebuilds on source changes):
+npx docmedown build ./docs --watch
+
+# Output single-file offline bundle to a custom directory:
+npx docmedown build ./docs --out-dir ./dist
 ```
 
-Recursively scans all Markdown documents, parses frontmatter, extracts headings for table of contents, and generates serveable `_manifest.json`, `_docs.js`, and runtime files in the documentation directory. Every build also:
-
-- **Prerenders a static page** per document (`<slug>/index.html`, README → root `index.html`) with full SEO head tags (title, description, canonical, Open Graph, Twitter card, JSON-LD), so crawlers and no-JS visitors see complete content.
-- **Generates a `404.html`**, plus `sitemap.xml` and `robots.txt` when `url` is set in `docs.json`.
-- **Emits AI context files**: `llms.txt`, `llms-full.txt`, `SKILL.md`, and `okf.json` at the documentation root.
-- Creates a self-contained offline bundle at `<dir>/.dist/index.html` by default.
+### Generated Artifacts:
+1. **Prerendered Static Pages**: Compiles every markdown file to `<slug>/index.html` with full semantic HTML, inlined Prism syntax highlighting, and JSON-LD schema.
+2. **SEO Assets**: Generates `sitemap.xml` and `robots.txt` when `url` is configured in `docs.json`.
+3. **AI Context Files**: Emits `llms.txt`, `llms-full.txt`, `SKILL.md`, and `okf.json` directly at the documentation root for AI coding agents.
+4. **Standalone Offline Distributable**: Compresses all documents, custom components, and runtime into a single, self-extracting `.dist/index.html` that works over `file:///` URLs.
 
 ### Options:
-- `-w, --watch`: Watch source files and rebuild serveable assets plus `<dir>/.dist/index.html` after changes.
-- `--no-single-file`: Skip the default offline bundle and build serveable files only.
-- `--no-static`: Skip static page prerendering and the SEO/AI context files.
-- `-o, --out-dir <path>`: Destination directory for the offline `index.html` (default: `<dir>/.dist`).
+- `-w, --watch`: Watch source files and rebuild assets on change.
+- `--no-single-file`: Build serveable files only; skip offline single-file bundling.
+- `--no-static`: Skip prerendered static pages and SEO/AI files.
+- `-o, --out-dir <path>`: Output directory for the offline bundle (default: `<dir>/.dist`).
 
 ---
 
-## 5. `mcp` — Model Context Protocol Server
+## 4. `validate` — Link & Frontmatter Linter
+
+Performs deep structural verification across your documentation site. Catches broken local links, missing anchors, malformed YAML frontmatter, and invalid `docs.json` configuration before deployment.
 
 ```bash
-npx docmedown build ./docs   # the MCP server reads built artifacts
-npx docmedown mcp [dir]
+# Validate documentation links and schemas:
+npx docmedown validate ./docs
+
+# Output machine-readable JSON for CI/CD pipelines:
+npx docmedown validate ./docs --json
 ```
 
-Serves the built documentation as an MCP stdio server so AI coding assistants (Claude, Cursor, Windsurf, …) can query it directly. No source tree is required — only `_manifest.json` and `_docs.js` produced by `build`. Exposed tools:
+### Sample Output:
+```text
+🔍 Validating documentation in ./docs...
+  📄 Documents scanned: 12
+  🔗 Links verified:    21
+  📑 Headings indexed:  148
 
-| Tool | Description |
-| :--- | :--- |
-| `list_docs` | Every document with slug, title, category, and reading time |
-| `read_doc` | Full markdown content of one page, including headings and last-modified date |
-| `search_docs` | Keyword search returning ranked results with content snippets |
-| `resolve_url` | Resolve a slug to its public URL on the deployed site |
+✔ Validation passed! All documents, links, and schemas are valid.
+```
 
-Example `claude_desktop_config.json` entry:
-
-```json
-{
-  "mcpServers": {
-    "my-docs": { "command": "npx", "args": ["docmedown", "mcp", "./docs"] }
-  }
-}
+If an author writes a broken link or references a non-existent heading anchor, `validate` flags the exact file and line number:
+```text
+✖ Broken link in "guides/custom-components.md":
+  Anchor "#missing-prop" not found in "guides/cli-reference.md"
 ```
 
 ---
 
-## 6. `config` — Interactive Terminal TUI Wizard
+## 5. `doctor` — System & Component Diagnostics
+
+Runs comprehensive diagnostics on your development environment, project structure, asset references, and `.dmd` custom components.
 
 ```bash
-npx docmedown config [path]
+# Diagnose local documentation project:
+npx docmedown doctor ./docs
+
+# Output JSON report:
+npx docmedown doctor ./docs --json
 ```
 
-Launches an interactive, beautiful terminal user interface (TUI) allowing you to visually configure:
-- Project title & tagline
-- Theme family (`atlas`, `blueprint`, `terminal`, or `editorial`)
-- Default light, dark, or automatic color mode
-- Remote GitHub / GitLab repository source integration
-- Social and navbar links
-
-Saves directly to your `docs.json` file.
+### Sample Diagnostic Report:
+```text
+🩺 DocMeDown Doctor — System & Documentation Diagnostics (./docs)
+──────────────────────────────────────────────────────────────────────
+✔ [PASS] Node.js Environment: v26.3.0 (satisfies requirement >=20.19.0)
+✔ [PASS] Configuration File: Found valid configuration file: docs.json
+✔ [PASS] Documentation Documents: Found 12 markdown document(s) with valid home page
+✔ [PASS] Asset References: All local asset references verified
+✔ [PASS] Custom Components (.dmd): All 4 custom component(s) compiled cleanly
+──────────────────────────────────────────────────────────────────────
+✨ Doctor found 0 critical issues (5 passed, 0 warning(s)). Ready to build/serve!
+```
 
 ---
 
-## 💻 Local NPM Scripts
+## 6. `mcp` — Model Context Protocol Server
 
-When working directly inside the DocMeDown codebase (or before publishing to npm), use the local npm scripts:
+Turns your documentation into an interactive knowledge base queryable by AI coding assistants (Claude Desktop, Cursor, Windsurf, Copilot).
 
 ```bash
-# Start live preview dev server on ./docs
-npm run serve
-# or
-npm run dev
+# Stdio transport (default, ideal for Cursor / Claude Desktop):
+npx -y docmedown mcp ./docs
 
-# Build serveable docs and ./docs/.dist/index.html for offline use
-npm run build:docs
-
-# Watch source files and rebuild both outputs
-npm run build:docs:watch
-
-# Alias for the same standard build
-npm run build:offline
-
-# Launch interactive TUI configuration wizard
-npm run config:docs
-
-# Run test suite
-npm test
+# HTTP Server-Sent Events (SSE) transport (for networked/remote agents):
+npx -y docmedown mcp ./docs --transport sse --port 3001 --host 0.0.0.0
 ```
+
+### Options:
+- `-t, --transport <type>`: Protocol to use: `stdio` (default) or `sse`.
+- `-p, --port <number>`: Port number for SSE transport (default: `3001`).
+- `-H, --host <string>`: Hostname/IP to bind to (default: `localhost`).
+- `--allow-origins <origins>`: Allowed CORS origins for SSE (e.g. `*` or `http://localhost:3000`).
+
+---
+
+## 7. `config` — Interactive Terminal TUI
+
+Launch a terminal user interface to visually configure themes, branding, density, navigation links, and remote Git repositories.
+
+```bash
+npx docmedown config ./docs/docs.json
+```
+
+Saves directly to your `docs.json` file with full schema validation.
+
+---
+
+## 🤖 CI/CD Automation Recipe
+
+Add this GitHub Actions workflow to `.github/workflows/docs-check.yml` to automatically lint links, verify health, and build documentation on every Pull Request:
+
+```yaml title=".github/workflows/docs-check.yml"
+name: Documentation Quality & Build
+on: [push, pull_request]
+
+jobs:
+  check-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Validate Links & Frontmatter
+        run: npx docmedown validate ./docs
+
+      - name: Run Doctor Diagnostics
+        run: npx docmedown doctor ./docs
+
+      - name: Compile Production Site & Offline Bundle
+        run: npx docmedown build ./docs
+```
+
+---
+
+## 🗺️ Next Steps
+
+Continue along the linear documentation journey:
+
+<CardGrid cols={2}>
+  <Card
+    title="Migration Guides"
+    description="Step-by-step guides for migrating from Docusaurus, VitePress, Docsify, and MkDocs."
+    href="#/guides/migrations"
+    badge="Next Up"
+    badgeType="info"
+  />
+  <Card
+    title="Configuration Reference"
+    description="Review docs.json schema, theme families, branding, and navigation."
+    href="#/configuration"
+    badge="Previous"
+    badgeType="success"
+  />
+</CardGrid>
 

@@ -11,11 +11,12 @@ import { RemoteGitlabLoader } from "../runtime/loader/remote-gitlab";
 import { type ParsedMarkdown, parseMarkdown } from "../runtime/markdown/parser";
 import { createRouter, type HashRouter } from "../runtime/router";
 import { DocSearchIndex } from "../runtime/search/search-index";
-import type { DocConfig, SidebarTreeNode } from "../runtime/types";
+import type { DocConfig, DocFileItem, SidebarTreeNode } from "../runtime/types";
 
 export interface ActiveDocData extends ParsedMarkdown {
   slug: string;
   title: string;
+  rawContent: string;
 }
 
 export interface NavDocItem {
@@ -48,6 +49,129 @@ export class DocStore {
   error = $state<string | null>(null);
   isSearchOpen = $state(false);
   isMobileSidebarOpen = $state(false);
+  isEditorOpen = $state(false);
+  serverMode = $state<"production" | "preview">("production");
+  hasPreviewChanges = $state(false);
+
+  isScrolled = $state(false);
+  activeTagModal = $state<string | null>(null);
+  allDocs = $state<DocFileItem[]>([]);
+
+  openTagModal(tag: string) {
+    this.activeTagModal = tag.replace(/^#/, "").trim();
+  }
+
+  closeTagModal() {
+    this.activeTagModal = null;
+  }
+
+  getDocsWithTag(tag: string): DocFileItem[] {
+    const cleanTag = tag.replace(/^#/, "").toLowerCase().trim();
+    if (!cleanTag) return [];
+    return this.allDocs.filter((d) => d.frontmatter?.tags?.some((t) => t.toLowerCase().trim() === cleanTag));
+  }
+
+  getAllTags(): Array<{ tag: string; count: number }> {
+    const counts = new Map<string, number>();
+    for (const d of this.allDocs) {
+      if (Array.isArray(d.frontmatter?.tags)) {
+        for (const t of d.frontmatter.tags) {
+          const clean = t.toLowerCase().trim();
+          if (clean) counts.set(clean, (counts.get(clean) || 0) + 1);
+        }
+      }
+    }
+    return Array.from(counts.entries())
+      .map(([tag, count]) => ({ tag, count }))
+      .sort((a, b) => b.count - a.count);
+  }
+
+  getPossiblePaths(
+    crumbIndex: number,
+    _crumbSegment?: string,
+  ): Array<{ slug: string; title: string; category?: string; readingTimeMinutes?: number }> {
+    const results: Array<{ slug: string; title: string; category?: string; readingTimeMinutes?: number }> = [];
+    const seen = new Set<string>();
+
+    const addDoc = (slug: string, title: string, category?: string, readingTimeMinutes?: number) => {
+      if (!seen.has(slug)) {
+        seen.add(slug);
+        results.push({ slug, title, category, readingTimeMinutes });
+      }
+    };
+
+    // If index 0 (Root "Docs"): return all root docs and first doc of sections
+    if (crumbIndex === 0) {
+      for (const d of this.allDocs) {
+        addDoc(d.slug, d.title || d.slug, d.category || d.frontmatter?.category, d.readingTimeMinutes);
+      }
+      for (const d of this.flatDocs) {
+        addDoc(d.slug, d.title);
+      }
+      return results;
+    }
+
+    // Crumb > 0: find docs matching the directory / section prefix
+    const slugParts = this.currentSlug.split("/").filter(Boolean);
+    const prefixParts = slugParts.slice(0, crumbIndex);
+    const prefix = prefixParts.join("/");
+
+    if (prefix) {
+      for (const d of this.allDocs) {
+        if (d.slug.startsWith(`${prefix}/`) || d.slug === prefix) {
+          addDoc(d.slug, d.title || d.slug, d.category || d.frontmatter?.category, d.readingTimeMinutes);
+        }
+      }
+      for (const d of this.flatDocs) {
+        if (d.slug.startsWith(`${prefix}/`) || d.slug === prefix) {
+          addDoc(d.slug, d.title);
+        }
+      }
+    }
+
+    // If only 1 result or fewer (e.g. leaf doc like showcase or custom-components),
+    // fallback to sibling docs under the parent directory/section so hovering always
+    // shows navigable destinations in the current context.
+    if (results.length <= 1) {
+      const parentParts = slugParts.slice(0, Math.max(0, crumbIndex - 1));
+      const parentPrefix = parentParts.join("/");
+      if (parentPrefix) {
+        for (const d of this.allDocs) {
+          if (d.slug.startsWith(`${parentPrefix}/`) || d.slug === parentPrefix) {
+            addDoc(d.slug, d.title || d.slug, d.category || d.frontmatter?.category, d.readingTimeMinutes);
+          }
+        }
+        for (const d of this.flatDocs) {
+          if (d.slug.startsWith(`${parentPrefix}/`) || d.slug === parentPrefix) {
+            addDoc(d.slug, d.title);
+          }
+        }
+      } else {
+        // Root siblings (e.g. README, showcase)
+        for (const d of this.allDocs) {
+          if (!d.slug.includes("/")) {
+            addDoc(d.slug, d.title || d.slug, d.category || d.frontmatter?.category, d.readingTimeMinutes);
+          }
+        }
+        for (const d of this.flatDocs) {
+          if (!d.slug.includes("/")) {
+            addDoc(d.slug, d.title);
+          }
+        }
+        // If still fewer than 2, offer all top docs
+        if (results.length <= 1) {
+          for (const d of this.allDocs) {
+            addDoc(d.slug, d.title || d.slug, d.category || d.frontmatter?.category, d.readingTimeMinutes);
+          }
+          for (const d of this.flatDocs) {
+            addDoc(d.slug, d.title);
+          }
+        }
+      }
+    }
+
+    return results;
+  }
 
   originalHome = $state<ResolvedHome | null>(null);
   docPaths = $state<HomeDocumentInput[]>([]);
@@ -165,6 +289,9 @@ export class DocStore {
     if (!this.renderDocNow(initial.slug, epoch)) {
       await this.loadDoc(initial.slug, epoch);
     }
+    if (typeof window !== "undefined") {
+      (window as any).__DOCMEDOWN_STORE__ = this;
+    }
     void this.initTree(epoch);
     this.initHome(epoch);
     this.warmParseCache(epoch);
@@ -183,6 +310,7 @@ export class DocStore {
         }
         if (manifest.tree) this.tree = manifest.tree;
         if (manifest.docs) {
+          this.allDocs = manifest.docs;
           this.searchIndex.addDocs(manifest.docs);
           this.docPaths = manifest.docs.map((doc) => ({ slug: doc.slug, path: doc.path }));
         }
@@ -241,7 +369,7 @@ export class DocStore {
     const parsed = this.parseMarkdownCached(rawContent, slug);
     const title = parsed.frontmatter.title || parsed.headings[0]?.text || slug;
 
-    this.currentDoc = { ...parsed, slug, title };
+    this.currentDoc = { ...parsed, slug, title, rawContent };
     this.error = null;
     this.isLoading = false;
     this.isNavigating = false;
@@ -253,7 +381,56 @@ export class DocStore {
       headings: parsed.headings,
       content: rawContent,
     });
+    if (!this.allDocs.some((d) => d.slug === slug)) {
+      this.allDocs.push({
+        slug,
+        path: `${slug}.md`,
+        title,
+        frontmatter: parsed.frontmatter,
+        headings: parsed.headings,
+        readingTimeMinutes: parsed.readingTimeMinutes,
+      });
+    }
     this.resetScroll();
+  }
+
+  public toggleEditor(open?: boolean): void {
+    this.isEditorOpen = open !== undefined ? open : !this.isEditorOpen;
+  }
+
+  public updateDocContent(content: string, slug: string = this.currentSlug, resetScroll: boolean = false): void {
+    this.localLoader.setDocContent(slug, content);
+    this.parseCache.delete(slug);
+
+    if (this.currentSlug === slug) {
+      const parsed = parseMarkdown(content, slug);
+      const title = parsed.frontmatter.title || parsed.headings[0]?.text || slug;
+      this.currentDoc = { ...parsed, slug, title, rawContent: content };
+      this.searchIndex.addDoc({
+        slug,
+        path: `${slug}.md`,
+        title,
+        frontmatter: parsed.frontmatter,
+        headings: parsed.headings,
+        content,
+      });
+      if (resetScroll) {
+        this.resetScroll();
+      }
+    }
+  }
+
+  public applyHmrUpdate(slug: string, content: string): void {
+    this.updateDocContent(content, slug, false);
+    if (typeof console !== "undefined") {
+      console.log(`[DocMeDown HMR] In-place update applied for ${slug}`);
+    }
+  }
+
+  public updateConfig(newConfig: Partial<DocConfig>): void {
+    if (this.config) {
+      this.config = { ...this.config, ...newConfig };
+    }
   }
 
   private resetScroll(): void {

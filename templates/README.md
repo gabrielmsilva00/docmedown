@@ -20,7 +20,7 @@ tags: [getting-started, overview, docs]
 - **🚀 Zero Build Friction**: Host statically, build a self-contained `.dist/index.html` for `file:///`, or document remote GitHub/GitLab repositories dynamically.
 - **🎨 Complete Theme Families**: Atlas, Blueprint, Terminal, and Editorial each provide distinct surfaces, geometry, typography, spacing, and diagram palettes across light and dark modes.
 - **⚡ Fast Search**: In-browser fuzzy search with `⌘K` command palette.
-- **⚛️ React Components**: Support for custom React components via `.dmd/` global registry or ready-to-use builtins.
+- **🧩 Custom Components**: Support for custom `.dmd/` widgets written in native Svelte 5, React TSX, or Web Elements, plus ready-to-use builtins.
 - **📊 Diagrams & Math**: A theme-aware Mermaid viewer with Fit, zoom, SVG export, and offline parity, plus KaTeX formulas.
 
 ---
@@ -30,7 +30,7 @@ tags: [getting-started, overview, docs]
 ```mermaid
 graph LR
     A[Markdown Files] --> B[DocMeDown Parser]
-    B --> C[React SPA Runtime]
+    B --> C[Svelte 5 Engine]
     C --> D[Live Documentation Site]
     E[docs.json] --> C
     F[.dmd Components] --> C

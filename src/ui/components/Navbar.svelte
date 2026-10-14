@@ -1,7 +1,9 @@
 <script lang="ts">
+  import { untrack } from "svelte";
   import { doc } from "../doc-context.svelte";
   import { theme } from "../theme.svelte";
   import AppearanceMenu from "./AppearanceMenu.svelte";
+  import BreadcrumbItem from "./BreadcrumbItem.svelte";
   import OfflineDownloadButton from "./OfflineDownloadButton.svelte";
 
   const homeHref = $derived(
@@ -9,22 +11,211 @@
   );
   const homeTitle = $derived(doc.home?.via === "ancestor" ? "Original documentation home" : "Documentation home");
   const config = $derived(doc.config);
-  let isScrolled = $state(false);
+  const isScrolled = $derived(doc.isScrolled);
+
+  const breadcrumbs = $derived.by(() => {
+    const slug = doc.currentSlug;
+    if (!slug) return [];
+    return slug.split("/").filter(Boolean);
+  });
+
+  let searchBarEl = $state<HTMLElement | null>(null);
+  let routeBarEl = $state<HTMLElement | null>(null);
+  // Search bar and route bar both use reversible CSS transitions
+  let routeLockTimeout: ReturnType<typeof setTimeout> | null = null;
+  let isFirstNavbarAnim = true;
+  let lastAnimScrolled: boolean | null = null;
+
+  const checkIsMac = () => {
+    if (typeof navigator === "undefined") return false;
+    const nav = navigator as Navigator & { userAgentData?: { platform?: string } };
+    const platform = nav.userAgentData?.platform || nav.platform || "";
+    const userAgent = nav.userAgent || "";
+    return /^mac/i.test(platform) || /macintosh|mac os x/i.test(userAgent);
+  };
+
+  let isMac = $state(checkIsMac());
+
+  $effect(() => {
+    isMac = checkIsMac();
+  });
+
+  const searchShortcut = $derived(isMac ? "⌘K" : "Ctrl K");
+
+  const resolvedPlaceholder = $derived.by(() => {
+    const raw = config?.search?.placeholder || "Search docs...";
+    if (isMac) {
+      return raw.replace(/Ctrl\+?K/gi, "⌘K");
+    }
+    return raw.replace(/⌘K/g, "Ctrl K").replace(/⌘/g, "Ctrl");
+  });
+
+  const searchAriaLabel = $derived.by(() => {
+    const base = resolvedPlaceholder;
+    if (base.includes(searchShortcut)) return base;
+    return `${base} (${searchShortcut})`;
+  });
 
   $effect(() => {
     let ticking = false;
+    let threshold = 50;
+
+    const measureThreshold = () => {
+      const headerEl = document.querySelector(".dmd-content-header") as HTMLElement | null;
+      const navEl = document.querySelector(".dmd-navbar") as HTMLElement | null;
+      const navHeight = navEl ? navEl.offsetHeight : 56;
+      if (headerEl) {
+        const docTop = headerEl.getBoundingClientRect().top + window.scrollY;
+        threshold = Math.max(30, Math.round(docTop - navHeight + 8));
+      } else {
+        const mainEl = document.querySelector(".dmd-main-content") as HTMLElement | null;
+        if (mainEl) {
+          const docTop = mainEl.getBoundingClientRect().top + window.scrollY;
+          threshold = Math.max(30, Math.round(docTop - navHeight + 8));
+        } else {
+          threshold = 50;
+        }
+      }
+    };
+
+    const updateScroll = () => {
+      ticking = false;
+      const y = window.scrollY;
+      const currentlyScrolled = untrack(() => doc.isScrolled);
+      const nextScrolled = currentlyScrolled ? y >= threshold - 20 : y >= threshold;
+      if (currentlyScrolled !== nextScrolled) {
+        doc.isScrolled = nextScrolled;
+      }
+    };
+
     const handleScroll = () => {
       if (ticking) return;
       ticking = true;
-      requestAnimationFrame(() => {
-        ticking = false;
-        const scrolled = window.scrollY > 8;
-        if (isScrolled !== scrolled) isScrolled = scrolled;
-      });
+      requestAnimationFrame(updateScroll);
     };
-    handleScroll();
+
+    measureThreshold();
+    updateScroll();
+
     window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
+    window.addEventListener("resize", measureThreshold, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("resize", measureThreshold);
+    };
+  });
+
+  $effect(() => {
+    // When slug or document loading state changes, re-measure threshold after paint
+    doc.currentSlug;
+    doc.isLoading;
+    requestAnimationFrame(() => {
+      const headerEl = document.querySelector(".dmd-content-header") as HTMLElement | null;
+      const navEl = document.querySelector(".dmd-navbar") as HTMLElement | null;
+      const navHeight = navEl ? navEl.offsetHeight : 56;
+      let th = 50;
+      if (headerEl) {
+        th = Math.max(30, Math.round(headerEl.getBoundingClientRect().top + window.scrollY - navHeight + 8));
+      }
+      doc.isScrolled = window.scrollY >= th;
+    });
+  });
+
+  // Smooth cinematic transitions between full search bar and unrolled route bar
+  $effect(() => {
+    const isNowScrolled = isScrolled && !!doc.currentDoc;
+    if (!routeBarEl || !searchBarEl) return;
+
+    if (isFirstNavbarAnim) {
+      isFirstNavbarAnim = false;
+      lastAnimScrolled = isNowScrolled;
+      if (!isNowScrolled) {
+        routeBarEl.style.opacity = "0";
+        routeBarEl.style.clipPath = "inset(0 100% 0 0)";
+        routeBarEl.style.pointerEvents = "none";
+        routeBarEl.removeAttribute("data-visible");
+        searchBarEl.removeAttribute("data-collapsed");
+        searchBarEl.style.removeProperty("max-width");
+      } else {
+        // Snap to visible with no transition on first render
+        routeBarEl.style.transition = "none";
+        routeBarEl.setAttribute("data-visible", "true");
+        routeBarEl.style.opacity = "1";
+        routeBarEl.style.clipPath = "inset(0 0% 0 0)";
+        routeBarEl.style.pointerEvents = "auto";
+        requestAnimationFrame(() => {
+          if (routeBarEl) routeBarEl.style.removeProperty("transition");
+        });
+        // Snap search bar to collapsed with no transition on first render
+        searchBarEl.style.transition = "none";
+        searchBarEl.setAttribute("data-collapsed", "true");
+        searchBarEl.style.removeProperty("max-width");
+        requestAnimationFrame(() => {
+          if (searchBarEl) searchBarEl.style.removeProperty("transition");
+        });
+      }
+      return;
+    }
+
+    // Skip if state has not genuinely transitioned
+    if (isNowScrolled === lastAnimScrolled) {
+      return;
+    }
+    lastAnimScrolled = isNowScrolled;
+
+    // Cancel any in-flight transitions / timeouts
+    if (routeLockTimeout !== null) {
+      clearTimeout(routeLockTimeout);
+      routeLockTimeout = null;
+    }
+
+    if (isNowScrolled) {
+      // ── Search bar: collapse via CSS transition in main.css ──────────────
+      searchBarEl.style.removeProperty("max-width");
+      searchBarEl.setAttribute("data-collapsed", "true");
+
+      // ── Route bar: unroll left-to-right via CSS transition ───────────────
+      routeBarEl.style.pointerEvents = "auto";
+      routeBarEl.removeAttribute("data-visible");
+      routeBarEl.style.removeProperty("transition");
+      routeBarEl.style.clipPath = "inset(0 0% 0 0)";
+      routeBarEl.style.opacity = "1";
+
+      routeLockTimeout = setTimeout(() => {
+        routeLockTimeout = null;
+        if (routeBarEl && doc.isScrolled && doc.currentDoc) {
+          routeBarEl.setAttribute("data-visible", "true");
+          routeBarEl.style.removeProperty("clip-path");
+          routeBarEl.style.removeProperty("opacity");
+        }
+      }, 260);
+    } else {
+      // ── Search bar: expand via CSS transition in main.css ────────────────
+      searchBarEl.style.removeProperty("max-width");
+      searchBarEl.removeAttribute("data-collapsed");
+
+      // ── Route bar: roll right-to-left via CSS transition ─────────────────
+      routeBarEl.style.pointerEvents = "none";
+      routeBarEl.removeAttribute("data-visible");
+      routeBarEl.style.removeProperty("transition");
+      routeBarEl.style.clipPath = "inset(0 100% 0 0)";
+      routeBarEl.style.opacity = "0";
+
+      routeLockTimeout = setTimeout(() => {
+        routeLockTimeout = null;
+        if (routeBarEl && !doc.isScrolled) {
+          routeBarEl.style.clipPath = "inset(0 100% 0 0)";
+          routeBarEl.style.opacity = "0";
+        }
+      }, 260);
+    }
+
+    return () => {
+      if (routeLockTimeout !== null) {
+        clearTimeout(routeLockTimeout);
+        routeLockTimeout = null;
+      }
+    };
   });
 </script>
 
@@ -58,22 +249,114 @@
     </a>
   </div>
 
-  <div class="dmd-navbar-center">
-    {#if config?.search?.enabled !== false}
-      <button
-        type="button"
-        class="dmd-search-trigger"
-        aria-label={config?.search?.placeholder || "Search documentation"}
-        onclick={() => (doc.isSearchOpen = true)}
-      >
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="11" cy="11" r="8" />
-          <path d="m21 21-4.3-4.3" />
-        </svg>
-        <span class="dmd-search-placeholder">{config?.search?.placeholder || "Search docs..."}</span>
-        <span class="dmd-search-shortcut"><kbd class="dmd-kbd">⌘K</kbd></span>
-      </button>
-    {/if}
+  <div class="dmd-navbar-center" class:has-route={isScrolled && doc.currentDoc}>
+    <!-- Search bar: wide when at top, smoothly collapses to the side into the compact search icon.
+         data-collapsed is set by JS ONLY after the animation finishes — never toggled reactively. -->
+    <div
+      bind:this={searchBarEl}
+      class="dmd-navbar-search-full"
+      aria-hidden={false}
+    >
+      {#if config?.search?.enabled !== false}
+        <button
+          type="button"
+          class="dmd-search-trigger"
+          tabindex={0}
+          aria-label={searchAriaLabel}
+          title={isScrolled && doc.currentDoc ? searchAriaLabel : undefined}
+          onclick={() => (doc.isSearchOpen = true)}
+        >
+          <svg class="dmd-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="11" cy="11" r="8" />
+            <path d="m21 21-4.3-4.3" />
+          </svg>
+          <span class="dmd-search-placeholder">{resolvedPlaceholder}</span>
+          <span class="dmd-search-shortcut"><kbd class="dmd-kbd">{searchShortcut}</kbd></span>
+        </button>
+      {/if}
+    </div>
+
+    <!-- Scrolled route, tags: unrolls left-to-right as search bar collapses.
+         data-visible is set by JS ONLY after the WAAPI animation finishes — never toggled reactively. -->
+    <div
+      bind:this={routeBarEl}
+      class="dmd-navbar-route-bar"
+      aria-hidden={!isScrolled || !doc.currentDoc}
+    >
+      <nav class="dmd-nav-breadcrumbs" aria-label="Breadcrumb">
+        <BreadcrumbItem label="Docs" index={0} isHome={true} isScrolled={isScrolled} />
+        {#each breadcrumbs as crumb, idx (idx)}
+          <span class="dmd-nav-crumb-sep">/</span>
+          <BreadcrumbItem
+            label={crumb}
+            index={idx + 1}
+            isLast={idx === breadcrumbs.length - 1}
+            isScrolled={isScrolled}
+          />
+        {/each}
+      </nav>
+
+      {#if doc.currentDoc}
+        <div class="dmd-nav-meta">
+          {#if doc.currentDoc.readingTimeMinutes}
+            <span class="dmd-nav-meta-item dmd-meta-item" title="Reading time">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="12 6 12 12 16 14" />
+              </svg>
+              <span>{doc.currentDoc.readingTimeMinutes} min read</span>
+            </span>
+          {/if}
+          {#if doc.currentDoc.frontmatter?.category}
+            <span class="dmd-nav-meta-item dmd-meta-item dmd-meta-category">{doc.currentDoc.frontmatter.category}</span>
+          {/if}
+          {#if doc.currentDoc.frontmatter?.tags && doc.currentDoc.frontmatter.tags.length > 0}
+            {@const allTags = doc.currentDoc.frontmatter.tags}
+            {@const maxNavbarTags = allTags.length > 2 ? 1 : 2}
+            {@const visibleTags = allTags.slice(0, maxNavbarTags)}
+            {@const remainingCount = allTags.length - visibleTags.length}
+            {#each visibleTags as tag (tag)}
+              <button
+                type="button"
+                class="dmd-nav-meta-tag dmd-meta-tag dmd-clickable-tag"
+                tabindex={isScrolled ? 0 : -1}
+                title="View documents tagged with #{tag}"
+                aria-label="View documents tagged with #{tag}"
+                onclick={() => doc.openTagModal(tag)}
+              >
+                #{tag}
+              </button>
+            {/each}
+            {#if remainingCount > 0}
+              <button
+                type="button"
+                class="dmd-nav-meta-tag dmd-meta-tag dmd-clickable-tag dmd-nav-meta-tag-more"
+                tabindex={isScrolled ? 0 : -1}
+                title={`View all ${allTags.length} tags for this document`}
+                aria-label={`View ${remainingCount} more tags`}
+                onclick={() => doc.openTagModal(allTags[1] || allTags[0])}
+              >
+                +{remainingCount}
+              </button>
+            {/if}
+          {/if}
+          <button
+            type="button"
+            class="dmd-meta-edit-btn"
+            tabindex={isScrolled ? 0 : -1}
+            title="Edit this document (Ctrl+E / ⌘E)"
+            aria-label="Edit document in 2-way editor"
+            onclick={() => (doc.isEditorOpen = true)}
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M12 20h9" />
+              <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+            </svg>
+            <span>Edit</span>
+          </button>
+        </div>
+      {/if}
+    </div>
   </div>
 
   <div class="dmd-navbar-right">
@@ -115,6 +398,19 @@
         {/each}
       </div>
     {/if}
+
+    <button
+      type="button"
+      class="dmd-social-btn dmd-edit-btn"
+      title="Edit markdown (Ctrl+E / ⌘E)"
+      aria-label="Edit markdown"
+      onclick={() => (doc.isEditorOpen = true)}
+    >
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 20h9" />
+        <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+      </svg>
+    </button>
 
     <OfflineDownloadButton />
     <AppearanceMenu />

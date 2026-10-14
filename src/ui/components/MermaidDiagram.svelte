@@ -1,6 +1,7 @@
 <script lang="ts">
   import {
     calculateDiagramCameraBounds,
+    calculateDiagramFit,
     type DiagramCamera,
     type DiagramCameraBounds,
     type DiagramSize,
@@ -76,6 +77,9 @@
   let camera = $state<DiagramCamera>({ x: 0, y: 0 });
   let copiedTarget = $state<string | null>(null);
   let isPanning = $state(false);
+  // Collapsed-mode stage height: sized to the fitted diagram instead of a fixed
+  // square so short diagrams don't float in a tall empty frame.
+  let stageHeight = $state<number | null>(null);
 
   let stageElement = $state<HTMLDivElement | null>(null);
   let canvasElement = $state<HTMLDivElement | null>(null);
@@ -161,31 +165,44 @@
 
   // Mermaid occasionally emits a viewBox that excludes the tail of clustered
   // flowcharts. Once the SVG is in the document, measure its actual graphics
-  // tree and replace the nominal bounds before fitting the viewer.
+  // tree and replace the nominal bounds only if clusters exceed nominal bounds.
+  // In sequence diagrams and other diagrams, Mermaid emits multiple top-level <g>
+  // elements and its nominal viewBox is authoritative. Overwriting viewBox with
+  // an arbitrary child <g> would corrupt diagram bounds and clip elements.
   $effect(() => {
     if (!svg) return;
     const svgElement = canvasElement?.querySelector("svg");
-    const graphics = svgElement?.querySelector<SVGGElement>(":scope > g");
-    if (!svgElement || !graphics || typeof graphics.getBBox !== "function") return;
+    if (!svgElement) return;
+
+    const hasClusters = svgElement.querySelector(".cluster") !== null;
+    const directGroups = svgElement.querySelectorAll(":scope > g");
+    const rootGraphics =
+      svgElement.querySelector<SVGGElement>(":scope > g.output, :scope > g[id^='flowchart-']") ??
+      (directGroups.length === 1 ? directGroups[0] : null);
+
+    if (!hasClusters || !rootGraphics || typeof rootGraphics.getBBox !== "function") return;
 
     try {
-      const bounds = graphics.getBBox();
+      const bounds = rootGraphics.getBBox();
       if (bounds.width <= 0 || bounds.height <= 0) return;
       const padding = 20;
       const measured = { width: bounds.width + padding * 2, height: bounds.height + padding * 2 };
-      svgElement.setAttribute("viewBox", `${bounds.x - padding} ${bounds.y - padding} ${measured.width} ${measured.height}`);
-      svgElement.removeAttribute("width");
-      svgElement.removeAttribute("height");
-      diagramSize = measured;
+      if (!diagramSize || measured.height > diagramSize.height || measured.width > diagramSize.width) {
+        svgElement.setAttribute("viewBox", `${bounds.x - padding} ${bounds.y - padding} ${measured.width} ${measured.height}`);
+        svgElement.removeAttribute("width");
+        svgElement.removeAttribute("height");
+        diagramSize = measured;
+      }
     } catch {
       // Some non-browser DOM shims do not implement SVG geometry. The emitted
       // Mermaid viewBox remains a safe fallback in those environments.
     }
   });
 
-  // The default viewer is a square inspection window. Fit is intentionally
-  // width-first: tall diagrams continue below the fold and are explored by
-  // panning instead of making the document card grow or exposing scrollbars.
+  // The default viewer is a responsive inspection window. Fit is width-first in
+  // collapsed mode (tall diagrams continue below the fold and are explored by
+  // panning instead of making the document card grow or exposing scrollbars).
+  // In expanded overlay mode, Fit contains both width and height.
   $effect(() => {
     if (!stageElement || !diagramSize) return;
 
@@ -195,11 +212,21 @@
       const verticalPadding = Number.parseFloat(styles.paddingTop) + Number.parseFloat(styles.paddingBottom);
       const availableWidth = Math.max(1, stageElement!.clientWidth - horizontalPadding);
       const availableHeight = Math.max(1, stageElement!.clientHeight - verticalPadding);
-      const nextFit = clampZoom(availableWidth / diagramSize!.width);
+
+      const nextFit = expanded
+        ? clampZoom(calculateDiagramFit(diagramSize!, { width: availableWidth, height: availableHeight }))
+        : clampZoom(Math.min(1, availableWidth / diagramSize!.width));
+
+      // Expanded mode fills the overlay; otherwise hug the fitted diagram.
+      const targetHeight = expanded
+        ? null
+        : Math.round(Math.min(560, Math.max(200, diagramSize!.height * nextFit + verticalPadding)));
+      stageHeight = targetHeight;
+      const visibleHeight = Math.max(1, (targetHeight ?? stageElement!.clientHeight) - verticalPadding);
       fitZoom = nextFit;
       if (isFitted) {
         zoom = nextFit;
-        camera = { x: 0, y: Math.max(0, (diagramSize!.height * nextFit - availableHeight) / 2) };
+        camera = { x: 0, y: Math.max(0, (diagramSize!.height * nextFit - visibleHeight) / 2) };
       }
     };
 
@@ -301,6 +328,15 @@
   function fitDiagram() {
     isFitted = true;
     zoom = fitZoom;
+    const stage = stageElement;
+    if (stage && diagramSize) {
+      const styles = getComputedStyle(stage);
+      const verticalPadding = Number.parseFloat(styles.paddingTop) + Number.parseFloat(styles.paddingBottom);
+      const visibleHeight = Math.max(1, (stageHeight ?? stage.clientHeight) - verticalPadding);
+      const nextCamera = { x: 0, y: Math.max(0, (diagramSize.height * fitZoom - visibleHeight) / 2) };
+      cameraRef = nextCamera;
+      camera = nextCamera;
+    }
   }
 
   function readCameraBounds(): DiagramCameraBounds {
@@ -409,24 +445,6 @@
     <div class="dmd-diagram-toolbar">
       <button
         type="button"
-        class="dmd-diagram-btn dmd-diagram-icon-btn dmd-diagram-copy-all{copiedTarget === "graph" ? " copied" : ""}"
-        disabled={!svg}
-        aria-label={copiedTarget === "graph" ? "Graph Markdown copied" : "Copy graph Markdown"}
-        title={copiedTarget === "graph" ? "Copied" : "Copy graph Markdown"}
-        onclick={() => copyMarkdown(formatDiagramMarkdown(diagramSource), "graph")}
-      >
-        {#if copiedTarget === "graph"}
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6" /></svg>
-        {:else}
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <rect x="8" y="8" width="11" height="11" rx="2" />
-            <path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" />
-          </svg>
-        {/if}
-      </button>
-      <span class="dmd-diagram-toolbar-divider" aria-hidden="true"></span>
-      <button
-        type="button"
         class="dmd-diagram-btn"
         aria-label="Zoom out"
         disabled={!svg || zoom <= MIN_ZOOM}
@@ -454,6 +472,24 @@
         1:1
       </button>
       <span class="dmd-diagram-toolbar-spacer"></span>
+      <button
+        type="button"
+        class="dmd-diagram-btn dmd-diagram-icon-btn dmd-diagram-copy-all{copiedTarget === "graph" ? " copied" : ""}"
+        disabled={!svg}
+        aria-label={copiedTarget === "graph" ? "Graph Markdown copied" : "Copy graph Markdown"}
+        title={copiedTarget === "graph" ? "Copied" : "Copy graph Markdown"}
+        onclick={() => copyMarkdown(formatDiagramMarkdown(diagramSource), "graph")}
+      >
+        {#if copiedTarget === "graph"}
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6" /></svg>
+        {:else}
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="8" y="8" width="11" height="11" rx="2" />
+            <path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" />
+          </svg>
+        {/if}
+      </button>
+      <span class="dmd-diagram-toolbar-divider" aria-hidden="true"></span>
       <button type="button" class="dmd-diagram-btn" disabled={!svg} onclick={downloadSvg}>SVG</button>
       <button type="button" class="dmd-diagram-btn" disabled={!svg} onclick={() => (expanded = !expanded)}>
         {expanded ? "Close" : "Expand"}
@@ -463,6 +499,7 @@
     <div
       role="application"
       class="dmd-diagram-stage{isPanning ? " is-panning" : ""}"
+      style={stageHeight !== null && !expanded ? `height: ${stageHeight}px; aspect-ratio: auto;` : undefined}
       bind:this={stageElement}
       onpointerdown={handlePanStart}
       onpointermove={handlePanMove}
@@ -475,7 +512,7 @@
         <div
           bind:this={canvasElement}
           class="dmd-diagram-canvas"
-          style="width: {renderedSize.width}px; height: {renderedSize.height}px; transform: translate3d(calc(-50% + {camera.x}px), calc(-50% + {camera.y}px), 0);"
+          style="width: {renderedSize.width}px; height: {renderedSize.height}px; margin-left: {-Math.round(renderedSize.width / 2)}px; margin-top: {-Math.round(renderedSize.height / 2)}px; transform: translate({Math.round(camera.x)}px, {Math.round(camera.y)}px);"
         >
           <div class="dmd-diagram-svg">
             {@html svg}

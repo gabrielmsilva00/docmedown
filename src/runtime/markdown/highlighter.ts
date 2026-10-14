@@ -1,3 +1,4 @@
+import { marked } from "marked";
 import Prism from "prismjs";
 
 // Import core languages only (10 most common). Less common languages like
@@ -15,9 +16,49 @@ import "prismjs/components/prism-json";
 import "prismjs/components/prism-yaml";
 import "prismjs/components/prism-css";
 import "prismjs/components/prism-markdown";
+import "prismjs/components/prism-markup";
 import "prismjs/components/prism-python";
 
+import { escapeHtml } from "./escape";
 import { encodeDiagramSource } from "./mermaid";
+import { renderDelimitedBlock } from "./tables";
+
+export { escapeHtml };
+
+// Prism 1.29 does not include an official Svelte grammar. Compose one from its
+// bundled JavaScript, CSS, and markup grammars instead of treating `.svelte`
+// fences as an unknown language. Script/style content comes first so it takes
+// precedence over the general template-tag matcher.
+Prism.languages.svelte = {
+  script: {
+    pattern: /(<script\b[^>]*>)[\s\S]*?(?=<\/script>)/i,
+    lookbehind: true,
+    greedy: true,
+    inside: Prism.languages.javascript,
+  },
+  style: {
+    pattern: /(<style\b[^>]*>)[\s\S]*?(?=<\/style>)/i,
+    lookbehind: true,
+    greedy: true,
+    inside: Prism.languages.css,
+  },
+  comment: /<!--[\s\S]*?-->/,
+  "svelte-directive": {
+    pattern: /<\/?svelte:[\w-]+(?:\s+(?:[^>"']|"[^"]*"|'[^']*')*)?\/?>(?=\s|$)/i,
+    greedy: true,
+    inside: Prism.languages.markup,
+  },
+  tag: {
+    pattern: /<\/?(?!\d)[^\s>/=$<%]+(?:\s+(?:[^\s>/=]+(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s'">=]+))?))*\s*\/?>/,
+    greedy: true,
+    inside: Prism.languages.markup,
+  },
+  interpolation: {
+    pattern: /\{(?:[^{}]|\{(?:[^{}]|\{[^{}]*\})*\})*\}/,
+    greedy: true,
+    inside: Prism.languages.javascript,
+  },
+};
 
 /**
  * Mermaid fences emit a data-driven placeholder. The runtime mounts an
@@ -143,15 +184,6 @@ export function highlightCode(code: string, lang: string = ""): string {
   return Prism.highlight(code, grammar, cleanLang);
 }
 
-export function escapeHtml(str: string): string {
-  return str
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
-
 /**
  * Renders a path-aware title HTML: directories are dimmed, the filename is
  * color-coded by extension and prefixed with a small file icon that inherits
@@ -197,6 +229,12 @@ export function renderCodeBlock(code: string, infoString: string = ""): string {
   if (titleMatch) title = titleMatch[1];
 
   if (lang.toLowerCase() === "mermaid") return diagramPlaceholder(code);
+
+  // ```csv / ```tsv render as real tables (with the same Copy menu as pipe
+  // tables) instead of highlighted source. Use ```text to show raw CSV.
+  if (lang === "csv" || lang === "tsv") {
+    return renderDelimitedBlock(code, infoString, lang, (source) => marked.parseInline(source) as string);
+  }
 
   const highlighted = highlightCode(code, lang);
   const id = `code-${Math.random().toString(36).substring(2, 9)}`;

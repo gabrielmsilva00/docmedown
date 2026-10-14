@@ -7,7 +7,8 @@ import chokidar from "chokidar";
 import { buildSync } from "esbuild";
 import { compile } from "svelte/compiler";
 import { normalizeConfig, parseDocConfigJson } from "../../runtime/config";
-
+import { isFaviconPreset, resolveFavicon } from "../../runtime/favicons";
+import { isDataUri, resolveMimeType, toLosslessDataUri } from "../../runtime/media";
 import {
   createCompressedOfflineHtml,
   OFFLINE_FORMAT_VERSION,
@@ -18,6 +19,7 @@ import { dmdTag, ensureCustomElementTag } from "../../runtime/svelte-tag";
 import type { DocConfig } from "../../runtime/types";
 import { emitAiContextFiles } from "../ai-context";
 import { emitStaticSite } from "../seo";
+import { convertReactToSvelte } from "../utils/react-to-svelte";
 import { generateManifest, scanDirectory } from "../utils/scanner";
 
 export interface BuildOptions {
@@ -86,25 +88,48 @@ export function bundleCustomComponents(targetPath: string): string | undefined {
     }
   }
 
-  const svelteFiles =
-    dmdDir && fs.existsSync(dmdDir) ? fs.readdirSync(dmdDir).filter((file) => file.endsWith(".svelte")) : [];
+  const dmdEntries = dmdDir && fs.existsSync(dmdDir) ? fs.readdirSync(dmdDir) : [];
+  const svelteFiles = dmdEntries.filter((file) => file.endsWith(".svelte"));
+  const reactFiles = dmdEntries.filter(
+    (file) => (file.endsWith(".tsx") || file.endsWith(".jsx")) && !file.startsWith("."),
+  );
+  const EXCLUDED_SCRIPTS = [
+    "setup.js",
+    "setup.mjs",
+    "setup.ts",
+    "languages.js",
+    "languages.ts",
+    "components.js",
+    "index.js",
+  ];
+  const webElementFiles = dmdEntries.filter(
+    (file) =>
+      (file.endsWith(".ts") || file.endsWith(".js")) && !EXCLUDED_SCRIPTS.includes(file) && !file.endsWith(".d.ts"),
+  );
 
-  if (svelteFiles.length > 0 && dmdDir) {
+  const hasComponents = svelteFiles.length > 0 || reactFiles.length > 0 || webElementFiles.length > 0;
+
+  if (hasComponents && dmdDir) {
     try {
-      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "docmedown-svelte-bundle-"));
+      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "docmedown-components-bundle-"));
       try {
-        const dmdEntries = fs.readdirSync(dmdDir);
         for (const entry of dmdEntries) {
-          if (!entry.endsWith(".svelte")) {
-            const src = path.join(dmdDir, entry);
-            if (fs.statSync(src).isFile()) {
-              fs.copyFileSync(src, path.join(tempDir, entry));
-            }
+          const src = path.join(dmdDir, entry);
+          if (fs.statSync(src).isFile()) {
+            fs.copyFileSync(src, path.join(tempDir, entry));
           }
+        }
+
+        // Provide bridge runtime if React bridging is required
+        const bridgeSrc = path.resolve(__dirname, "../../runtime/bridges/react-bridge.ts");
+        if (fs.existsSync(bridgeSrc)) {
+          fs.copyFileSync(bridgeSrc, path.join(tempDir, "react-bridge-runtime.ts"));
         }
 
         const entryImports: string[] = [];
         const entryExports: string[] = [];
+
+        // 1. Process Svelte components
         for (const svelteFile of svelteFiles) {
           const rawSource = fs.readFileSync(path.join(dmdDir, svelteFile), "utf-8");
           const baseName = svelteFile.replace(/\.svelte$/, "");
@@ -119,6 +144,65 @@ export function bundleCustomComponents(targetPath: string): string | undefined {
           const outJsFile = `${baseName}.compiled.js`;
           fs.writeFileSync(path.join(tempDir, outJsFile), compiled.js.code, "utf-8");
           entryImports.push(`import "./${outJsFile}";`);
+          entryExports.push(`${JSON.stringify(baseName)}: ${JSON.stringify(tag)}`);
+        }
+
+        // 2. Process React TSX / JSX components
+        for (const reactFile of reactFiles) {
+          const rawSource = fs.readFileSync(path.join(dmdDir, reactFile), "utf-8");
+          const baseName = path.basename(reactFile, path.extname(reactFile));
+          const tag = dmdTag(baseName);
+
+          // Attempt build-time conversion to native Svelte 5 custom element
+          const converted = convertReactToSvelte(rawSource, {
+            name: baseName,
+            tag,
+            filename: reactFile,
+          });
+
+          if (converted.success && converted.svelteSource) {
+            // Svelte base conversion succeeded: compile to native Svelte 5 custom element with 0 React overhead
+            const compiled = compile(converted.svelteSource, {
+              filename: `${baseName}.svelte`,
+              customElement: true,
+            });
+
+            const outJsFile = `${baseName}.compiled.js`;
+            fs.writeFileSync(path.join(tempDir, outJsFile), compiled.js.code, "utf-8");
+            entryImports.push(`import "./${outJsFile}";`);
+            entryExports.push(`${JSON.stringify(baseName)}: ${JSON.stringify(tag)}`);
+          } else {
+            // Fallback: wrap with ReactBridge and bundle via esbuild
+            const bridgeFile = `${baseName}.bridge.js`;
+            const bridgeContent = `
+import React from "react";
+import ReactDOM from "react-dom/client";
+import ComponentModule from "./${reactFile}";
+import { createReactBridge } from "./react-bridge-runtime";
+
+const Component = ComponentModule.default || ComponentModule;
+const BridgeClass = createReactBridge(Component, {
+  React,
+  ReactDOM,
+  createRoot: ReactDOM.createRoot,
+  createElement: React.createElement,
+});
+
+if (typeof customElements !== "undefined" && !customElements.get(${JSON.stringify(tag)})) {
+  customElements.define(${JSON.stringify(tag)}, BridgeClass);
+}
+`;
+            fs.writeFileSync(path.join(tempDir, bridgeFile), bridgeContent, "utf-8");
+            entryImports.push(`import "./${bridgeFile}";`);
+            entryExports.push(`${JSON.stringify(baseName)}: ${JSON.stringify(tag)}`);
+          }
+        }
+
+        // 3. Process Web Element / Lit components
+        for (const weFile of webElementFiles) {
+          const baseName = path.basename(weFile, path.extname(weFile));
+          const tag = dmdTag(baseName);
+          entryImports.push(`import "./${weFile}";`);
           entryExports.push(`${JSON.stringify(baseName)}: ${JSON.stringify(tag)}`);
         }
 
@@ -148,13 +232,13 @@ export function bundleCustomComponents(targetPath: string): string | undefined {
           target: "es2022",
           write: false,
           minify: true,
-          external: ["svelte", "svelte/*"],
+          external: ["svelte", "svelte/*", "docmedown/motion", "motion", "docmedown"],
           legalComments: "none",
         });
 
         const bundledSource = result.outputFiles[0]?.text;
         if (!bundledSource) {
-          throw new Error("esbuild did not produce an output module for Svelte components.");
+          throw new Error("esbuild did not produce an output module for custom components.");
         }
 
         return bundledSource;
@@ -163,7 +247,7 @@ export function bundleCustomComponents(targetPath: string): string | undefined {
       }
     } catch (error) {
       throw new Error(
-        `Could not bundle Svelte custom components from ${dmdDir}: ${error instanceof Error ? error.message : String(error)}`,
+        `Could not bundle custom components from ${dmdDir}: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
   }
@@ -222,6 +306,47 @@ export function createOfflineDataBootstrap(offlinePayload: string): string {
     })();`;
 }
 
+/**
+ * Resolves a favicon into a self-contained data URI for single-file offline bundles.
+ * Inlines local image files (SVG, PNG, ICO, etc.) as base64 data URIs so the single-file
+ * distributable has zero external file dependencies.
+ */
+export function resolveFaviconForOffline(favicon?: string | null, targetDir?: string): string {
+  if (!favicon || favicon === "data:,") {
+    return resolveFavicon();
+  }
+  const trimmed = favicon.trim();
+  if (isFaviconPreset(trimmed) || trimmed.startsWith("data:")) {
+    return resolveFavicon(trimmed);
+  }
+  if (targetDir && !/^(https?:|\/\/)/i.test(trimmed)) {
+    const cleanPath = trimmed.replace(/^\.?\/+/, "");
+    const candidatePaths = [path.resolve(targetDir, cleanPath), path.resolve(process.cwd(), cleanPath)];
+    for (const cand of candidatePaths) {
+      if (fs.existsSync(cand) && fs.statSync(cand).isFile()) {
+        try {
+          const ext = path.extname(cand).toLowerCase();
+          const mimeMap: Record<string, string> = {
+            ".svg": "image/svg+xml",
+            ".png": "image/png",
+            ".ico": "image/x-icon",
+            ".jpg": "image/jpeg",
+            ".jpeg": "image/jpeg",
+            ".webp": "image/webp",
+            ".gif": "image/gif",
+          };
+          const mime = mimeMap[ext] || "image/x-icon";
+          const data = fs.readFileSync(cand);
+          return `data:${mime};base64,${data.toString("base64")}`;
+        } catch {
+          // Fall back to preset or default
+        }
+      }
+    }
+  }
+  return resolveFavicon(trimmed);
+}
+
 const GENERATED_DOC_OUTPUTS = [
   "_manifest.json",
   "_docs.js",
@@ -271,11 +396,271 @@ export function findNestedDocumentationRoots(targetDir: string): string[] {
 }
 
 /**
+ * Scans markdown sources in `docsMap` for `<Card>` / `<dmd-card>` components
+ * with `content="..."` pointing to online URLs (or local file paths) and
+ * fetches them so they are embedded directly into offline distributables.
+ */
+export async function inlineCardOnlineSources(docsMap: Record<string, string>, targetDir?: string): Promise<string[]> {
+  const inlinedUrls: string[] = [];
+  const visited = new Set<string>();
+
+  const CARD_TAG_RE = /<(?:Card|dmd-card)\b((?:[^>"']|"[^"]*"|'[^']*')*)\/?>/gi;
+  const CONTENT_ATTR_RE = /\bcontent\s*=\s*(?:"([^"]*)"|'([^']*)'|\{["']([^"']*)["']\})/i;
+
+  let hasMore = true;
+  while (hasMore) {
+    hasMore = false;
+    const entries = Object.entries(docsMap);
+
+    for (const [, docContent] of entries) {
+      if (!docContent || typeof docContent !== "string") continue;
+      CARD_TAG_RE.lastIndex = 0;
+      while (true) {
+        const tagMatch = CARD_TAG_RE.exec(docContent);
+        if (tagMatch === null) break;
+        const attrs = tagMatch[1];
+        if (!attrs) continue;
+
+        const attrMatch = CONTENT_ATTR_RE.exec(attrs);
+        if (!attrMatch) continue;
+
+        const rawUrl = (attrMatch[1] ?? attrMatch[2] ?? attrMatch[3] ?? "").trim();
+        if (!rawUrl || visited.has(rawUrl)) continue;
+        visited.add(rawUrl);
+
+        if (/^https?:\/\//i.test(rawUrl)) {
+          try {
+            console.log(chalk.cyan(`  ⬇ Fetching Card online source: ${rawUrl}`));
+            const res = await fetch(rawUrl);
+            if (!res.ok) {
+              console.warn(chalk.yellow(`  ⚠ HTTP ${res.status} fetching Card online source "${rawUrl}"`));
+              continue;
+            }
+            const text = await res.text();
+            docsMap[rawUrl] = text;
+            inlinedUrls.push(rawUrl);
+            const cleanKey = rawUrl.replace(/\.(md|mdx)$/i, "");
+            if (cleanKey !== rawUrl) {
+              docsMap[cleanKey] = text;
+            }
+            hasMore = true;
+          } catch (err: any) {
+            console.warn(
+              chalk.yellow(`  ⚠ Could not fetch Card online source "${rawUrl}": ${err?.message || String(err)}`),
+            );
+          }
+        } else if (targetDir && /\.(md|mdx)$/i.test(rawUrl)) {
+          const cleanPath = rawUrl.replace(/^\.?\//, "");
+          const candidatePaths = [path.resolve(targetDir, cleanPath), path.resolve(targetDir, rawUrl)];
+          for (const cand of candidatePaths) {
+            if (fs.existsSync(cand) && fs.statSync(cand).isFile()) {
+              const text = fs.readFileSync(cand, "utf-8");
+              docsMap[rawUrl] = text;
+              docsMap[cleanPath] = text;
+              const slug = cleanPath.replace(/\.(md|mdx)$/i, "");
+              docsMap[slug] = text;
+              break;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return inlinedUrls;
+}
+
+/**
+ * Scans markdown documents for media references in <Media>, <dmd-media>,
+ * Markdown image syntax (![alt](url)), and HTML <img> tags. Local and accessible
+ * online media files are converted losslessly into base64 Data URIs so the resulting
+ * offline bundle index.html is 100% self-contained and offline-compatible.
+ */
+export async function inlineMediaSources(
+  docsMap: Record<string, string>,
+  targetDir?: string,
+  options?: { fetchRemote?: boolean },
+): Promise<{ inlinedCount: number; mediaMap: Record<string, string> }> {
+  const mediaMap: Record<string, string> = {};
+  const cache = new Map<string, string>();
+  const visitedAssets = new Set<string>();
+
+  const MEDIA_TAG_RE = /<(?:Media|dmd-media)\b((?:[^>"']|"[^"]*"|'[^']*')*)\/?>/gi;
+  const ATTR_RE = (attr: string) =>
+    new RegExp(`\\b${attr}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|\\{["']([^"']*)["']\\})`, "i");
+  const EMBED_ATTR_RE = /\bembed\s*=\s*(?:"([^"]*)"|'([^']*)'|\\{([^}]+)\\})/i;
+  const TYPE_ATTR_RE = /\b(?:type|format)\s*=\s*(?:"([^"]*)"|'([^']*)'|\\{["']([^"']*)["']\\})/i;
+  const MD_IMAGE_RE = /!\[([^\]]*)\]\(([^)\s]+)(?:\s+"([^"]*)")?\)/g;
+  const HTML_IMG_RE = /<img\b((?:[^>"']|"[^"]*"|'[^']*')*)\/?>/gi;
+  const SRC_ATTR_RE = /\bsrc\s*=\s*(?:"([^"]*)"|'([^']*)'|\\{["']([^"']*)["']\\})/i;
+
+  async function resolveToDataUri(rawUrl: string, explicitType?: string): Promise<string | null> {
+    const trimmed = rawUrl.trim();
+    if (!trimmed) return null;
+    if (isDataUri(trimmed)) return trimmed;
+    if (cache.has(trimmed)) return cache.get(trimmed)!;
+
+    // Remote URLs: only fetch when explicitly requested via options.fetchRemote
+    if (/^https?:\/\//i.test(trimmed)) {
+      if (options?.fetchRemote !== true) return null;
+      try {
+        const res = await fetch(trimmed);
+        if (res.ok) {
+          const arrayBuffer = await res.arrayBuffer();
+          const buffer = Buffer.from(arrayBuffer);
+          const mime = res.headers.get("content-type")?.split(";")[0]?.trim() || resolveMimeType(trimmed, explicitType);
+          const dataUri = toLosslessDataUri(buffer, mime);
+          cache.set(trimmed, dataUri);
+          return dataUri;
+        }
+      } catch {
+        return null;
+      }
+    }
+
+    // Local files
+    if (targetDir) {
+      const cleanPath = trimmed.replace(/^\.?\//, "");
+      const candidates = [
+        path.resolve(targetDir, cleanPath),
+        path.resolve(targetDir, trimmed),
+        path.resolve(process.cwd(), cleanPath),
+        path.resolve(process.cwd(), trimmed),
+      ];
+      for (const cand of candidates) {
+        if (fs.existsSync(cand) && fs.statSync(cand).isFile()) {
+          try {
+            const buffer = fs.readFileSync(cand);
+            const mime = resolveMimeType(cand, explicitType);
+            const dataUri = toLosslessDataUri(buffer, mime);
+            cache.set(trimmed, dataUri);
+            return dataUri;
+          } catch {
+            return null;
+          }
+        }
+      }
+    }
+
+    return null;
+  }
+
+  const entries = Object.entries(docsMap);
+  for (const [key, docContent] of entries) {
+    if (!docContent || typeof docContent !== "string") continue;
+    let modified = docContent;
+
+    // 1. Process <Media> and <dmd-media> tags
+    MEDIA_TAG_RE.lastIndex = 0;
+    const mediaTags: Array<{ fullTag: string; attrs: string }> = [];
+    while (true) {
+      const match = MEDIA_TAG_RE.exec(docContent);
+      if (match === null) break;
+      mediaTags.push({ fullTag: match[0], attrs: match[1] || "" });
+    }
+
+    for (const { fullTag, attrs } of mediaTags) {
+      const embedMatch = EMBED_ATTR_RE.exec(attrs);
+      const embedVal = (embedMatch ? (embedMatch[1] ?? embedMatch[2] ?? embedMatch[3] ?? "") : "").trim().toLowerCase();
+      if (embedVal === "none" || embedVal === "false") {
+        continue;
+      }
+
+      const typeMatch = TYPE_ATTR_RE.exec(attrs);
+      const explicitType = (typeMatch ? (typeMatch[1] ?? typeMatch[2] ?? typeMatch[3] ?? "") : "").trim();
+
+      let newTag = fullTag;
+
+      for (const attrName of ["src", "fallback", "poster"]) {
+        const attrRe = ATTR_RE(attrName);
+        const m = attrRe.exec(attrs);
+        if (m) {
+          const rawVal = (m[1] ?? m[2] ?? m[3] ?? "").trim();
+          if (rawVal && !isDataUri(rawVal)) {
+            const typeHint = attrName === "src" ? explicitType : undefined;
+            const dataUri = await resolveToDataUri(rawVal, typeHint);
+            if (dataUri) {
+              mediaMap[rawVal] = dataUri;
+              const clean = rawVal.replace(/^\.?\//, "");
+              mediaMap[clean] = dataUri;
+              mediaMap[`./${clean}`] = dataUri;
+              visitedAssets.add(rawVal);
+              // Only rewrite tag in markdown if under 512KB to prevent marked regex stack overflow
+              if (dataUri.length <= 512 * 1024) {
+                newTag = newTag.replace(m[0], `${attrName}="${dataUri}"`);
+              }
+            }
+          }
+        }
+      }
+
+      if (newTag !== fullTag) {
+        modified = modified.replace(fullTag, newTag);
+      }
+    }
+
+    // 2. Process Markdown images: ![alt](url)
+    MD_IMAGE_RE.lastIndex = 0;
+    const mdImages: Array<{ full: string; alt: string; url: string; title?: string }> = [];
+    while (true) {
+      const mdMatch = MD_IMAGE_RE.exec(modified);
+      if (mdMatch === null) break;
+      mdImages.push({ full: mdMatch[0], alt: mdMatch[1] || "", url: mdMatch[2], title: mdMatch[3] });
+    }
+
+    for (const { full, alt, url, title } of mdImages) {
+      if (!isDataUri(url)) {
+        const dataUri = await resolveToDataUri(url);
+        if (dataUri) {
+          mediaMap[url] = dataUri;
+          const clean = url.replace(/^\.?\//, "");
+          mediaMap[clean] = dataUri;
+          visitedAssets.add(url);
+          const titleSuffix = title ? ` "${title}"` : "";
+          modified = modified.replace(full, `![${alt}](${dataUri}${titleSuffix})`);
+        }
+      }
+    }
+
+    // 3. Process HTML <img> tags
+    HTML_IMG_RE.lastIndex = 0;
+    const htmlImgs: Array<{ full: string; attrs: string }> = [];
+    while (true) {
+      const imgMatch = HTML_IMG_RE.exec(modified);
+      if (imgMatch === null) break;
+      htmlImgs.push({ full: imgMatch[0], attrs: imgMatch[1] || "" });
+    }
+
+    for (const { full, attrs } of htmlImgs) {
+      const srcMatch = SRC_ATTR_RE.exec(attrs);
+      if (srcMatch) {
+        const rawUrl = (srcMatch[1] ?? srcMatch[2] ?? srcMatch[3] ?? "").trim();
+        if (rawUrl && !isDataUri(rawUrl)) {
+          const dataUri = await resolveToDataUri(rawUrl);
+          if (dataUri) {
+            mediaMap[rawUrl] = dataUri;
+            const clean = rawUrl.replace(/^\.?\//, "");
+            mediaMap[clean] = dataUri;
+            visitedAssets.add(rawUrl);
+            const newTag = full.replace(srcMatch[0], `src="${dataUri}"`);
+            modified = modified.replace(full, newTag);
+          }
+        }
+      }
+    }
+
+    docsMap[key] = modified;
+  }
+
+  return { inlinedCount: visitedAssets.size, mediaMap };
+}
+
+/**
  * Loads every nested documentation root into an embeddable offline payload so
  * the parent's single-file bundle can open subdocumentation without any
  * external files. Keys are the nested root's path relative to the parent root.
  */
-export function collectNestedOfflineSites(targetDir: string): Record<string, OfflineNestedSiteData> {
+export async function collectNestedOfflineSites(targetDir: string): Promise<Record<string, OfflineNestedSiteData>> {
   const sites: Record<string, OfflineNestedSiteData> = {};
 
   for (const nestedRoot of findNestedDocumentationRoots(targetDir)) {
@@ -295,6 +680,9 @@ export function collectNestedOfflineSites(targetDir: string): Record<string, Off
       nestedDocs[file] = raw;
     }
 
+    await inlineCardOnlineSources(nestedDocs, nestedRoot);
+    const { mediaMap: nestedMediaMap } = await inlineMediaSources(nestedDocs, nestedRoot);
+
     const nestedComponentsPath = path.join(nestedRoot, ".dmd");
     loadBuildTimeCustomSetup(nestedComponentsPath);
     sites[key] = {
@@ -302,6 +690,7 @@ export function collectNestedOfflineSites(targetDir: string): Record<string, Off
       manifest: generateManifest(nestedRoot, nestedConfig),
       docs: nestedDocs,
       componentsSource: bundleCustomComponents(nestedComponentsPath),
+      ...(Object.keys(nestedMediaMap).length > 0 ? { media: nestedMediaMap } : {}),
     };
   }
 
@@ -313,7 +702,7 @@ export function shouldWatchDocumentationSource(rootDir: string, changedPath: str
   const segments = relativePath.split("/");
   const firstSegment = segments[0];
   const baseName = segments[segments.length - 1];
-  const isCustomComponentModule = /(^|\/)\.dmd\/[^/]+\.(svelte|js|ts)$/i.test(relativePath);
+  const isCustomComponentModule = /(^|\/)\.dmd\/[^/]+\.(svelte|js|ts|tsx)$/i.test(relativePath);
 
   // Build outputs can be written at any depth (e.g. `.nojekyll` inside nested
   // documentation roots), so generated artifacts are matched by basename to
@@ -387,13 +776,42 @@ export async function buildCommand(targetDirArg: string = "./docs", options: Bui
     docsMap[file] = raw;
   }
 
+  // Inline online and local sources referenced by Card components so offline bundles are truly offline
+  const inlinedSources = await inlineCardOnlineSources(docsMap, targetDir);
+  if (inlinedSources.length > 0) {
+    console.log(
+      chalk.green(
+        `  ✔ Inlined ${inlinedSources.length} Card online source${inlinedSources.length === 1 ? "" : "s"} into offline bundle`,
+      ),
+    );
+  }
+
+  // Inline media sources (raster images, vector SVG, video, audio) into lossless data URIs
+  const { inlinedCount: inlinedMediaCount, mediaMap } = await inlineMediaSources(docsMap, targetDir);
+  if (inlinedMediaCount > 0) {
+    console.log(
+      chalk.green(
+        `  ✔ Embedded ${inlinedMediaCount} media asset${inlinedMediaCount === 1 ? "" : "s"} into offline bundle (lossless data URIs)`,
+      ),
+    );
+  }
+
   const componentsPath = path.join(targetDir, ".dmd");
   loadBuildTimeCustomSetup(componentsPath);
   const componentsSource = bundleCustomComponents(componentsPath);
 
   // 2. Generate _docs.js for precompiled local and file:/// documentation data.
   // Custom components are bundled so embedded Blob modules can use relative imports.
-  const docsJsContent = `window.__DOCMEDOWN_DATA__ = ${JSON.stringify({ manifest, docs: docsMap, componentsSource }, null, 2)};\n`;
+  const docsJsContent = `window.__DOCMEDOWN_DATA__ = ${JSON.stringify(
+    {
+      manifest,
+      docs: docsMap,
+      componentsSource,
+      ...(Object.keys(mediaMap).length > 0 ? { media: mediaMap } : {}),
+    },
+    null,
+    2,
+  )};\n`;
   const docsJsPath = path.join(onlineDir, "_docs.js");
   fs.writeFileSync(docsJsPath, docsJsContent, "utf-8");
   console.log(chalk.green(`  ✔ Generated _docs.js for offline file:/// double-click usage`));
@@ -412,7 +830,7 @@ export async function buildCommand(targetDirArg: string = "./docs", options: Bui
     console.log(chalk.cyan("\n  Compiling standalone single-file offline index.html..."));
     const embedNestedDocs = config.offline?.embedNestedDocs !== false;
     const nestedSites =
-      embedNestedDocs && options.buildNested !== false ? collectNestedOfflineSites(targetDir) : undefined;
+      embedNestedDocs && options.buildNested !== false ? await collectNestedOfflineSites(targetDir) : undefined;
     const nestedCount = nestedSites ? Object.keys(nestedSites).length : 0;
     if (nestedCount > 0) {
       console.log(
@@ -494,20 +912,27 @@ export async function buildCommand(targetDirArg: string = "./docs", options: Bui
         manifest,
         docs: docsMap,
         componentsSource,
+        ...(Object.keys(mediaMap).length > 0 ? { media: mediaMap } : {}),
         ...(nestedSites && nestedCount > 0 ? { nestedSites } : {}),
       },
       runtime: bundleJs,
     };
     const encodedEnvelope = encodeCompressedOfflineEnvelope(envelope);
-    const singleFileHtml = createCompressedOfflineHtml(encodedEnvelope, config.name || "Documentation", {
-      tagline: config.tagline,
-      version: config.version,
-      logo: config.theme?.logo?.light,
-      logoDark: config.theme?.logo?.dark,
-      logoAlt: config.theme?.logo?.alt,
-      accent: config.theme?.accentColor,
-      accentDark: config.theme?.accentColorDark,
-    });
+    const resolvedOfflineFavicon = resolveFaviconForOffline(config.theme?.favicon, targetDir);
+    const singleFileHtml = createCompressedOfflineHtml(
+      encodedEnvelope,
+      config.name || "Documentation",
+      {
+        tagline: config.tagline,
+        version: config.version,
+        logo: config.theme?.logo?.light,
+        logoDark: config.theme?.logo?.dark,
+        logoAlt: config.theme?.logo?.alt,
+        accent: config.theme?.accentColor,
+        accentDark: config.theme?.accentColorDark,
+      },
+      resolvedOfflineFavicon,
+    );
 
     const singleFilePath = path.join(offlineDir, "index.html");
     fs.writeFileSync(singleFilePath, singleFileHtml, "utf-8");

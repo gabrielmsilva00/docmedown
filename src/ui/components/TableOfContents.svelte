@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { DocHeading } from "../../runtime/types";
+  import { scrollToAndHighlight } from "../../runtime/router";
 
   let {
     headings,
@@ -41,11 +42,30 @@
     return () => observer.disconnect();
   });
 
+  // Ensure active TOC link is smoothly scrolled into view inside TOC container
+  $effect(() => {
+    if (!activeId) return;
+    const activeLink = document.querySelector(`.dmd-toc-link[href*="#${activeId}"]`);
+    if (activeLink && typeof activeLink.scrollIntoView === "function") {
+      activeLink.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    }
+  });
+
   function jumpTo(heading: DocHeading) {
     const target = document.getElementById(heading.id);
     if (target) {
-      target.scrollIntoView({ behavior: "smooth", block: "start" });
-      history.pushState(null, "", `#/${currentSlug}#${heading.id}`);
+      scrollToAndHighlight(target);
+      try {
+        if (typeof window !== "undefined" && window.location.protocol === "file:") {
+          window.location.hash = `#/${currentSlug}#${heading.id}`;
+        } else {
+          history.pushState(null, "", `#/${currentSlug}#${heading.id}`);
+        }
+      } catch {
+        try {
+          window.location.hash = `#/${currentSlug}#${heading.id}`;
+        } catch {}
+      }
       activeId = heading.id;
       isOpen = false;
     }

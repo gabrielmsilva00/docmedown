@@ -6,6 +6,12 @@ All notable changes to DocMeDown are documented here.
 
 ---
 
+## 0.9.2 - 2026-10-14
+
+- **v1.0.0-rc01 Release Candidate Preparation**:
+  - Deterministic code block ID generation for reproducible build outputs.
+  - Ecosystem dogfooding and cross-browser stabilization.
+
 ## 0.9.1 - 2026-10-14
 
 - **v1.0.0-rc01 Release Candidate Stabilization**:

@@ -236,8 +236,17 @@ export function renderCodeBlock(code: string, infoString: string = ""): string {
     return renderDelimitedBlock(code, infoString, lang, (source) => marked.parseInline(source) as string);
   }
 
+  function computeCodeId(code: string, lang: string, infoString: string): string {
+    let hash = 5381;
+    const str = `${lang}:${infoString}:${code}`;
+    for (let i = 0; i < str.length; i++) {
+      hash = ((hash << 5) + hash) ^ str.charCodeAt(i);
+    }
+    return `code-${(hash >>> 0).toString(36)}`;
+  }
+
   const highlighted = highlightCode(code, lang);
-  const id = `code-${Math.random().toString(36).substring(2, 9)}`;
+  const id = computeCodeId(code, lang, infoString);
   const activeLines = parseActiveLines(infoString);
   const hasActive = activeLines.size > 0;
 

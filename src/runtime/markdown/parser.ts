@@ -74,7 +74,7 @@ export function slugifyHeading(text: string): string {
     .replace(/[\s_-]+/g, "-"); // replace spaces with -
 }
 
-export function calculateReadingTime(text: string): number {
+function calculateReadingTime(text: string): number {
   const words = text.trim().split(/\s+/).length;
   const wpm = 200;
   return Math.max(1, Math.ceil(words / wpm));

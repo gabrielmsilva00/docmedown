@@ -180,14 +180,14 @@ function findDoc(toolkit: DocToolkit, slug: string): DocFileItem | undefined {
   );
 }
 
-export type RegisterTools = (server: McpServer, toolkit: DocToolkit) => void;
+type RegisterTools = (server: McpServer, toolkit: DocToolkit) => void;
 
 /**
  * Registers the documentation tools on an MCP server. Tool output shapes match
  * the surface docmd users asked for in docmd-io/docmd#221: full page content
  * with headings and last-modified dates instead of truncated snippets.
  */
-export const registerDocTools: RegisterTools = (server, toolkit) => {
+const registerDocTools: RegisterTools = (server, toolkit) => {
   const siteName = toolkit.manifest.config?.name || "Documentation";
 
   server.registerTool(

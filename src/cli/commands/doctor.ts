@@ -9,7 +9,7 @@ import { dmdTag, ensureCustomElementTag } from "../../runtime/svelte-tag";
 import { convertReactToSvelte } from "../utils/react-to-svelte";
 import { scanDirectory } from "../utils/scanner";
 
-export interface DoctorCheck {
+interface DoctorCheck {
   id: string;
   name: string;
   status: "pass" | "warn" | "fail";

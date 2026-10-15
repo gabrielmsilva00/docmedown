@@ -1,15 +1,11 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import http from "node:http";
-import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
 import { startDevServer } from "../src/cli/utils/server";
 import { LocalDocLoader } from "../src/runtime/loader/local-loader";
-
-function createTempDir(prefix: string): string {
-  return fs.mkdtempSync(path.join(os.tmpdir(), `dmd-hmr-${prefix}-`));
-}
+import { makeTempDir } from "./helpers/temp";
 
 function requestJson(
   url: string,
@@ -80,7 +76,7 @@ test("LocalDocLoader setDocContent dynamically mutates cache for instant HMR", a
 });
 
 test("DevServer API mode and preview toggle endpoints", async () => {
-  const dir = createTempDir("mode-test");
+  const dir = makeTempDir("dmd-hmr-mode-test");
   fs.writeFileSync(path.join(dir, "README.md"), "# Production Home", "utf-8");
 
   const serverHandle = await startDevServer({
@@ -116,7 +112,7 @@ test("DevServer API mode and preview toggle endpoints", async () => {
 });
 
 test("DevServer 2-way edit save to source and .preview targets", async () => {
-  const dir = createTempDir("save-test");
+  const dir = makeTempDir("dmd-hmr-save-test");
   const readmePath = path.join(dir, "README.md");
   fs.writeFileSync(readmePath, "# Original Production", "utf-8");
 
@@ -164,7 +160,7 @@ test("DevServer 2-way edit save to source and .preview targets", async () => {
 });
 
 test("DevServer raw content retrieval and differential preview serving", async () => {
-  const dir = createTempDir("diff-test");
+  const dir = makeTempDir("dmd-hmr-diff-test");
   fs.writeFileSync(path.join(dir, "page.md"), "Production Content", "utf-8");
 
   const previewDir = path.join(dir, ".preview");
@@ -204,7 +200,7 @@ test("DevServer raw content retrieval and differential preview serving", async (
 });
 
 test("DevServer publish-preview and discard-preview workflows", async () => {
-  const dir = createTempDir("publish-discard");
+  const dir = makeTempDir("dmd-hmr-publish-discard");
   const sourceFile = path.join(dir, "doc.md");
   fs.writeFileSync(sourceFile, "# Original Doc", "utf-8");
 

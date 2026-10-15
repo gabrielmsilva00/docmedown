@@ -9,7 +9,7 @@ import { loadBuildTimeCustomSetup } from "./utils/custom-setup";
 
 const DESCRIPTION_MAX_LENGTH = 160;
 
-export function resolveSplashOptions(config: DocConfig): SplashOptions {
+function resolveSplashOptions(config: DocConfig): SplashOptions {
   return {
     name: config.name,
     tagline: config.tagline,
@@ -33,7 +33,7 @@ export function escapeHtml(value: string): string {
 }
 
 /** Strips tags/entities from rendered HTML for meta descriptions and JSON-LD. */
-export function htmlToPlainText(html: string): string {
+function htmlToPlainText(html: string): string {
   return html
     .replace(/<script[\s\S]*?<\/script>/gi, "")
     .replace(/<style[\s\S]*?<\/style>/gi, "")
@@ -71,7 +71,7 @@ function extractSummary(markdown: string): string {
   return "";
 }
 
-export function getPageDescription(config: DocConfig, doc: DocFileItem): string {
+function getPageDescription(config: DocConfig, doc: DocFileItem): string {
   return (
     doc.frontmatter?.description ||
     (doc.content ? extractSummary(doc.content) : "") ||
@@ -82,7 +82,7 @@ export function getPageDescription(config: DocConfig, doc: DocFileItem): string 
 }
 
 /** Canonical absolute URL for a document slug, or null when no site origin is configured. */
-export function getPageUrl(config: DocConfig, slug: string): string | null {
+function getPageUrl(config: DocConfig, slug: string): string | null {
   if (!config.url) return null;
   const base = config.url.replace(/\/+$/, "");
   return slug === "README" ? `${base}/` : `${base}/${slug}/`;
@@ -203,7 +203,7 @@ export function renderStaticPage({ config, doc, contentHtml }: StaticPageInput):
 }
 
 /** Renders the static 404 page: a standard shell whose runtime renders the not-found state. */
-export function renderStatic404Page(config: DocConfig): string {
+function renderStatic404Page(config: DocConfig): string {
   const siteName = config.name || "Documentation";
   const splash = resolveSplashOptions({ ...config, name: siteName });
   const runtimeGlobals =

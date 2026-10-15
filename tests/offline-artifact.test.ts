@@ -1,11 +1,11 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
 import { gunzipSync } from "node:zlib";
 import { buildCommand } from "../src/cli/commands/build";
 import { isRelativeHtmlLink, matchEmbeddedNestedSite } from "../src/runtime/offline-export";
+import { makeTempDir } from "./helpers/temp";
 
 const packageRoot = path.resolve(__dirname, "..");
 
@@ -110,7 +110,7 @@ test("offline link helpers classify file links and embedded nested targets", () 
 });
 
 test("offline.embedNestedDocs: false keeps the single-file bundle free of nested sites", async () => {
-  const workspace = fs.mkdtempSync(path.join(os.tmpdir(), "docmedown-offline-"));
+  const workspace = makeTempDir("docmedown-offline-");
   try {
     fs.writeFileSync(
       path.join(workspace, "docs.json"),
@@ -134,7 +134,7 @@ test("offline.embedNestedDocs: false keeps the single-file bundle free of nested
 });
 
 test("buildCommand inlines Card online sources into both _docs.js and single-file offline index.html", async () => {
-  const workspace = fs.mkdtempSync(path.join(os.tmpdir(), "docmedown-card-offline-"));
+  const workspace = makeTempDir("docmedown-card-offline-");
   const originalFetch = globalThis.fetch;
   try {
     globalThis.fetch = (async (input: string | URL | Request) => {

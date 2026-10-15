@@ -5,7 +5,7 @@ import type { ColorMode, ThemeFamily } from "../../runtime/types";
 import { buildCommand } from "../commands/build";
 import { detectRootMarkdownFiles, linkRootMarkdownFiles } from "./link-root";
 
-export interface ScaffoldItem {
+interface ScaffoldItem {
   relPath: string;
   type: "file" | "directory" | "symlink";
   action: "create" | "link" | "skip";
@@ -49,7 +49,7 @@ interface TreeNode {
 
 const PRIORITY_ORDER = ["index.html", "favicon.svg", "docs.json", "README.md", "getting-started.md"];
 
-export function getActiveTemplateDir(): string {
+function getActiveTemplateDir(): string {
   const candidates = [
     path.resolve(__dirname, "../../../templates"),
     path.resolve(__dirname, "../../templates"),

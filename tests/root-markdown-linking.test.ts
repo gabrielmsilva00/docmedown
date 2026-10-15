@@ -1,15 +1,15 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
 import { shouldWatchDocumentationSource } from "../src/cli/commands/build";
 import { detectRootMarkdownFiles, linkRootMarkdownFiles } from "../src/cli/utils/link-root";
 import { generateManifest, scanDirectory } from "../src/cli/utils/scanner";
 import { DEFAULT_CONFIG } from "../src/runtime/config";
+import { makeTempDir } from "./helpers/temp";
 
 test("detectRootMarkdownFiles discovers root markdown files and ignores excluded/hidden files", () => {
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "dmd-root-test-"));
+  const tempDir = makeTempDir("dmd-root-test-");
   try {
     fs.writeFileSync(path.join(tempDir, "README.md"), "# Project Readme", "utf-8");
     fs.writeFileSync(path.join(tempDir, "CONTRIBUTING.md"), "# Contributing", "utf-8");
@@ -31,7 +31,7 @@ test("detectRootMarkdownFiles discovers root markdown files and ignores excluded
 });
 
 test("linkRootMarkdownFiles links root markdown files into docs folder by default without subdivision", () => {
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "dmd-link-test-"));
+  const tempDir = makeTempDir("dmd-link-test-");
   const docsDir = path.join(tempDir, "docs");
 
   try {
@@ -86,7 +86,7 @@ test("linkRootMarkdownFiles links root markdown files into docs folder by defaul
 });
 
 test("linkRootMarkdownFiles cleans up stale symlinks when a root markdown file is deleted", () => {
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "dmd-cleanup-test-"));
+  const tempDir = makeTempDir("dmd-cleanup-test-");
   const docsDir = path.join(tempDir, "docs");
 
   try {

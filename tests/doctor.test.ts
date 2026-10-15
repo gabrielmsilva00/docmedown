@@ -4,10 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
 import { checkNodeVersion, doctorCommand } from "../src/cli/commands/doctor";
-
-function createTempDir(prefix: string): string {
-  return fs.mkdtempSync(path.join(os.tmpdir(), `dmd-doctor-${prefix}-`));
-}
+import { makeTempDir } from "./helpers/temp";
 
 test("checkNodeVersion accurately verifies engine compatibility", () => {
   assert.equal(checkNodeVersion("v20.19.0").supported, true);
@@ -22,7 +19,7 @@ test("checkNodeVersion accurately verifies engine compatibility", () => {
 });
 
 test("doctorCommand reports healthy status on valid project with assets", async () => {
-  const dir = createTempDir("healthy");
+  const dir = makeTempDir("dmd-doctor-healthy");
   const assetDir = path.join(dir, "assets");
   fs.mkdirSync(assetDir, { recursive: true });
   fs.writeFileSync(path.join(assetDir, "logo.svg"), "<svg></svg>", "utf-8");
@@ -56,7 +53,7 @@ Documentation overview page.
 });
 
 test("doctorCommand detects missing local assets referenced in markdown and config", async () => {
-  const dir = createTempDir("missing-asset");
+  const dir = makeTempDir("dmd-doctor-missing-asset");
   fs.writeFileSync(
     path.join(dir, "docs.json"),
     JSON.stringify({
@@ -86,7 +83,7 @@ test("doctorCommand detects missing local assets referenced in markdown and conf
 });
 
 test("doctorCommand verifies valid .dmd custom components", async () => {
-  const dir = createTempDir("valid-components");
+  const dir = makeTempDir("dmd-doctor-valid-components");
   const dmdDir = path.join(dir, ".dmd");
   fs.mkdirSync(dmdDir, { recursive: true });
 
@@ -124,7 +121,7 @@ export default function CounterWidget({ initial = 0 }: { initial?: number }) {
 });
 
 test("doctorCommand diagnoses syntax and compilation errors in .dmd custom components", async () => {
-  const dir = createTempDir("broken-components");
+  const dir = makeTempDir("dmd-doctor-broken-components");
   const dmdDir = path.join(dir, ".dmd");
   fs.mkdirSync(dmdDir, { recursive: true });
 

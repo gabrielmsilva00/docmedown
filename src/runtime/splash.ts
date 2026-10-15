@@ -35,7 +35,7 @@ export const SPLASH_START_KEY = "__DOCMEDOWN_SPLASH_START__";
 /** Minimum brand time before the splash may be dismissed, in milliseconds. */
 export const SPLASH_MIN_DURATION_MS = 950;
 /** Must match the `#dmd-splash` transition duration in the stylesheet below. */
-export const SPLASH_EXIT_MS = 450;
+const SPLASH_EXIT_MS = 450;
 
 export interface SplashOptions {
   /** Documentation name rendered in the top-bar brand lockup. */

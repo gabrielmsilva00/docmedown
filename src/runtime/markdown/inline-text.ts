@@ -35,7 +35,7 @@ function codePointToChar(code: number): string {
   return Number.isInteger(code) && code > 0 && code <= 0x10ffff ? String.fromCodePoint(code) : "";
 }
 
-export function decodeHtmlEntities(value: string): string {
+function decodeHtmlEntities(value: string): string {
   return value
     .replace(/&#x([0-9a-f]+);/gi, (_match, hex: string) => codePointToChar(parseInt(hex, 16)))
     .replace(/&#([0-9]+);/g, (_match, dec: string) => codePointToChar(Number(dec)))

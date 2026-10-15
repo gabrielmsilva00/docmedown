@@ -10,9 +10,9 @@ import {
 import type { DocManifest } from "./types";
 
 export const OFFLINE_FORMAT_VERSION = 2;
-export const OFFLINE_RUNTIME_SCRIPT_ATTRIBUTE = "data-docmedown-runtime";
+const OFFLINE_RUNTIME_SCRIPT_ATTRIBUTE = "data-docmedown-runtime";
 
-export interface OfflineDocumentationData {
+interface OfflineDocumentationData {
   manifest: DocManifest;
   docs: Record<string, string>;
   componentsSource?: string;

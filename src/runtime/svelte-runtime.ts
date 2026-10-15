@@ -9,7 +9,7 @@ import { dmdTag, ensureCustomElementTag } from "./svelte-tag";
 
 export { ensureCustomElementTag };
 
-export interface CompiledSvelteResult {
+interface CompiledSvelteResult {
   js: string;
   css?: string;
   tag: string;
@@ -74,7 +74,7 @@ export function linkSveltePrimitives(jsCode: string): string {
 /**
  * Compiles a raw `.svelte` source string into client JavaScript with custom element registration.
  */
-export async function compileSvelteComponent(
+async function compileSvelteComponent(
   source: string,
   options: { name: string; tag?: string; filename?: string },
 ): Promise<CompiledSvelteResult> {
@@ -97,7 +97,7 @@ export async function compileSvelteComponent(
  * Evaluates compiled Svelte 5 component JavaScript in the browser as a Blob module.
  * The module automatically invokes `customElements.define()` upon execution.
  */
-export async function evaluateCompiledSvelte(jsCode: string): Promise<unknown> {
+async function evaluateCompiledSvelte(jsCode: string): Promise<unknown> {
   if (typeof window === "undefined" || typeof document === "undefined") {
     return null;
   }

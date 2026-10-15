@@ -34,7 +34,7 @@ const CHECK_ICON =
 const CHEVRON_ICON =
   '<svg class="dmd-table-copy-chevron" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>';
 
-export const TABLE_COPY_FORMATS = [
+const TABLE_COPY_FORMATS = [
   { id: "markdown", label: "Markdown", badge: "MD", description: "For documents" },
   { id: "html", label: "HTML", badge: "&lt;&gt;", description: "For web pages" },
   { id: "csv", label: "CSV", badge: "CSV", description: "For spreadsheets" },
@@ -99,7 +99,7 @@ const DELIMITER_NAMES: Record<string, string> = {
 };
 
 /** Resolves a `delimiter=` option (`;`, `tab`, `pipe`, …). */
-export function resolveDelimiter(value: string | undefined, fallback: string): string {
+function resolveDelimiter(value: string | undefined, fallback: string): string {
   if (!value) return fallback;
   const named = DELIMITER_NAMES[value.toLowerCase()];
   if (named) return named;

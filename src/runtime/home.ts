@@ -11,10 +11,10 @@
  * reachable, Home links to the original (outermost) documentation home instead.
  */
 
-export const HOME_CANDIDATE_FILES = ["README.md", "PROJECT.md", "ABOUT.md", "INDEX.md"] as const;
+const HOME_CANDIDATE_FILES = ["README.md", "PROJECT.md", "ABOUT.md", "INDEX.md"] as const;
 
 /** How many directory levels upward to probe for an enclosing documentation root. */
-export const ORIGINAL_HOME_MAX_ANCESTORS = 3;
+const ORIGINAL_HOME_MAX_ANCESTORS = 3;
 
 export interface HomeDocumentInput {
   slug?: string;
@@ -33,7 +33,7 @@ export interface ResolvedHome {
   via?: "ancestor";
 }
 
-export interface MinimalFetchResponse {
+interface MinimalFetchResponse {
   ok: boolean;
   json: () => Promise<unknown>;
 }

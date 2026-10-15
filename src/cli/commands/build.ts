@@ -688,7 +688,7 @@ export async function inlineMediaSources(
  * the parent's single-file bundle can open subdocumentation without any
  * external files. Keys are the nested root's path relative to the parent root.
  */
-export async function collectNestedOfflineSites(targetDir: string): Promise<Record<string, OfflineNestedSiteData>> {
+async function collectNestedOfflineSites(targetDir: string): Promise<Record<string, OfflineNestedSiteData>> {
   const sites: Record<string, OfflineNestedSiteData> = {};
 
   for (const nestedRoot of findNestedDocumentationRoots(targetDir)) {

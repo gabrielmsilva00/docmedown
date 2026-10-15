@@ -5,14 +5,14 @@ import matter from "gray-matter";
 import { docConfigSchema } from "../../runtime/config-schema";
 import { extractHeadings, scanDirectory } from "../utils/scanner";
 
-export interface ValidationError {
+interface ValidationError {
   file: string;
   line?: number;
   message: string;
   type: "config" | "frontmatter" | "link" | "anchor";
 }
 
-export interface ValidationWarning {
+interface ValidationWarning {
   file: string;
   line?: number;
   message: string;

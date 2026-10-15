@@ -4,13 +4,10 @@ import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
 import { validateCommand } from "../src/cli/commands/validate";
-
-function createTempDir(prefix: string): string {
-  return fs.mkdtempSync(path.join(os.tmpdir(), `dmd-validate-${prefix}-`));
-}
+import { makeTempDir } from "./helpers/temp";
 
 test("validateCommand passes on valid documentation with cross-links and anchors", async () => {
-  const dir = createTempDir("valid");
+  const dir = makeTempDir("dmd-validate-valid");
   fs.writeFileSync(
     path.join(dir, "docs.json"),
     JSON.stringify({
@@ -66,7 +63,7 @@ Setup details here.
 });
 
 test("validateCommand detects invalid docs.json configuration schema", async () => {
-  const dir = createTempDir("invalid-config");
+  const dir = makeTempDir("dmd-validate-invalid-config");
   fs.writeFileSync(
     path.join(dir, "docs.json"),
     JSON.stringify({
@@ -85,7 +82,7 @@ test("validateCommand detects invalid docs.json configuration schema", async () 
 });
 
 test("validateCommand flags deprecated theme.preset in docs.json", async () => {
-  const dir = createTempDir("deprecated-preset");
+  const dir = makeTempDir("dmd-validate-deprecated-preset");
   fs.writeFileSync(
     path.join(dir, "docs.json"),
     JSON.stringify({
@@ -102,7 +99,7 @@ test("validateCommand flags deprecated theme.preset in docs.json", async () => {
 });
 
 test("validateCommand detects malformed YAML frontmatter syntax", async () => {
-  const dir = createTempDir("bad-yaml");
+  const dir = makeTempDir("dmd-validate-bad-yaml");
   fs.writeFileSync(
     path.join(dir, "README.md"),
     `---
@@ -123,7 +120,7 @@ broken_yaml: [
 });
 
 test("validateCommand validates frontmatter field types", async () => {
-  const dir = createTempDir("bad-fm-types");
+  const dir = makeTempDir("dmd-validate-bad-fm-types");
   fs.writeFileSync(
     path.join(dir, "README.md"),
     `---
@@ -148,7 +145,7 @@ tags: "not-an-array"
 });
 
 test("validateCommand catches broken local anchors, relative file links, and remote anchors", async () => {
-  const dir = createTempDir("broken-links");
+  const dir = makeTempDir("dmd-validate-broken-links");
   fs.writeFileSync(
     path.join(dir, "README.md"),
     `# Home

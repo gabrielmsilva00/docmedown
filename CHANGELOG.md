@@ -6,6 +6,13 @@ All notable changes to DocMeDown are documented here.
 
 ---
 
+## 0.9.5 - 2026-10-14
+
+- **Code Cleanup**:
+  - Removed dead code (unused `adaptComponent` bridge helper and `CalloutInfo` type) and narrowed internal-only exports across the CLI and runtime modules.
+- **Test Suite Streamlining**:
+  - Added a shared temp-directory test helper that cleans up after itself, replacing duplicated per-file setup across twelve test files.
+
 ## 0.9.4 - 2026-10-14
 
 - **Interactive Scaffold Tree Preview & Confirmation Prompt**:

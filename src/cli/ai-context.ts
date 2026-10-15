@@ -8,7 +8,7 @@ import type { DocConfig, DocManifest } from "../runtime/types";
  * HTML tags removed, and whitespace collapsed. Code fences are preserved as
  * indented text so agent consumers still see code content.
  */
-export function markdownToPlainText(markdown: string): string {
+function markdownToPlainText(markdown: string): string {
   return markdown
     .replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, "")
     .replace(/```[\s\S]*?```/g, (block) =>
@@ -32,7 +32,7 @@ function siteBaseUrl(config: DocConfig): string | null {
 }
 
 /** Public URL (absolute when a site origin is configured) for a document slug. */
-export function getDocUrl(config: DocConfig, slug: string): string {
+function getDocUrl(config: DocConfig, slug: string): string {
   const path_ = slug === "README" ? "" : `${slug}/`;
   const base = siteBaseUrl(config);
   return base ? `${base}/${path_}` : `/${path_}`;
@@ -54,7 +54,7 @@ function docSummary(content: string | undefined): string {
  * llmstxt.org-format index of the documentation corpus: short, link-only,
  * with one-line summaries so models can decide what to fetch.
  */
-export function generateLlmsTxt(manifest: DocManifest, config: DocConfig): string {
+function generateLlmsTxt(manifest: DocManifest, config: DocConfig): string {
   const lines: string[] = [`# ${config.name || "Documentation"}`];
   if (config.description || config.tagline) {
     lines.push("", `> ${config.description || config.tagline}`);
@@ -69,7 +69,7 @@ export function generateLlmsTxt(manifest: DocManifest, config: DocConfig): strin
 }
 
 /** The full corpus as plain markdown — one section per document. */
-export function generateLlmsFullTxt(manifest: DocManifest, config: DocConfig): string {
+function generateLlmsFullTxt(manifest: DocManifest, config: DocConfig): string {
   const chunks: string[] = [`# ${config.name || "Documentation"}`];
   if (config.description || config.tagline) {
     chunks.push(`> ${config.description || config.tagline}`);
@@ -83,7 +83,7 @@ export function generateLlmsFullTxt(manifest: DocManifest, config: DocConfig): s
 }
 
 /** Agent Skill file (SKILL.md) so coding assistants can discover and use the docs. */
-export function generateSkillMd(manifest: DocManifest, config: DocConfig): string {
+function generateSkillMd(manifest: DocManifest, config: DocConfig): string {
   const skillName =
     (config.name || "documentation")
       .toLowerCase()
@@ -120,7 +120,7 @@ export function generateSkillMd(manifest: DocManifest, config: DocConfig): strin
 }
 
 /** Versioned machine-readable bundle (Open-Knowledge-Format style) for agents and tooling. */
-export function generateOkfBundle(manifest: DocManifest, config: DocConfig): string {
+function generateOkfBundle(manifest: DocManifest, config: DocConfig): string {
   const bundle = {
     format: "docmedown-okf",
     version: 1,

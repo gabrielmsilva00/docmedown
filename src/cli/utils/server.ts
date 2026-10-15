@@ -26,7 +26,7 @@ export interface DevServerHandle {
   setMode: (mode: "preview" | "production") => void;
 }
 
-export function shouldRebuildDocumentation(rootDir: string, changedPath: string): boolean {
+function shouldRebuildDocumentation(rootDir: string, changedPath: string): boolean {
   return shouldWatchDocumentationSource(rootDir, changedPath);
 }
 

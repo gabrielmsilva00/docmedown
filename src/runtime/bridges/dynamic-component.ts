@@ -19,9 +19,8 @@
  *                                             ▼ Svelte application
  */
 
-import { dmdTag } from "../svelte-tag";
 import { createElementBridge, registerWebComponent } from "./element-bridge";
-import { createReactBridge, type DmdElementClass } from "./react-bridge";
+import { createReactBridge } from "./react-bridge";
 
 export type ComponentKind = "svelte" | "react" | "element";
 
@@ -88,48 +87,6 @@ export function detectComponentKind(componentOrSource: unknown, filename?: strin
 
   // Fallback default
   return "svelte";
-}
-
-/**
- * Adapts any component (Svelte, React, or Web Element/Lit) into a registered Custom Element
- * that can be natively rendered in Markdown with <Name ... /> tags.
- */
-export function adaptComponent(
-  name: string,
-  component: unknown,
-  kind?: ComponentKind,
-  tag?: string,
-): { tag: string; elementClass?: DmdElementClass } {
-  const resolvedKind = kind || detectComponentKind(component, `${name}.js`);
-  const resolvedTag = tag || dmdTag(name);
-
-  switch (resolvedKind) {
-    case "react": {
-      const ElementClass = createReactBridge(component);
-      if (typeof window !== "undefined" && typeof customElements !== "undefined") {
-        if (!customElements.get(resolvedTag)) {
-          customElements.define(resolvedTag, ElementClass);
-        }
-      }
-      return { tag: resolvedTag, elementClass: ElementClass };
-    }
-
-    case "element": {
-      const ElementClass =
-        typeof component === "function" ? createElementBridge(component as CustomElementConstructor) : undefined;
-      if (ElementClass && typeof window !== "undefined" && typeof customElements !== "undefined") {
-        registerWebComponent(resolvedTag, ElementClass);
-      }
-      return { tag: resolvedTag, elementClass: ElementClass };
-    }
-
-    default: {
-      return {
-        tag: resolvedTag,
-        elementClass: typeof component === "function" ? (component as DmdElementClass) : undefined,
-      };
-    }
-  }
 }
 
 export { createElementBridge, createReactBridge, registerWebComponent };

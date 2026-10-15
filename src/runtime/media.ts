@@ -5,7 +5,7 @@
 
 export type MediaCategory = "image" | "vector" | "video" | "audio" | "unknown";
 
-export const MEDIA_MIME_TYPES: Record<string, string> = {
+const MEDIA_MIME_TYPES: Record<string, string> = {
   // Raster Images
   png: "image/png",
   jpg: "image/jpeg",
@@ -52,7 +52,7 @@ export const MEDIA_MIME_TYPES: Record<string, string> = {
 };
 
 /** Extracts extension without dot, query params or hash fragments. */
-export function extractExtension(urlOrPath: string): string {
+function extractExtension(urlOrPath: string): string {
   if (!urlOrPath) return "";
   const clean = urlOrPath.trim().split("#")[0].split("?")[0];
   const lastDot = clean.lastIndexOf(".");

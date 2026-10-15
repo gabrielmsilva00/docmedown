@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
 import { inlineMediaSources } from "../src/cli/commands/build";
@@ -13,6 +12,7 @@ import {
   toLosslessDataUri,
 } from "../src/runtime/media";
 import { ComponentRegistry } from "../src/ui/registry";
+import { makeTempDir } from "./helpers/temp";
 
 const mediaSrc = fs.readFileSync(path.resolve(__dirname, "../src/ui/builtins/Media.svelte"), "utf-8");
 const mainCss = fs.readFileSync(path.resolve(__dirname, "../src/runtime/styles/main.css"), "utf-8");
@@ -163,7 +163,7 @@ test("Media utilities: lossless Data URI encoding and decoding preserves exact b
 });
 
 test("inlineMediaSources: inlines <Media> raster, vector, video, and audio assets losslessly for offline compilation", async () => {
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "dmd-media-test-"));
+  const tempDir = makeTempDir("dmd-media-test-");
   try {
     const assetsDir = path.join(tempDir, "assets");
     fs.mkdirSync(assetsDir, { recursive: true });

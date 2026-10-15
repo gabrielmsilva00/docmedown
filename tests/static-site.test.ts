@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
 import { emitAiContextFiles } from "../src/cli/ai-context";
@@ -15,9 +14,10 @@ import {
 } from "../src/cli/seo";
 import { generateManifest } from "../src/cli/utils/scanner";
 import { normalizeConfig } from "../src/runtime/config";
+import { makeTempDir } from "./helpers/temp";
 
 function createFixture(): { root: string; config: any } {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "dmd-static-"));
+  const root = makeTempDir("dmd-static-");
   fs.writeFileSync(
     path.join(root, "README.md"),
     "---\ntitle: Home\ndescription: The home page\n---\n\n# Home\n\nWelcome to the **docs**.\n",

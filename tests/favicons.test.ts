@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
 import { resolveFaviconForOffline } from "../src/cli/commands/build";
@@ -15,6 +14,7 @@ import {
   svgToDataUri,
 } from "../src/runtime/favicons";
 import { createCompressedOfflineHtml } from "../src/runtime/offline-export";
+import { makeTempDir } from "./helpers/temp";
 
 test("Favicon presets are well-formed 32x32 SVGs with base64 data URIs", () => {
   assert.equal(DEFAULT_FAVICON_PRESET, "default");
@@ -74,7 +74,7 @@ test("resolveFavicon maps presets to data URIs and preserves custom links", () =
 });
 
 test("resolveFaviconForOffline inlines local image assets into self-contained base64 data URIs", () => {
-  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "dmd-fav-test-"));
+  const tmpDir = makeTempDir("dmd-fav-test-");
   try {
     const customSvgPath = path.join(tmpDir, "custom.svg");
     fs.writeFileSync(customSvgPath, '<svg xmlns="http://www.w3.org/2000/svg"><circle r="10"/></svg>', "utf-8");

@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
 import { gunzipSync } from "node:zlib";
@@ -24,6 +23,7 @@ import {
   sanitizeDownloadName,
 } from "../src/runtime/offline-export";
 import { linkSveltePrimitives } from "../src/runtime/svelte-runtime";
+import { makeTempDir } from "./helpers/temp";
 
 test("Extract headings from markdown content", () => {
   const content = `
@@ -159,7 +159,7 @@ test("Compressed offline envelopes round-trip and produce a minified self-extrac
 });
 
 test("Offline custom component bundles resolve relative imports and defer module evaluation to the runtime", () => {
-  const temporaryDirectory = fs.mkdtempSync(path.join(os.tmpdir(), "docmedown-components-"));
+  const temporaryDirectory = makeTempDir("docmedown-components-");
   const componentsPath = path.join(temporaryDirectory, "components.js");
 
   try {
@@ -185,7 +185,7 @@ test("Offline custom component bundles resolve relative imports and defer module
 });
 
 test(".dmd/*.svelte components are discovered in manifest and bundled AOT via Svelte 5 customElement compiler", () => {
-  const temporaryDirectory = fs.mkdtempSync(path.join(os.tmpdir(), "docmedown-svelte-test-"));
+  const temporaryDirectory = makeTempDir("docmedown-svelte-test-");
   const dmdDir = path.join(temporaryDirectory, ".dmd");
   fs.mkdirSync(dmdDir, { recursive: true });
 

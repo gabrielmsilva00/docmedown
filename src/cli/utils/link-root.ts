@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-export const EXCLUDED_ROOT_FILES = new Set(["SKILL.md"]);
+const EXCLUDED_ROOT_FILES = new Set(["SKILL.md"]);
 
 /**
  * Discovers markdown files directly at the root directory (excluding hidden files,

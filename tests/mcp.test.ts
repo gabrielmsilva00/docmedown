@@ -18,9 +18,10 @@ import {
   startMcpSseServer,
 } from "../src/cli/commands/mcp";
 import type { DocManifest } from "../src/runtime/types";
+import { makeTempDir } from "./helpers/temp";
 
 function createBuiltFixture(): string {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "dmd-mcp-fixture-"));
+  const root = makeTempDir("dmd-mcp-fixture-");
   const manifest: DocManifest = {
     version: "1.0.0",
     generatedAt: "2026-09-07T00:00:00.000Z",
@@ -83,7 +84,7 @@ function createBuiltFixture(): string {
 function createUnbuiltFixture(
   options: { configType?: "docs.json" | "dmd.json" | "none"; configContent?: any } = {},
 ): string {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "dmd-unbuilt-"));
+  const root = makeTempDir("dmd-unbuilt-");
 
   if (options.configType === "docs.json" || options.configType === undefined) {
     fs.writeFileSync(
@@ -134,18 +135,18 @@ test("loadBuiltSite reads manifest and embedded docs without a source tree", () 
 test("loadBuiltSite returns null when _manifest.json is missing or dir does not exist", () => {
   assert.equal(loadBuiltSite(path.join(os.tmpdir(), "dmd-mcp-nonexistent")), null);
 
-  const emptyDir = fs.mkdtempSync(path.join(os.tmpdir(), "dmd-empty-"));
+  const emptyDir = makeTempDir("dmd-empty-");
   assert.equal(loadBuiltSite(emptyDir), null);
 });
 
 test("loadBuiltSite returns null when _manifest.json contains invalid JSON syntax", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "dmd-corrupt-manifest-"));
+  const root = makeTempDir("dmd-corrupt-manifest-");
   fs.writeFileSync(path.join(root, "_manifest.json"), "{ invalid json syntax !!", "utf-8");
   assert.equal(loadBuiltSite(root), null);
 });
 
 test("loadBuiltSite handles missing or malformed _docs.js gracefully", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "dmd-no-docsjs-"));
+  const root = makeTempDir("dmd-no-docsjs-");
   const manifest: DocManifest = {
     version: "1.0.0",
     generatedAt: "2026-09-07T00:00:00.000Z",
@@ -199,7 +200,7 @@ test("loadOrCreateToolkit uses default normalized config when no config file exi
 });
 
 test("loadOrCreateToolkit normalizes index.md and README.md to README slug and indexes nested paths", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "dmd-index-slug-"));
+  const root = makeTempDir("dmd-index-slug-");
   fs.writeFileSync(path.join(root, "index.md"), "# Index Title\n\nIndex page content.", "utf-8");
   const sub = path.join(root, "api", "v1");
   fs.mkdirSync(sub, { recursive: true });
@@ -216,7 +217,7 @@ test("loadOrCreateToolkit normalizes index.md and README.md to README slug and i
 test("loadOrCreateToolkit returns null for non-existent directory or directory with no markdown files", () => {
   assert.equal(loadOrCreateToolkit(path.join(os.tmpdir(), "dmd-zero-nonexistent")), null);
 
-  const emptyDir = fs.mkdtempSync(path.join(os.tmpdir(), "dmd-empty-unbuilt-"));
+  const emptyDir = makeTempDir("dmd-empty-unbuilt-");
   fs.writeFileSync(path.join(emptyDir, "some-file.txt"), "Not markdown", "utf-8");
   assert.equal(loadOrCreateToolkit(emptyDir), null);
 });
@@ -789,7 +790,7 @@ test("MCP server cleanly closes all active SSE sessions and frees listening sock
 // ---------------------------------------------------------------------------
 
 test("mcpCommand throws descriptive error when target directory has no documentation", async () => {
-  const emptyDir = fs.mkdtempSync(path.join(os.tmpdir(), "dmd-empty-mcp-"));
+  const emptyDir = makeTempDir("dmd-empty-mcp-");
   await assert.rejects(
     async () => {
       await mcpCommand(emptyDir);

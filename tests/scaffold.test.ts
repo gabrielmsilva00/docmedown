@@ -1,18 +1,14 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
 import prompts from "prompts";
 import { initCommand, quickstartCommand } from "../src/cli/commands/init";
 import { detectProjectInfo, planScaffold, renderScaffoldTree } from "../src/cli/utils/scaffold-tree";
-
-function createTempDir(prefix: string): string {
-  return fs.mkdtempSync(path.join(os.tmpdir(), `dmd-scaffold-${prefix}-`));
-}
+import { makeTempDir } from "./helpers/temp";
 
 test("detectProjectInfo extracts metadata from package.json or defaults cleanly", () => {
-  const root = createTempDir("info");
+  const root = makeTempDir("dmd-scaffold-info");
   const defaultInfo = detectProjectInfo(root);
   assert.equal(defaultInfo.name, path.basename(root));
   assert.equal(defaultInfo.description, "The simplest Markdown documentation yet");
@@ -29,7 +25,7 @@ test("detectProjectInfo extracts metadata from package.json or defaults cleanly"
 });
 
 test("planScaffold identifies linked root markdown files without mutating disk", () => {
-  const root = createTempDir("plan-root");
+  const root = makeTempDir("dmd-scaffold-plan-root");
   const targetDir = path.join(root, "docs");
 
   // Create root markdown files
@@ -73,7 +69,7 @@ test("planScaffold identifies linked root markdown files without mutating disk",
 });
 
 test("planScaffold creates README.md from template if root has no README.md", () => {
-  const root = createTempDir("plan-no-readme");
+  const root = makeTempDir("dmd-scaffold-plan-no-readme");
   const targetDir = path.join(root, "docs");
 
   const plan = planScaffold({
@@ -90,7 +86,7 @@ test("planScaffold creates README.md from template if root has no README.md", ()
 });
 
 test("planScaffold marks existing files as skip with preservation annotation", () => {
-  const root = createTempDir("plan-existing");
+  const root = makeTempDir("dmd-scaffold-plan-existing");
   const targetDir = path.join(root, "docs");
   fs.mkdirSync(targetDir, { recursive: true });
   fs.writeFileSync(path.join(targetDir, "docs.json"), '{"name":"existing"}', "utf-8");
@@ -108,7 +104,7 @@ test("planScaffold marks existing files as skip with preservation annotation", (
 });
 
 test("planScaffold omits guides and custom components when includeSamples is false", () => {
-  const root = createTempDir("plan-nosamples");
+  const root = makeTempDir("dmd-scaffold-plan-nosamples");
 
   const plan = planScaffold({
     targetDirArg: "./docs",
@@ -127,7 +123,7 @@ test("planScaffold omits guides and custom components when includeSamples is fal
 });
 
 test("renderScaffoldTree outputs clean directory tree with connectors and annotations", () => {
-  const root = createTempDir("tree-view");
+  const root = makeTempDir("dmd-scaffold-tree-view");
   fs.writeFileSync(path.join(root, "README.md"), "# Root", "utf-8");
   fs.writeFileSync(path.join(root, "CHANGELOG.md"), "# Changes", "utf-8");
 
@@ -156,7 +152,7 @@ test("renderScaffoldTree outputs clean directory tree with connectors and annota
 });
 
 test("quickstartCommand does NOT create any files when confirmation is declined", async () => {
-  const root = createTempDir("quickstart-cancel");
+  const root = makeTempDir("dmd-scaffold-quickstart-cancel");
   const targetDir = path.join(root, "docs");
 
   const originalCwd = process.cwd();
@@ -175,7 +171,7 @@ test("quickstartCommand does NOT create any files when confirmation is declined"
 });
 
 test("quickstartCommand scaffolds files and builds artifacts when confirmed or --yes", async () => {
-  const root = createTempDir("quickstart-yes");
+  const root = makeTempDir("dmd-scaffold-quickstart-yes");
   const targetDir = path.join(root, "docs");
 
   const originalCwd = process.cwd();
@@ -198,7 +194,7 @@ test("quickstartCommand scaffolds files and builds artifacts when confirmed or -
 });
 
 test("initCommand does NOT create any files when questionnaire is cancelled", async () => {
-  const root = createTempDir("init-cancel-questionnaire");
+  const root = makeTempDir("dmd-scaffold-init-cancel-questionnaire");
   const targetDir = path.join(root, "docs");
 
   const originalCwd = process.cwd();
@@ -217,7 +213,7 @@ test("initCommand does NOT create any files when questionnaire is cancelled", as
 });
 
 test("initCommand does NOT create any files when confirmation prompt is declined", async () => {
-  const root = createTempDir("init-cancel-confirm");
+  const root = makeTempDir("dmd-scaffold-init-cancel-confirm");
   const targetDir = path.join(root, "docs");
 
   const originalCwd = process.cwd();
@@ -236,7 +232,7 @@ test("initCommand does NOT create any files when confirmation prompt is declined
 });
 
 test("initCommand applies interactive choices to docs.json and scaffolds when confirmed", async () => {
-  const root = createTempDir("init-success");
+  const root = makeTempDir("dmd-scaffold-init-success");
   const targetDir = path.join(root, "docs");
 
   const originalCwd = process.cwd();

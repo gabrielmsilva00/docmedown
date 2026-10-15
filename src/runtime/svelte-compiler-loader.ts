@@ -23,7 +23,7 @@ function globalCompiler(): SvelteCompilerEngine | undefined {
   return (globalThis as Record<string, unknown>)[COMPILER_GLOBAL] as SvelteCompilerEngine | undefined;
 }
 
-export function loadExternalCompilerEngine(): Promise<SvelteCompilerEngine> {
+function loadExternalCompilerEngine(): Promise<SvelteCompilerEngine> {
   return new Promise((resolve, reject) => {
     if (typeof document === "undefined") {
       reject(new Error("DocMeDown: the Svelte compiler engine can only be loaded in a browser."));

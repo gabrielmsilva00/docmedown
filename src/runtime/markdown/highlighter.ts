@@ -152,7 +152,7 @@ const LANG_COLORS: Record<string, string> = {
   toml: EXT_COLORS.toml,
 };
 
-export function normalizeLanguage(lang: string): string {
+function normalizeLanguage(lang: string): string {
   const clean = lang.trim().toLowerCase();
   return LANG_ALIASES[clean] || clean;
 }
@@ -166,7 +166,7 @@ export function registerLanguage(name: string, definition: Record<string, unknow
   }
 }
 
-export function highlightCode(code: string, lang: string = ""): string {
+function highlightCode(code: string, lang: string = ""): string {
   const cleanLang = normalizeLanguage(lang);
 
   if (cleanLang === "mermaid") {
@@ -315,7 +315,7 @@ export function parseActiveLines(infoString: string): Set<number> {
  * triple-quoted string or block comment) are left untouched because their
  * whitespace is content, not indentation.
  */
-export function wrapCodeLines(html: string, activeLines: Set<number> = new Set()): string {
+function wrapCodeLines(html: string, activeLines: Set<number> = new Set()): string {
   const out: string[] = [];
   let cur = "";
   let hasContent = false;

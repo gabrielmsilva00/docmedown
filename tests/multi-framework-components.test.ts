@@ -1,14 +1,14 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
 import { bundleCustomComponents } from "../src/cli/commands/build";
 import { generateManifest } from "../src/cli/utils/scanner";
 import { DEFAULT_CONFIG } from "../src/runtime/config";
+import { makeTempDir } from "./helpers/temp";
 
 test("multi-framework custom components (.svelte, .tsx, .ts) are discovered and bundled", () => {
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "dmd-mf-test-"));
+  const tempDir = makeTempDir("dmd-mf-test-");
   const dmdDir = path.join(tempDir, ".dmd");
   fs.mkdirSync(dmdDir, { recursive: true });
 
@@ -55,6 +55,7 @@ export default function ReactMetric({ label = "Success Rate", initial = 99 }: Me
       path.join(dmdDir, "ComplexReactWidget.tsx"),
       `
 import React, { useContext } from 'react';
+import { makeTempDir } from "./helpers/temp";
 
 export default function ComplexReactWidget() {
   // uses useContext which requires React runtime bridge

@@ -6,6 +6,18 @@ All notable changes to DocMeDown are documented here.
 
 ---
 
+## 0.9.6 - 2026-10-15
+
+- **Mobile View & Markdown Editor Overhaul**:
+  - Full-screen sheet modal layout on mobile devices (<=768px) with bottom slide animation and safe-area inset support.
+  - Dedicated mobile Write / Preview tab switcher replacing cramped side-by-side split view.
+  - Touch-friendly markdown formatting toolbar with quick actions for headings, bold, italic, code, links, bullet/numbered lists, checklists, quotes, and indentation.
+  - Dynamic visual viewport tracking that adapts layout and scrolling when the on-screen keyboard opens, preventing viewport shifts and occluded actions.
+  - Enhanced mobile touch targets (44px) and 16px form controls to prevent iOS auto-zoom on input focus.
+- **Mobile Navbar Enhancements**:
+  - Compact, uniform 40px icon controls for search, theme toggle, and menu triggers on tablet and mobile viewports (<=820px).
+  - Streamlined navbar layout eliminating duplicate links and optimizing breadcrumbs and route display on narrow screens.
+
 ## 0.9.5 - 2026-10-14
 
 - **Code Cleanup**:

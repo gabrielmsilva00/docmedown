@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { tick } from "svelte";
   import { doc } from "../doc-context.svelte";
   import MarkdownBody from "./MarkdownBody.svelte";
   import { parseMarkdown } from "../../runtime/markdown/parser";
@@ -22,6 +23,56 @@
   });
 
   let lineCount = $derived(draftContent.split("\n").length);
+
+  // Mobile layout state ------------------------------------------------------
+  let isMobile = $state(false);
+  let mobilePane = $state<"write" | "preview">("write");
+  let vvTop = $state(0);
+  let vvHeight = $state(0);
+  let keyboardOpen = $state(false);
+  let textareaEl = $state<HTMLTextAreaElement | null>(null);
+
+  const showTabPane = $derived(!isMobile || mobilePane === "write");
+  const showPreviewPane = $derived(isMobile ? mobilePane === "preview" : showSplitPreview);
+
+  $effect(() => {
+    if (typeof window === "undefined") return;
+    const mq = window.matchMedia("(max-width: 768px)");
+    const sync = () => (isMobile = mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  });
+
+  // While open: lock page scroll and follow the visual viewport so the on-screen
+  // keyboard never hides the footer or the caret.
+  $effect(() => {
+    if (!doc.isEditorOpen || typeof window === "undefined") return;
+    const vv = window.visualViewport;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    mobilePane = "write";
+
+    const update = () => {
+      if (!vv) return;
+      vvTop = Math.round(vv.offsetTop);
+      vvHeight = Math.round(vv.height);
+      keyboardOpen = window.innerHeight - vv.height > 140;
+    };
+    update();
+    vv?.addEventListener("resize", update);
+    vv?.addEventListener("scroll", update);
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      vv?.removeEventListener("resize", update);
+      vv?.removeEventListener("scroll", update);
+      keyboardOpen = false;
+    };
+  });
+
+  const backdropStyle = $derived(
+    isMobile && vvHeight ? `top:${vvTop}px;height:${vvHeight}px;bottom:auto;` : undefined,
+  );
 
   let activeTab = $state<"editor" | "frontmatter" | "table">("editor");
 
@@ -186,6 +237,58 @@
     }
   }
 
+  // Markdown toolbar helpers (touch-friendly formatting) ---------------------
+  function commitDraft(next: string, selStart: number, selEnd: number) {
+    draftContent = next;
+    doc.updateDocContent(draftContent, doc.currentSlug, false);
+    statusMessage = "Unsaved changes (live preview active)";
+    tick().then(() => {
+      if (!textareaEl) return;
+      textareaEl.focus({ preventScroll: true });
+      textareaEl.setSelectionRange(selStart, selEnd);
+    });
+  }
+
+  function wrapSelection(before: string, after = before, placeholder = "text") {
+    if (!textareaEl) return;
+    const s = textareaEl.selectionStart;
+    const e = textareaEl.selectionEnd;
+    const selected = draftContent.slice(s, e) || placeholder;
+    const next = draftContent.slice(0, s) + before + selected + after + draftContent.slice(e);
+    commitDraft(next, s + before.length, s + before.length + selected.length);
+  }
+
+  function transformLines(fn: (line: string, index: number) => string) {
+    if (!textareaEl) return;
+    const s = textareaEl.selectionStart;
+    const e = textareaEl.selectionEnd;
+    const lineStart = draftContent.lastIndexOf("\n", s - 1) + 1;
+    let lineEnd = draftContent.indexOf("\n", e);
+    if (lineEnd === -1) lineEnd = draftContent.length;
+    const block = draftContent.slice(lineStart, lineEnd);
+    const out = block.split("\n").map(fn).join("\n");
+    commitDraft(draftContent.slice(0, lineStart) + out + draftContent.slice(lineEnd), lineStart, lineStart + out.length);
+  }
+
+  const toolbarActions: Array<{ id: string; label: string; title: string; run: () => void; mono?: boolean }> = [
+    { id: "h2", label: "H", title: "Heading", run: () => transformLines((l) => (l.startsWith("## ") ? l.slice(3) : `## ${l.replace(/^#+\s*/, "")}`)) },
+    { id: "bold", label: "B", title: "Bold", run: () => wrapSelection("**") },
+    { id: "italic", label: "I", title: "Italic", run: () => wrapSelection("*") },
+    { id: "code", label: "`", title: "Inline code", mono: true, run: () => wrapSelection("`", "`", "code") },
+    { id: "codeblock", label: "{ }", title: "Code block", mono: true, run: () => wrapSelection("```\n", "\n```", "code") },
+    { id: "link", label: "Link", title: "Link", run: () => wrapSelection("[", "](https://)", "link text") },
+    { id: "ul", label: "• List", title: "Bullet list", run: () => transformLines((l) => (l.startsWith("- ") ? l.slice(2) : `- ${l}`)) },
+    { id: "ol", label: "1. List", title: "Numbered list", run: () => transformLines((l, i) => `${i + 1}. ${l.replace(/^\d+\.\s+/, "")}`) },
+    { id: "task", label: "☑", title: "Checklist", run: () => transformLines((l) => (l.startsWith("- [ ] ") ? l.slice(6) : `- [ ] ${l.replace(/^- (\[[ x]\] )?/, "")}`)) },
+    { id: "quote", label: "❝", title: "Quote", run: () => transformLines((l) => (l.startsWith("> ") ? l.slice(2) : `> ${l}`)) },
+    { id: "indent", label: "⇥", title: "Indent", run: () => transformLines((l) => `  ${l}`) },
+    { id: "outdent", label: "⇤", title: "Outdent", run: () => transformLines((l) => l.replace(/^ {1,2}/, "")) },
+  ];
+
+  function keepEditorFocus(e: Event) {
+    e.preventDefault();
+  }
+
   // Live in-page preview update as author types
   function handleInput(e: Event) {
     const target = e.target as HTMLTextAreaElement;
@@ -329,6 +432,8 @@
 {#if doc.isEditorOpen}
   <div
     class="dmd-editor-backdrop"
+    class:keyboard-open={keyboardOpen}
+    style={backdropStyle}
     role="dialog"
     aria-modal="true"
     tabindex="-1"
@@ -345,80 +450,108 @@
           <span class="dmd-editor-file-badge">{doc.currentSlug}.md</span>
         </div>
 
-        <div class="dmd-editor-tab-group">
+        <div class="dmd-editor-tab-group" role="tablist">
           <button
             type="button"
+            role="tab"
+            aria-selected={activeTab === 'editor'}
             class="dmd-editor-tab-btn {activeTab === 'editor' ? 'active' : ''}"
-            onclick={() => (activeTab = 'editor')}
+            onclick={() => { activeTab = 'editor'; mobilePane = 'write'; }}
           >
             Markdown
           </button>
           <button
             type="button"
+            role="tab"
+            aria-selected={activeTab === 'frontmatter'}
             class="dmd-editor-tab-btn {activeTab === 'frontmatter' ? 'active' : ''}"
-            onclick={() => { syncFmFromDraft(); activeTab = 'frontmatter'; }}
+            onclick={() => { syncFmFromDraft(); activeTab = 'frontmatter'; mobilePane = 'write'; }}
           >
-            Frontmatter Form
+            Frontmatter<span class="dmd-hide-sm"> Form</span>
           </button>
           <button
             type="button"
+            role="tab"
+            aria-selected={activeTab === 'table'}
             class="dmd-editor-tab-btn {activeTab === 'table' ? 'active' : ''}"
-            onclick={() => (activeTab = 'table')}
+            onclick={() => { activeTab = 'table'; mobilePane = 'write'; }}
           >
-            Table Assistant
+            Table<span class="dmd-hide-sm"> Assistant</span>
           </button>
         </div>
 
         <div class="dmd-editor-header-controls">
-          <!-- Target selector -->
-          {#if !isOffline}
-            <div class="dmd-editor-target-pill">
-              <span class="dmd-editor-target-label">Target:</span>
+          <div class="dmd-editor-options">
+            <!-- Mobile-only Write / Preview switch (replaces side-by-side split) -->
+            <div class="dmd-editor-mobile-switch" role="group" aria-label="Editor view">
               <button
                 type="button"
-                class="dmd-editor-pill-btn {saveTarget === 'source' ? 'active' : ''}"
-                onclick={() => (saveTarget = 'source')}
+                class="dmd-editor-pill-btn {mobilePane === 'write' ? 'active' : ''}"
+                aria-pressed={mobilePane === 'write'}
+                onclick={() => (mobilePane = 'write')}
               >
-                Source
+                Write
               </button>
               <button
                 type="button"
-                class="dmd-editor-pill-btn {saveTarget === 'preview' ? 'active' : ''}"
-                onclick={() => (saveTarget = 'preview')}
+                class="dmd-editor-pill-btn {mobilePane === 'preview' ? 'active' : ''}"
+                aria-pressed={mobilePane === 'preview'}
+                onclick={() => (mobilePane = 'preview')}
               >
-                .preview
+                Preview
               </button>
             </div>
-          {/if}
 
-          <!-- Split preview toggle -->
-          <button
-            type="button"
-            class="dmd-editor-btn-secondary {showSplitPreview ? 'active' : ''}"
-            onclick={() => (showSplitPreview = !showSplitPreview)}
-            title="Toggle Split Preview"
-          >
-            {showSplitPreview ? "Split: ON" : "Split: OFF"}
-          </button>
-
-          <!-- Server mode badge & toggle OR Offline Mode badge -->
-          <div class="dmd-editor-mode-toggle">
-            {#if isOffline}
-              <span class="dmd-badge-offline" title="Running in self-contained offline mode. Edits save to in-browser session & storage.">
-                Offline Mode
-              </span>
-            {:else}
-              <span class="dmd-mode-label">Server:</span>
-              {#if doc.serverMode === "preview"}
-                <button type="button" class="dmd-badge-preview" onclick={() => toggleServerMode("production")} title="Click to switch to Production mode">
-                  Preview Mode
+            <!-- Target selector -->
+            {#if !isOffline}
+              <div class="dmd-editor-target-pill">
+                <span class="dmd-editor-target-label">Target:</span>
+                <button
+                  type="button"
+                  class="dmd-editor-pill-btn {saveTarget === 'source' ? 'active' : ''}"
+                  onclick={() => (saveTarget = 'source')}
+                >
+                  Source
                 </button>
-              {:else}
-                <button type="button" class="dmd-badge-prod" onclick={() => toggleServerMode("preview")} title="Click to switch to Preview mode">
-                  Production Mode
+                <button
+                  type="button"
+                  class="dmd-editor-pill-btn {saveTarget === 'preview' ? 'active' : ''}"
+                  onclick={() => (saveTarget = 'preview')}
+                >
+                  .preview
                 </button>
-              {/if}
+              </div>
             {/if}
+
+            <!-- Split preview toggle (desktop) -->
+            <button
+              type="button"
+              class="dmd-editor-btn-secondary dmd-editor-split-btn {showSplitPreview ? 'active' : ''}"
+              onclick={() => (showSplitPreview = !showSplitPreview)}
+              title="Toggle Split Preview"
+            >
+              {showSplitPreview ? "Split: ON" : "Split: OFF"}
+            </button>
+
+            <!-- Server mode badge & toggle OR Offline Mode badge -->
+            <div class="dmd-editor-mode-toggle">
+              {#if isOffline}
+                <span class="dmd-badge-offline" title="Running in self-contained offline mode. Edits save to in-browser session & storage.">
+                  Offline Mode
+                </span>
+              {:else}
+                <span class="dmd-mode-label">Server:</span>
+                {#if doc.serverMode === "preview"}
+                  <button type="button" class="dmd-badge-preview" onclick={() => toggleServerMode("production")} title="Click to switch to Production mode">
+                    Preview Mode
+                  </button>
+                {:else}
+                  <button type="button" class="dmd-badge-prod" onclick={() => toggleServerMode("preview")} title="Click to switch to Preview mode">
+                    Production Mode
+                  </button>
+                {/if}
+              {/if}
+            </div>
           </div>
 
           <!-- Close button -->
@@ -434,18 +567,48 @@
       </div>
 
       <!-- Editor Main Panes -->
-      <div class="dmd-editor-body {showSplitPreview ? 'split' : 'full'}">
-        {#if activeTab === 'editor'}
+      <div class="dmd-editor-body {showPreviewPane && showTabPane ? 'split' : 'full'}">
+        {#if !showTabPane}
+          <!-- Mobile preview-only view: tab pane hidden -->
+        {:else if activeTab === 'editor'}
           <!-- Editor Input Pane -->
           <div class="dmd-editor-pane editor">
+            {#if isMobile}
+              <!-- svelte-ignore a11y_no_static_element_interactions -->
+              <div
+                class="dmd-editor-toolbar"
+                role="group"
+                aria-label="Markdown formatting"
+                onpointerdown={keepEditorFocus}
+                onmousedown={keepEditorFocus}
+              >
+                {#each toolbarActions as action (action.id)}
+                  <button
+                    type="button"
+                    class="dmd-editor-toolbar-btn {action.mono ? 'mono' : ''} {action.id}"
+                    title={action.title}
+                    aria-label={action.title}
+                    onclick={action.run}
+                  >
+                    {action.label}
+                  </button>
+                {/each}
+              </div>
+            {/if}
             <div class="dmd-editor-textarea-wrapper">
               <textarea
+                bind:this={textareaEl}
                 class="dmd-editor-textarea"
                 value={draftContent}
                 oninput={handleInput}
                 onkeydown={handleTextareaKeyDown}
                 placeholder="Type markdown here..."
                 spellcheck="false"
+                autocapitalize="off"
+                autocomplete="off"
+                {...{ autocorrect: "off" }}
+                enterkeyhint="enter"
+                aria-label="Markdown source"
               ></textarea>
             </div>
           </div>
@@ -548,7 +711,7 @@
         {/if}
 
         <!-- Live Preview Pane -->
-        {#if showSplitPreview}
+        {#if showPreviewPane}
           <div class="dmd-editor-pane preview">
             <div class="dmd-editor-preview-header">
               <span>Live Render</span>
@@ -1207,4 +1370,383 @@
     width: 32px;
     text-align: center;
   }
+
+  /* New header wrappers (desktop defaults) --------------------------------- */
+  .dmd-editor-options {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .dmd-editor-mobile-switch,
+  .dmd-editor-toolbar {
+    display: none;
+  }
+
+  .dmd-editor-title {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Mobile editor ---------------------------------------------------------- */
+  @keyframes dmdEditorSheetEnter {
+    from {
+      opacity: 0;
+      transform: translateY(24px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @media (max-width: 768px) {
+    .dmd-editor-backdrop {
+      padding: 0;
+      align-items: stretch;
+      justify-content: stretch;
+      background: var(--dmd-bg-card, #181825);
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+      overscroll-behavior: contain;
+    }
+
+    .dmd-editor-window {
+      width: 100%;
+      max-width: none;
+      height: 100%;
+      border: none;
+      border-radius: 0;
+      box-shadow: none;
+      animation: dmdEditorSheetEnter 0.26s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+
+    /* Header: row 1 = title + close, row 2 = tabs, row 3 = scrolling options */
+    .dmd-editor-header {
+      height: auto;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 8px;
+      padding: max(8px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) 8px max(12px, env(safe-area-inset-left));
+    }
+
+    .dmd-editor-title-group {
+      order: 1;
+      flex: 1 1 0;
+      min-width: 0;
+    }
+
+    .dmd-editor-file-badge {
+      min-width: 0;
+      max-width: 42vw;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .dmd-editor-header-controls {
+      display: contents;
+    }
+
+    .dmd-editor-close-btn {
+      order: 2;
+      width: 40px;
+      height: 40px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      font-size: 18px;
+      border-radius: 10px;
+      background: var(--dmd-bg-card, #181825);
+      border: 1px solid var(--dmd-border-color, #313244);
+    }
+
+    .dmd-editor-tab-group {
+      order: 3;
+      width: 100%;
+      overflow-x: auto;
+      scrollbar-width: none;
+      padding: 3px;
+      border-radius: 10px;
+    }
+
+    .dmd-editor-tab-group::-webkit-scrollbar,
+    .dmd-editor-options::-webkit-scrollbar,
+    .dmd-editor-toolbar::-webkit-scrollbar {
+      display: none;
+    }
+
+    .dmd-editor-tab-btn {
+      flex: 1 0 auto;
+      min-height: 38px;
+      padding: 0 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    .dmd-editor-options {
+      order: 4;
+      width: 100%;
+      overflow-x: auto;
+      scrollbar-width: none;
+      -webkit-overflow-scrolling: touch;
+      gap: 8px;
+      padding-bottom: 1px;
+    }
+
+    .dmd-editor-options > * {
+      flex-shrink: 0;
+    }
+
+    .dmd-editor-mobile-switch {
+      display: flex;
+      align-items: center;
+      background: var(--dmd-bg-card, #181825);
+      border: 1px solid var(--dmd-border-color, #313244);
+      border-radius: 8px;
+      padding: 2px;
+      gap: 2px;
+    }
+
+    .dmd-editor-pill-btn {
+      min-height: 32px;
+      padding: 0 12px;
+      font-size: 13px;
+    }
+
+    .dmd-editor-split-btn {
+      display: none;
+    }
+
+    .dmd-editor-target-pill,
+    .dmd-editor-mode-toggle {
+      white-space: nowrap;
+    }
+
+    .dmd-badge-preview,
+    .dmd-badge-prod,
+    .dmd-badge-offline {
+      min-height: 32px;
+      padding: 0 10px;
+      display: inline-flex;
+      align-items: center;
+    }
+
+    .dmd-hide-sm {
+      display: none;
+    }
+
+    /* Formatting toolbar */
+    .dmd-editor-toolbar {
+      display: flex;
+      gap: 6px;
+      padding: 6px max(8px, env(safe-area-inset-left));
+      overflow-x: auto;
+      scrollbar-width: none;
+      -webkit-overflow-scrolling: touch;
+      background: var(--dmd-bg-surface, #1e1e2e);
+      border-bottom: 1px solid var(--dmd-border-color, #313244);
+      flex-shrink: 0;
+    }
+
+    .dmd-editor-toolbar-btn {
+      flex: 0 0 auto;
+      min-width: 42px;
+      height: 38px;
+      padding: 0 12px;
+      border-radius: 8px;
+      border: 1px solid var(--dmd-border-color, #313244);
+      background: var(--dmd-bg-card, #181825);
+      color: var(--dmd-text-primary, #cdd6f4);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      transition: background 0.12s ease, border-color 0.12s ease, transform 0.12s ease;
+    }
+
+    .dmd-editor-toolbar-btn:active {
+      transform: scale(0.94);
+      background: var(--dmd-accent, #89b4fa);
+      border-color: var(--dmd-accent, #89b4fa);
+      color: #11111b;
+    }
+
+    .dmd-editor-toolbar-btn.mono {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    .dmd-editor-toolbar-btn.bold {
+      font-weight: 800;
+    }
+
+    .dmd-editor-toolbar-btn.italic {
+      font-style: italic;
+      font-family: Georgia, serif;
+    }
+
+    /* Panes */
+    .dmd-editor-pane.preview {
+      border-left: none;
+    }
+
+    .dmd-editor-preview-header {
+      display: none;
+    }
+
+    .dmd-editor-preview-content {
+      padding: 16px max(16px, env(safe-area-inset-left));
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .dmd-editor-textarea {
+      /* 16px prevents iOS Safari from zooming on focus */
+      font-size: 16px;
+      line-height: 1.55;
+      padding: 14px max(14px, env(safe-area-inset-left)) 32px;
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .frontmatter-pane,
+    .table-pane {
+      padding: 16px max(14px, env(safe-area-inset-left));
+    }
+
+    .dmd-fm-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .dmd-fm-field input[type="text"],
+    .dmd-fm-field input[type="number"] {
+      min-height: 44px;
+      font-size: 16px;
+    }
+
+    .dmd-checkbox-label {
+      min-height: 44px;
+    }
+
+    .dmd-checkbox-label input {
+      width: 20px;
+      height: 20px;
+    }
+
+    .dmd-table-toolbar {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 10px;
+    }
+
+    .dmd-table-toolbar-actions {
+      flex-wrap: wrap;
+    }
+
+    .dmd-table-toolbar-actions .dmd-btn-xs {
+      flex: 1 1 auto;
+      min-height: 40px;
+      font-size: 12px;
+    }
+
+    .dmd-th-input,
+    .dmd-td-input,
+    .dmd-th-align {
+      font-size: 16px;
+      min-height: 38px;
+    }
+
+    .dmd-th-input,
+    .dmd-td-input {
+      min-width: 120px;
+    }
+
+    .dmd-cell-del {
+      min-width: 32px;
+      min-height: 32px;
+    }
+
+    /* Footer: status row above full-width action buttons */
+    .dmd-editor-footer {
+      height: auto;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 8px;
+      padding: 8px max(12px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+    }
+
+    .dmd-editor-status {
+      justify-content: space-between;
+      min-width: 0;
+      font-size: 12px;
+    }
+
+    .dmd-status-text {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .dmd-status-lines {
+      flex-shrink: 0;
+    }
+
+    .dmd-editor-actions {
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .dmd-editor-actions > button {
+      flex: 1 1 40%;
+      min-height: 44px;
+      font-size: 14px;
+      border-radius: 10px;
+    }
+
+    .dmd-editor-actions > .dmd-btn-warning,
+    .dmd-editor-actions > .dmd-btn-danger {
+      font-size: 13px;
+    }
+
+    /* On-screen keyboard open: reclaim vertical space for writing */
+    .keyboard-open .dmd-editor-options,
+    .keyboard-open .dmd-editor-status {
+      display: none;
+    }
+
+    .keyboard-open .dmd-editor-header {
+      padding-top: 6px;
+      padding-bottom: 6px;
+    }
+
+    .keyboard-open .dmd-editor-footer {
+      padding-bottom: 8px;
+    }
+  }
+
+  @media (max-width: 420px) {
+    .dmd-editor-title {
+      display: none;
+    }
+
+    .dmd-editor-file-badge {
+      max-width: 60vw;
+    }
+  }
+
+  /* Landscape phones: very little height, so drop the heading entirely. */
+  @media (max-width: 900px) and (max-height: 500px) {
+    .dmd-editor-title,
+    .dmd-editor-icon {
+      display: none;
+    }
+  }
 </style>
+

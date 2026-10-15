@@ -6403,6 +6403,106 @@ fieldset.dmd-appearance-section {
   }
 }
 
+/* Compact navbar for tablets/phones: uniform 40px icon controls, search is
+   always the icon form, and redundant items (home, version, labels) are dropped
+   so the bar stays on one row without crowding. Placed after the coarse-pointer
+   block so these sizes intentionally win over its 44px minimums. */
+@media (max-width: 820px) {
+  .dmd-navbar {
+    gap: 0.3rem;
+  }
+
+  .dmd-navbar-left,
+  .dmd-navbar-right {
+    gap: 0.3rem;
+  }
+
+  .dmd-navbar .dmd-mobile-menu-btn,
+  .dmd-navbar .dmd-social-btn,
+  .dmd-navbar .dmd-theme-toggle-btn,
+  .dmd-navbar .dmd-offline-download-btn,
+  .dmd-navbar .dmd-appearance-trigger {
+    width: 40px;
+    min-width: 40px;
+    height: 40px;
+    min-height: 40px;
+    padding: 0;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .dmd-navbar .dmd-mobile-menu-btn {
+    margin-left: -0.4rem;
+  }
+
+  /* The brand already links home. */
+  .dmd-navbar .dmd-home-btn,
+  .dmd-brand-version {
+    display: none;
+  }
+
+  .dmd-navbar .dmd-offline-download-btn span,
+  .dmd-navbar .dmd-appearance-trigger-label {
+    display: none;
+  }
+
+  .dmd-navbar-center,
+  .dmd-navbar-center.has-route {
+    flex: 1 1 auto;
+    max-width: none;
+  }
+
+  .dmd-navbar .dmd-navbar-search-full,
+  .dmd-navbar .dmd-navbar-search-full[data-collapsed="true"] {
+    width: 40px;
+    min-width: 40px;
+    max-width: 40px;
+    margin-left: auto;
+    justify-self: end;
+  }
+
+  .dmd-navbar .dmd-navbar-search-full .dmd-search-trigger,
+  .dmd-navbar .dmd-navbar-search-full[data-collapsed="true"] .dmd-search-trigger {
+    width: 40px;
+    min-width: 40px;
+    max-width: 40px;
+    height: 40px;
+    min-height: 40px;
+    padding: 0;
+    gap: 0;
+    justify-content: center;
+    background: var(--dmd-bg-card);
+    color: var(--dmd-text-secondary);
+  }
+
+  .dmd-navbar .dmd-navbar-search-full .dmd-search-icon {
+    width: 18px;
+    height: 18px;
+    margin: 0 auto;
+  }
+
+  .dmd-navbar .dmd-navbar-search-full .dmd-search-placeholder,
+  .dmd-navbar .dmd-navbar-search-full .dmd-search-shortcut {
+    display: none;
+  }
+
+  .dmd-navbar-route-bar {
+    padding-right: 48px;
+  }
+}
+
+@media (max-width: 520px) {
+  .dmd-offline-download-wrap {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .dmd-social-links {
+    display: none;
+  }
+}
+
 /* Short viewports keep drawers and overlays usable in landscape. */
 @media (max-height: 600px) {
   .dmd-sidebar {

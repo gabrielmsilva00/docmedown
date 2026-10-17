@@ -775,11 +775,11 @@ When a media asset fails to load, `<Media>` automatically presents a clear fallb
 
 ---
 
-## Part 3 — Your Own Components (`.dmd/`)
+## Part 3 — Your Own Components (`.dmd/.components/`)
 
-Author first-class Svelte 5 components as `.svelte` files under `.dmd/` — compiled ahead-of-time during build for zero-overhead static distribution, and dynamically compiled at runtime when developing. These two live widgets ship with this very site:
+Author first-class Svelte 5 components as `.svelte` files under `.dmd/.components/` — compiled ahead-of-time during build for zero-overhead static distribution, and dynamically compiled at runtime when developing. These two live widgets ship with this very site:
 
-```svelte title=".dmd/CounterWidget.svelte"
+```svelte title=".dmd/.components/CounterWidget.svelte"
 <svelte:options customElement={{ tag: "dmd-counter-widget" }} />
 
 <script>
@@ -804,9 +804,9 @@ Author first-class Svelte 5 components as `.svelte` files under `.dmd/` — comp
 
 ### Custom Syntax-Highlighting Languages
 
-Register a custom Prism grammar at build time and runtime for languages that are not bundled by default using `.dmd/setup.js`:
+Register a custom Prism grammar at build time and runtime for languages that are not bundled by default using `.dmd/.components/setup.js`:
 
-```js title=".dmd/setup.js"
+```js title=".dmd/.components/setup.js"
 window.DocMeDown.registerLanguage("mylang", {
   comment: /#.*/,
   string: /"(?:[^"\\]|\\.)*"/,

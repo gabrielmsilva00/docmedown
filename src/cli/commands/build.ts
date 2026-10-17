@@ -7,6 +7,7 @@ import chokidar from "chokidar";
 import { buildSync } from "esbuild";
 import { compile } from "svelte/compiler";
 import { normalizeConfig, parseDocConfigJson } from "../../runtime/config";
+import { embeddedDmdDocs } from "../../runtime/embedded-dmd";
 import { isFaviconPreset, resolveFavicon } from "../../runtime/favicons";
 import { isDataUri, resolveMimeType, toLosslessDataUri } from "../../runtime/media";
 import {
@@ -19,6 +20,18 @@ import { dmdTag, ensureCustomElementTag } from "../../runtime/svelte-tag";
 import type { DocConfig } from "../../runtime/types";
 import { emitAiContextFiles } from "../ai-context";
 import { emitStaticSite } from "../seo";
+import {
+  candidateComponentsDirs,
+  candidateOfflineDirs,
+  ensureRootSiteSymlinks,
+  LEGACY_OFFLINE_OUTPUT_DIRECTORY,
+  resolveComponentsDir,
+  resolveConfigDir,
+  resolveExistingComponentsDir,
+  resolveExistingConfigPath,
+  resolveOfflineDir,
+  resolveSiteDir,
+} from "../utils/docs-layout";
 import { linkRootMarkdownFiles } from "../utils/link-root";
 import { convertReactToSvelte } from "../utils/react-to-svelte";
 import { generateManifest, scanDirectory } from "../utils/scanner";
@@ -30,16 +43,33 @@ export interface BuildOptions {
   buildNested?: boolean;
   /** Prerender static pages + SEO/AI support files (default: true). */
   static?: boolean;
+  /**
+   * Suppress the per-step build banner/checklist (used by `serve` for the
+   * initial + nested builds). Errors and warnings still print; a one-line
+   * summary is returned via BuildResult.
+   */
+  silent?: boolean;
 }
 
-export const DEFAULT_OFFLINE_OUTPUT_DIRECTORY = ".dist";
+export interface BuildResult {
+  targetDir: string;
+  siteDir: string;
+  offlineDir: string | null;
+  pages: number;
+  nestedCount: number;
+}
+
+export const DEFAULT_OFFLINE_OUTPUT_DIRECTORY = ".singlefile";
+
+export { LEGACY_OFFLINE_OUTPUT_DIRECTORY };
 
 export function getBuildOutputPaths(targetDir: string, offlineOutDir?: string) {
+  const siteDir = resolveSiteDir(targetDir);
   return {
-    onlineDir: targetDir,
-    offlineDir: offlineOutDir
-      ? path.resolve(process.cwd(), offlineOutDir)
-      : path.join(targetDir, DEFAULT_OFFLINE_OUTPUT_DIRECTORY),
+    onlineDir: siteDir,
+    offlineDir: offlineOutDir ? path.resolve(process.cwd(), offlineOutDir) : resolveOfflineDir(targetDir, siteDir),
+    siteDir,
+    targetDir,
   };
 }
 
@@ -65,31 +95,72 @@ export { loadBuildTimeCustomSetup };
  * while maintaining backward compatibility with legacy `.dmd/components.js`.
  */
 export function bundleCustomComponents(targetPath: string): string | undefined {
-  let dmdDir: string | undefined;
+  let dmdDirs: string[] = [];
   let legacyFile: string | undefined;
 
   if (fs.existsSync(targetPath)) {
     const stat = fs.statSync(targetPath);
     if (stat.isDirectory()) {
-      if (fs.existsSync(path.join(targetPath, ".dmd"))) {
-        dmdDir = path.join(targetPath, ".dmd");
+      const base = path.basename(targetPath);
+      if (base === ".components" || base === ".dmd") {
+        // Already a components/workspace dir — bundle from it directly.
+        dmdDirs = [targetPath];
       } else {
-        dmdDir = targetPath;
+        dmdDirs = candidateComponentsDirs(targetPath).filter((dir) => {
+          try {
+            return fs.existsSync(dir) && fs.statSync(dir).isDirectory();
+          } catch {
+            return false;
+          }
+        });
       }
+      if (dmdDirs.length === 0) dmdDirs = [resolveComponentsDir(targetPath)];
     } else {
       legacyFile = targetPath;
-      dmdDir = path.dirname(targetPath);
+      dmdDirs = [resolveExistingComponentsDir(path.dirname(targetPath))];
     }
   } else {
     const parent = path.dirname(targetPath);
     if (fs.existsSync(parent) && fs.statSync(parent).isDirectory()) {
-      dmdDir = parent;
+      dmdDirs = [parent];
     } else {
       return undefined;
     }
   }
 
-  const dmdEntries = dmdDir && fs.existsSync(dmdDir) ? fs.readdirSync(dmdDir) : [];
+  // Merge new `.dmd/.components/` with the deprecated bare `.dmd/` fallback
+  // (new location wins on name collisions). Only user-authored component
+  // sources participate — generated workspace files (`_docs.js`,
+  // `docmedown.*.js`, `_manifest.json`, ...) must never be bundled.
+  const GENERATED_WORKSPACE_FILES = new Set([
+    "_docs.js",
+    "_manifest.json",
+    "docmedown.web.js",
+    "docmedown-mermaid.js",
+    "docmedown.iife.js",
+  ]);
+  const merged = new Map<string, string>();
+  for (const dir of [...dmdDirs].reverse()) {
+    let entries: string[] = [];
+    try {
+      entries = fs.existsSync(dir) ? fs.readdirSync(dir) : [];
+    } catch {
+      entries = [];
+    }
+    for (const entry of entries) {
+      if (entry.startsWith(".")) continue;
+      if (GENERATED_WORKSPACE_FILES.has(entry)) continue;
+      let isFile = false;
+      try {
+        isFile = fs.statSync(path.join(dir, entry)).isFile();
+      } catch {
+        continue;
+      }
+      if (!isFile) continue;
+      merged.set(entry, path.join(dir, entry));
+    }
+  }
+  const dmdEntries = [...merged.keys()];
   const svelteFiles = dmdEntries.filter((file) => file.endsWith(".svelte"));
   const reactFiles = dmdEntries.filter(
     (file) => (file.endsWith(".tsx") || file.endsWith(".jsx")) && !file.startsWith("."),
@@ -110,14 +181,18 @@ export function bundleCustomComponents(targetPath: string): string | undefined {
 
   const hasComponents = svelteFiles.length > 0 || reactFiles.length > 0 || webElementFiles.length > 0;
 
-  if (hasComponents && dmdDir) {
+  if (hasComponents && dmdDirs.length > 0) {
+    const primaryDir = dmdDirs[0];
     try {
       const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "docmedown-components-bundle-"));
       try {
-        for (const entry of dmdEntries) {
-          const src = path.join(dmdDir, entry);
-          if (fs.statSync(src).isFile()) {
-            fs.copyFileSync(src, path.join(tempDir, entry));
+        for (const [entry, src] of merged) {
+          try {
+            if (fs.statSync(src).isFile()) {
+              fs.copyFileSync(src, path.join(tempDir, entry));
+            }
+          } catch {
+            // ignore unreadable entries
           }
         }
 
@@ -137,7 +212,7 @@ export function bundleCustomComponents(targetPath: string): string | undefined {
 
         // 1. Process Svelte components
         for (const svelteFile of svelteFiles) {
-          const rawSource = fs.readFileSync(path.join(dmdDir, svelteFile), "utf-8");
+          const rawSource = fs.readFileSync(merged.get(svelteFile) ?? path.join(primaryDir, svelteFile), "utf-8");
           const baseName = svelteFile.replace(/\.svelte$/, "");
           const tag = dmdTag(baseName);
           const taggedSource = ensureCustomElementTag(rawSource, tag);
@@ -155,7 +230,7 @@ export function bundleCustomComponents(targetPath: string): string | undefined {
 
         // 2. Process React TSX / JSX components
         for (const reactFile of reactFiles) {
-          const rawSource = fs.readFileSync(path.join(dmdDir, reactFile), "utf-8");
+          const rawSource = fs.readFileSync(merged.get(reactFile) ?? path.join(primaryDir, reactFile), "utf-8");
           const baseName = path.basename(reactFile, path.extname(reactFile));
           const tag = dmdTag(baseName);
 
@@ -237,7 +312,7 @@ if (typeof customElements !== "undefined" && !customElements.get(${JSON.stringif
           path.resolve(__dirname, "node_modules"),
           path.resolve(process.cwd(), "node_modules"),
           path.resolve(targetPath, "node_modules"),
-          path.resolve(dmdDir, "node_modules"),
+          ...dmdDirs.map((dir) => path.resolve(dir, "node_modules")),
         ].filter((p) => fs.existsSync(p));
         const nodePaths = [...new Set(candidatePaths)];
 
@@ -265,21 +340,28 @@ if (typeof customElements !== "undefined" && !customElements.get(${JSON.stringif
       }
     } catch (error) {
       throw new Error(
-        `Could not bundle custom components from ${dmdDir}: ${error instanceof Error ? error.message : String(error)}`,
+        `Could not bundle custom components from ${dmdDirs[0] ?? targetPath}: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
   }
 
   // Fallback to setup.js / languages.js / components.js / index.js if present
+  // (new `.dmd/.components/` first, deprecated bare `.dmd/` as fallback).
+  const setupCandidates = dmdDirs.flatMap((dir) => [
+    path.join(dir, "setup.js"),
+    path.join(dir, "languages.js"),
+    path.join(dir, "components.js"),
+    path.join(dir, "index.js"),
+  ]);
   const candidate =
     (legacyFile && fs.existsSync(legacyFile) && !fs.statSync(legacyFile).isDirectory() ? legacyFile : undefined) ||
-    (dmdDir &&
-      [
-        path.join(dmdDir, "setup.js"),
-        path.join(dmdDir, "languages.js"),
-        path.join(dmdDir, "components.js"),
-        path.join(dmdDir, "index.js"),
-      ].find((p) => fs.existsSync(p)));
+    setupCandidates.find((p) => {
+      try {
+        return fs.existsSync(p);
+      } catch {
+        return false;
+      }
+    });
 
   if (!candidate || !fs.existsSync(candidate)) return undefined;
 
@@ -290,7 +372,7 @@ if (typeof customElements !== "undefined" && !customElements.get(${JSON.stringif
       path.resolve(__dirname, "node_modules"),
       path.resolve(process.cwd(), "node_modules"),
       path.resolve(targetPath, "node_modules"),
-      dmdDir ? path.resolve(dmdDir, "node_modules") : "",
+      ...dmdDirs.map((dir) => path.resolve(dir, "node_modules")),
     ].filter((p) => p && fs.existsSync(p));
 
     const result = buildSync({
@@ -349,7 +431,11 @@ export function resolveFaviconForOffline(favicon?: string | null, targetDir?: st
   }
   if (targetDir && !/^(https?:|\/\/)/i.test(trimmed)) {
     const cleanPath = trimmed.replace(/^\.?\/+/, "");
-    const candidatePaths = [path.resolve(targetDir, cleanPath), path.resolve(process.cwd(), cleanPath)];
+    const candidatePaths = [
+      path.resolve(targetDir, cleanPath),
+      path.resolve(targetDir, ".dmd", cleanPath),
+      path.resolve(process.cwd(), cleanPath),
+    ];
     for (const cand of candidatePaths) {
       if (fs.existsSync(cand) && fs.statSync(cand).isFile()) {
         try {
@@ -394,6 +480,234 @@ const GENERATED_DOC_OUTPUTS = [
   "okf.json",
 ];
 
+/**
+ * Structural cleanup: after a build the docs folder must contain ONLY
+ * documentation sources plus the single `index.html` symlink distributable.
+ * Removes legacy generated artifacts that previous builds wrote to the docs
+ * root (now housed in `<targetDir>/.dmd/`), without touching real docs:
+ * markdown, symlinked root docs, user components/config, or nested doc roots.
+ */
+export function cleanupLegacyRootArtifacts(
+  targetDir: string,
+  siteDir: string,
+  offlineDir: string,
+  buildOfflineBundle: boolean,
+): void {
+  const legacyFiles = new Set([
+    "_manifest.json",
+    "_docs.js",
+    "docmedown.web.js",
+    "docmedown-mermaid.js",
+    "docmedown.iife.js",
+    "404.html",
+    "sitemap.xml",
+    "robots.txt",
+    "llms.txt",
+    "SKILL.md",
+    "okf.json",
+  ]);
+  const legacyPatterns = [/^llms\.[a-z-]+\.txt$/i, /^llms-full(\.[a-z-]+)?\.txt$/i, /^okf(\.[a-z-]+)?\.json$/i];
+  try {
+    for (const entry of fs.readdirSync(targetDir, { withFileTypes: true })) {
+      const full = path.join(targetDir, entry.name);
+      const resolved = path.resolve(full);
+      if (resolved === path.resolve(siteDir) || resolved === path.resolve(offlineDir)) continue;
+      // Never touch nested documentation roots or the workspace itself.
+      if (entry.isDirectory()) {
+        // `.dmd` here is the hidden workspace (components live inside
+        // `.dmd/.components/` now); `.dist` is the legacy offline dir.
+        if (entry.name === ".dmd" || entry.name === ".dist" || entry.name === ".singlefile") {
+          if (entry.name !== ".dmd" && resolved !== path.resolve(siteDir) && resolved !== path.resolve(offlineDir)) {
+            try {
+              if (full !== targetDir) fs.rmSync(full, { recursive: true, force: true });
+            } catch {
+              // best effort
+            }
+          }
+          continue;
+        }
+        continue;
+      }
+      if (entry.isSymbolicLink()) continue; // linked root docs + index.html symlink stay
+      if (/\.(md|mdx)$/i.test(entry.name)) continue; // documentation sources stay
+      if (/^(docs|dmd)\.json$/i.test(entry.name)) continue; // legacy configs stay as fallback
+      if (/^favicon\.(svg|png|ico)$/i.test(entry.name)) continue; // source assets stay
+      const isLegacy = legacyFiles.has(entry.name) || legacyPatterns.some((re) => re.test(entry.name));
+      if (!isLegacy) continue;
+      // The root index.html symlink is the ONLY distributable artifact — other
+      // legacy build outputs move into `.dmd/` and are safe to remove here.
+      try {
+        fs.rmSync(full, { force: true });
+      } catch {
+        // best effort
+      }
+    }
+    // Prerendered page directories (`<slug>/index.html`) are now emitted into
+    // the hidden workspace; remove stale copies at the docs root.
+    try {
+      const workspacePages = new Set(listPrerenderedPages(siteDir));
+      for (const rel of listPrerenderedPages(targetDir)) {
+        if (!workspacePages.has(rel)) continue;
+        const full = path.join(targetDir, rel);
+        if (path.resolve(full) === path.resolve(siteDir)) continue;
+        if (isNestedDocsRoot(full)) continue;
+        try {
+          fs.rmSync(full, { recursive: true, force: true });
+          pruneEmptyParents(targetDir, path.dirname(full));
+        } catch {
+          // best effort
+        }
+      }
+    } catch {
+      // best effort
+    }
+    // Legacy offline dirs are superseded by `.dmd/.singlefile`.
+    if (buildOfflineBundle) {
+      for (const legacy of candidateOfflineDirs(targetDir).slice(1)) {
+        if (path.resolve(legacy) === path.resolve(offlineDir)) continue;
+        try {
+          if (fs.existsSync(legacy)) fs.rmSync(legacy, { recursive: true, force: true });
+        } catch {
+          // best effort
+        }
+      }
+    }
+  } catch {
+    // best effort only — never fail a build on cleanup
+  }
+}
+
+function listPrerenderedPages(root: string): string[] {
+  const out: string[] = [];
+  const walk = (dir: string, rel: string) => {
+    let entries: fs.Dirent[] = [];
+    try {
+      entries = fs.readdirSync(dir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue;
+      if (entry.name.startsWith(".")) continue;
+      if (["node_modules", "dist", "bin"].includes(entry.name)) continue;
+      const relDir = rel ? `${rel}/${entry.name}` : entry.name;
+      const fullDir = path.join(dir, entry.name);
+      try {
+        if (fs.existsSync(path.join(fullDir, "index.html"))) out.push(`${relDir}/index.html`);
+      } catch {
+        // ignore
+      }
+      walk(fullDir, relDir);
+    }
+  };
+  walk(root, "");
+  return out;
+}
+
+function isNestedDocsRoot(dir: string): boolean {
+  try {
+    return fs.existsSync(path.join(dir, "docs.json")) || fs.existsSync(path.join(dir, ".dmd", ".config", "docs.json"));
+  } catch {
+    return false;
+  }
+}
+
+function pruneEmptyParents(stopAt: string, dir: string): void {
+  let current = path.resolve(dir);
+  const stop = path.resolve(stopAt);
+  while (current.startsWith(stop) && current !== stop) {
+    try {
+      if (fs.readdirSync(current).length === 0) fs.rmdirSync(current);
+      else break;
+    } catch {
+      break;
+    }
+    current = path.dirname(current);
+  }
+}
+
+/**
+ * One-time structural adoption toward `./docs/.dmd/` as the hidden workspace:
+ * - user components `docs/.dmd/*` → `docs/.dmd/.components/*` (deprecated bare
+ *   location stays as fallback);
+ * - configs `docs/docs.json|dmd.json` → `docs/.dmd/.config/*` (legacy root
+ *   files stay as fallback);
+ * - source assets `docs/favicon.*` → `docs/.dmd/favicon.*` (root fallback).
+ * Never overwrites existing new-location files; never touches nested roots.
+ */
+export function migrateLegacyWorkspaceLayout(targetDir: string, siteDir: string): void {
+  try {
+    const componentsDir = resolveComponentsDir(targetDir, siteDir);
+    const configDir = resolveConfigDir(targetDir, siteDir);
+    fs.mkdirSync(componentsDir, { recursive: true });
+    fs.mkdirSync(configDir, { recursive: true });
+
+    // Components: move bare `.dmd/*` component files into `.components/`.
+    // Generated workspace files must never migrate as components.
+    const GENERATED_MIGRATION_DENY = new Set([
+      "_docs.js",
+      "_manifest.json",
+      "docmedown.web.js",
+      "docmedown-mermaid.js",
+      "docmedown.iife.js",
+    ]);
+    try {
+      for (const entry of fs.readdirSync(siteDir, { withFileTypes: true })) {
+        if (!entry.isFile()) continue;
+        if (entry.name.startsWith(".")) continue;
+        if (GENERATED_MIGRATION_DENY.has(entry.name)) continue;
+        if (!/\.(svelte|tsx|jsx|ts|js|mjs|cjs)$/i.test(entry.name)) continue;
+        if (/^(setup|languages|components|index)\.(js|mjs|cjs|ts)$/i.test(entry.name)) {
+          // setup-style modules stay loadable from both; prefer new location.
+        }
+        const from = path.join(siteDir, entry.name);
+        const to = path.join(componentsDir, entry.name);
+        try {
+          if (fs.existsSync(to)) continue;
+          fs.renameSync(from, to);
+        } catch {
+          try {
+            if (!fs.existsSync(to)) fs.copyFileSync(from, to);
+          } catch {
+            // best effort
+          }
+        }
+      }
+    } catch {
+      // best effort
+    }
+
+    // Configs: copy (not move — keep root fallback) into `.dmd/.config/`.
+    for (const name of ["docs.json", "dmd.json"]) {
+      const from = path.join(targetDir, name);
+      const to = path.join(configDir, name);
+      try {
+        if (fs.existsSync(from) && !fs.existsSync(to)) fs.copyFileSync(from, to);
+      } catch {
+        // best effort
+      }
+    }
+
+    // Favicon source asset: copy root `favicon.*` into the workspace.
+    try {
+      for (const entry of fs.readdirSync(targetDir, { withFileTypes: true })) {
+        if (!entry.isFile() || entry.isSymbolicLink()) continue;
+        if (!/^favicon\.(svg|png|ico)$/i.test(entry.name)) continue;
+        const to = path.join(siteDir, entry.name);
+        try {
+          if (!fs.existsSync(to)) fs.copyFileSync(path.join(targetDir, entry.name), to);
+        } catch {
+          // best effort
+        }
+      }
+    } catch {
+      // best effort
+    }
+  } catch {
+    // best effort only
+  }
+}
+
 export function findNestedDocumentationRoots(targetDir: string): string[] {
   const roots: string[] = [];
 
@@ -410,7 +724,13 @@ export function findNestedDocumentationRoots(targetDir: string): string[] {
       }
 
       const fullPath = path.join(directory, entry.name);
-      if (fs.existsSync(path.join(fullPath, "docs.json"))) {
+      // Nested roots carry their own config — new `.dmd/.config/docs.json`
+      // location first, legacy bare `docs.json` for backward compatibility.
+      const isNestedRoot =
+        fullPath !== directory &&
+        (fs.existsSync(path.join(fullPath, ".dmd", ".config", "docs.json")) ||
+          fs.existsSync(path.join(fullPath, "docs.json")));
+      if (isNestedRoot) {
         roots.push(fullPath);
         visit(fullPath);
       } else {
@@ -693,7 +1013,7 @@ async function collectNestedOfflineSites(targetDir: string): Promise<Record<stri
 
   for (const nestedRoot of findNestedDocumentationRoots(targetDir)) {
     const key = path.relative(targetDir, nestedRoot).replace(/\\/g, "/");
-    const nestedConfigPath = path.join(nestedRoot, "docs.json");
+    const nestedConfigPath = resolveExistingConfigPath(nestedRoot);
     let nestedConfig = normalizeConfig();
     if (fs.existsSync(nestedConfigPath)) {
       nestedConfig = normalizeConfig(parseDocConfigJson(fs.readFileSync(nestedConfigPath, "utf-8"), nestedConfigPath));
@@ -708,10 +1028,13 @@ async function collectNestedOfflineSites(targetDir: string): Promise<Record<stri
       nestedDocs[file] = raw;
     }
 
+    for (const [key, content] of Object.entries(embeddedDmdDocs(nestedConfig))) {
+      if (!nestedDocs[key]) nestedDocs[key] = content;
+    }
     await inlineCardOnlineSources(nestedDocs, nestedRoot);
     const { mediaMap: nestedMediaMap } = await inlineMediaSources(nestedDocs, nestedRoot);
 
-    const nestedComponentsPath = path.join(nestedRoot, ".dmd");
+    const nestedComponentsPath = resolveExistingComponentsDir(nestedRoot);
     loadBuildTimeCustomSetup(nestedComponentsPath);
     sites[key] = {
       name: nestedConfig.name || key,
@@ -730,13 +1053,34 @@ export function shouldWatchDocumentationSource(rootDir: string, changedPath: str
   const segments = relativePath.split("/");
   const firstSegment = segments[0];
   const baseName = segments[segments.length - 1];
-  const isCustomComponentModule = /(^|\/)\.dmd\/[^/]+\.(svelte|js|ts|tsx)$/i.test(relativePath);
+  const isCustomComponentModule =
+    /(^|\/)\.dmd\/\.components\/[^/]+\.(svelte|jsx?|tsx?|mjs|cjs)$/i.test(relativePath) ||
+    /(^|\/)\.dmd\/[^/]+\.(svelte|jsx?|tsx?|mjs|cjs)$/i.test(relativePath);
 
   // Build outputs can be written at any depth (e.g. `.nojekyll` inside nested
   // documentation roots), so generated artifacts are matched by basename to
-  // avoid watcher -> rebuild -> watcher feedback loops.
+  // avoid watcher -> rebuild -> watcher feedback loops. `.dmd/` internals are
+  // hidden build output — except user-authored components/config — and the
+  // root `index.html` symlink must never trigger a rebuild loop either.
+  const inSiteWorkspace = segments.includes(".dmd");
+  const isWorkspaceComponent = isCustomComponentModule;
+  let isWorkspaceConfig = false;
+  try {
+    const absChanged = path.resolve(changedPath);
+    const configDir = path.resolve(rootDir, ".dmd", ".config");
+    const relToConfig = path.relative(configDir, absChanged).replace(/\\/g, "/");
+    isWorkspaceConfig =
+      relToConfig !== "" && !relToConfig.startsWith("..") && /^(docs|dmd)\.json$/i.test(path.basename(absChanged));
+  } catch {
+    isWorkspaceConfig = false;
+  }
   const isGeneratedOutput =
-    baseName === ".nojekyll" || GENERATED_DOC_OUTPUTS.includes(baseName) || segments.includes(".dist");
+    baseName === ".nojekyll" ||
+    GENERATED_DOC_OUTPUTS.includes(baseName) ||
+    segments.includes(".dist") ||
+    segments.includes(".singlefile") ||
+    (inSiteWorkspace && !isWorkspaceComponent && !isWorkspaceConfig) ||
+    (baseName === "index.html" && inSiteWorkspace === false && segments.length === 1);
 
   // Check if changedPath is a root markdown file in the parent project directory
   const parentDir = path.dirname(rootDir);
@@ -751,7 +1095,7 @@ export function shouldWatchDocumentationSource(rootDir: string, changedPath: str
   return (
     Boolean(relativePath) &&
     !relativePath.startsWith("..") &&
-    (!relativePath.startsWith(".") || isCustomComponentModule) &&
+    (!relativePath.startsWith(".") || isCustomComponentModule || isWorkspaceConfig) &&
     !isGeneratedOutput &&
     !GENERATED_DOC_OUTPUTS.includes(relativePath) &&
     firstSegment !== "node_modules" &&
@@ -759,9 +1103,13 @@ export function shouldWatchDocumentationSource(rootDir: string, changedPath: str
   );
 }
 
-export async function buildCommand(targetDirArg: string = "./docs", options: BuildOptions = {}) {
+export async function buildCommand(targetDirArg: string = "./docs", options: BuildOptions = {}): Promise<BuildResult> {
   const targetDir = path.resolve(process.cwd(), targetDirArg);
   const rootDir = process.cwd();
+  const silent = options.silent === true;
+  const log = (...args: unknown[]) => {
+    if (!silent) console.log(...(args as [unknown, ...unknown[]]));
+  };
 
   // Link root markdown files into targetDir if targetDir is a direct subfolder of rootDir (e.g. ./docs)
   const isDirectSubfolder =
@@ -774,18 +1122,18 @@ export async function buildCommand(targetDirArg: string = "./docs", options: Bui
     linkedRootFiles = linkResult.linked;
   }
 
-  const { onlineDir, offlineDir } = getBuildOutputPaths(targetDir, options.outDir);
+  const { onlineDir, offlineDir, siteDir } = getBuildOutputPaths(targetDir, options.outDir);
   const buildOfflineBundle = options.singleFile !== false;
 
-  console.log(chalk.bold.magenta("\n⚡ DocMeDown Build\n"));
+  log(chalk.bold.magenta("\n⚡ DocMeDown Build\n"));
   if (isDirectSubfolder) {
-    console.log(
+    log(
       chalk.dim(
         `  Unified documents: Root (*.md) + ${path.relative(rootDir, targetDir) || targetDirArg} (linked by default without ./docs/ subdivision)`,
       ),
     );
     if (linkedRootFiles.length > 0) {
-      console.log(
+      log(
         chalk.green(
           `  ✔ Linked root markdown file${linkedRootFiles.length === 1 ? "" : "s"}: ${linkedRootFiles.join(", ")}`,
         ),
@@ -811,9 +1159,15 @@ export async function buildCommand(targetDirArg: string = "./docs", options: Bui
     fs.mkdirSync(offlineDir, { recursive: true });
   }
 
-  // Load config if exists
+  // One-time structural adoption: migrate legacy user content into the hidden
+  // workspace layout (`.dmd/.components/`, `.dmd/.config/`, `.dmd/favicon.*`).
+  // Backward-compatible fallbacks keep old locations working.
+  migrateLegacyWorkspaceLayout(targetDir, onlineDir);
+
+  // Load config: `<siteDir>/.config/docs.json` by default, with legacy
+  // `<targetDir>/docs.json` / `dmd.json` fallbacks for backward compatibility.
   let config: DocConfig = normalizeConfig();
-  const configPath = path.join(targetDir, "docs.json");
+  const configPath = resolveExistingConfigPath(targetDir);
   if (fs.existsSync(configPath)) {
     try {
       config = normalizeConfig(parseDocConfigJson(fs.readFileSync(configPath, "utf-8"), configPath));
@@ -823,11 +1177,11 @@ export async function buildCommand(targetDirArg: string = "./docs", options: Bui
   }
 
   // 1. Generate _manifest.json
-  console.log(chalk.cyan("  Indexing documentation pages..."));
+  log(chalk.cyan("  Indexing documentation pages..."));
   const manifest = generateManifest(targetDir, config);
   const manifestPath = path.join(onlineDir, "_manifest.json");
   fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2), "utf-8");
-  console.log(chalk.green(`  ✔ Generated _manifest.json (${manifest.docs.length} pages indexed)`));
+  log(chalk.green(`  ✔ Generated _manifest.json (${manifest.docs.length} pages indexed)`));
 
   // Collect all markdown documents into dictionary
   const docsMap: Record<string, string> = {};
@@ -841,10 +1195,17 @@ export async function buildCommand(targetDirArg: string = "./docs", options: Bui
     docsMap[file] = raw;
   }
 
+  // Inject default embedded DMD documentation (accessible exclusively via the footer)
+  for (const [key, content] of Object.entries(embeddedDmdDocs(config))) {
+    if (!docsMap[key]) {
+      docsMap[key] = content;
+    }
+  }
+
   // Inline online and local sources referenced by Card components so offline bundles are truly offline
   const inlinedSources = await inlineCardOnlineSources(docsMap, targetDir);
   if (inlinedSources.length > 0) {
-    console.log(
+    log(
       chalk.green(
         `  ✔ Inlined ${inlinedSources.length} Card online source${inlinedSources.length === 1 ? "" : "s"} into offline bundle`,
       ),
@@ -854,14 +1215,14 @@ export async function buildCommand(targetDirArg: string = "./docs", options: Bui
   // Inline media sources (raster images, vector SVG, video, audio) into lossless data URIs
   const { inlinedCount: inlinedMediaCount, mediaMap } = await inlineMediaSources(docsMap, targetDir);
   if (inlinedMediaCount > 0) {
-    console.log(
+    log(
       chalk.green(
         `  ✔ Embedded ${inlinedMediaCount} media asset${inlinedMediaCount === 1 ? "" : "s"} into offline bundle (lossless data URIs)`,
       ),
     );
   }
 
-  const componentsPath = path.join(targetDir, ".dmd");
+  const componentsPath = resolveExistingComponentsDir(targetDir);
   loadBuildTimeCustomSetup(componentsPath);
   const componentsSource = bundleCustomComponents(componentsPath);
 
@@ -879,26 +1240,29 @@ export async function buildCommand(targetDirArg: string = "./docs", options: Bui
   )};\n`;
   const docsJsPath = path.join(onlineDir, "_docs.js");
   fs.writeFileSync(docsJsPath, docsJsContent, "utf-8");
-  console.log(chalk.green(`  ✔ Generated _docs.js for offline file:/// double-click usage`));
+  log(chalk.green(`  ✔ Generated _docs.js for offline file:/// double-click usage`));
 
   // 2.5 Emit AI context files (llms.txt, llms-full.txt, SKILL.md, okf.json).
   const aiContextPaths = emitAiContextFiles(onlineDir, manifest, config);
-  console.log(chalk.green(`  ✔ Generated AI context files: ${aiContextPaths.map((p) => path.basename(p)).join(", ")}`));
+  log(chalk.green(`  ✔ Generated AI context files: ${aiContextPaths.map((p) => path.basename(p)).join(", ")}`));
 
   // 2.6 Prerender the static site (pages, sitemap, robots, 404) unless disabled.
+  // The serveable site lives in the hidden workspace; the docs root keeps only
+  // the `index.html` symlink distributable.
   if (options.static !== false) {
-    emitStaticSite(targetDir, manifest, docsMap, config);
+    emitStaticSite(onlineDir, manifest, docsMap, config, { silent });
   }
 
   // 3. Build the offline bundle by default. --no-single-file skips this artifact.
+  let nestedCount = 0;
   if (buildOfflineBundle) {
-    console.log(chalk.cyan("\n  Compiling standalone single-file offline index.html..."));
+    log(chalk.cyan("\n  Compiling standalone single-file offline index.html..."));
     const embedNestedDocs = config.offline?.embedNestedDocs !== false;
     const nestedSites =
       embedNestedDocs && options.buildNested !== false ? await collectNestedOfflineSites(targetDir) : undefined;
-    const nestedCount = nestedSites ? Object.keys(nestedSites).length : 0;
+    nestedCount = nestedSites ? Object.keys(nestedSites).length : 0;
     if (nestedCount > 0) {
-      console.log(
+      log(
         chalk.green(
           `  ✔ Embedded ${nestedCount} nested documentation site${nestedCount === 1 ? "" : "s"} into the offline bundle`,
         ),
@@ -1001,13 +1365,13 @@ export async function buildCommand(targetDirArg: string = "./docs", options: Bui
 
     const singleFilePath = path.join(offlineDir, "index.html");
     fs.writeFileSync(singleFilePath, singleFileHtml, "utf-8");
-    console.log(chalk.bold.green(`  ✔ Built self-contained offline bundle: ${singleFilePath}`));
-    console.log(
+    log(chalk.bold.green(`  ✔ Built self-contained offline bundle: ${singleFilePath}`));
+    log(
       chalk.dim(
         `    Compressed ${Buffer.byteLength(JSON.stringify(envelope), "utf-8").toLocaleString()} bytes to ${Buffer.byteLength(singleFileHtml, "utf-8").toLocaleString()} bytes.`,
       ),
     );
-    console.log(chalk.dim(`    You can now double-click index.html to view offline without any server!\n`));
+    log(chalk.dim(`    You can now double-click index.html to view offline without any server!\n`));
   }
 
   // 4. Copy the runtime the serveable documentation site loads, plus its
@@ -1049,7 +1413,7 @@ export async function buildCommand(targetDirArg: string = "./docs", options: Bui
     copiedAssets.push(asset);
   }
   if (copiedAssets.length > 0) {
-    console.log(chalk.green(`  ✔ Updated serveable runtime: ${copiedAssets.join(", ")}`));
+    log(chalk.green(`  ✔ Updated serveable runtime: ${copiedAssets.join(", ")}`));
   }
   // Drop a previously copied engine once the corpus no longer authors diagrams.
   if (!runtimeAssets.includes("docmedown-mermaid.js")) {
@@ -1059,25 +1423,52 @@ export async function buildCommand(targetDirArg: string = "./docs", options: Bui
   if (options.buildNested !== false) {
     const nestedRoots = findNestedDocumentationRoots(targetDir);
     for (const nestedRoot of nestedRoots) {
-      console.log(chalk.cyan(`\n  Building nested documentation site: ${path.relative(targetDir, nestedRoot)}...`));
-      await buildCommand(nestedRoot, { buildNested: false });
+      log(chalk.cyan(`\n  Building nested documentation site: ${path.relative(targetDir, nestedRoot)}...`));
+      await buildCommand(nestedRoot, { buildNested: false, silent });
     }
   }
 
-  console.log(chalk.bold.green("✨ Build completed successfully!\n"));
+  // 5. Structural cleanup: the docs folder keeps ONLY documentation sources
+  // plus the single `index.html` symlink distributable. Everything else lives
+  // in the hidden workspace; drop legacy artifacts from the docs root.
+  cleanupLegacyRootArtifacts(targetDir, siteDir, offlineDir, buildOfflineBundle);
+
+  // 6. Root `index.html` symlink → serveable SEO site entrypoint (ONLY
+  // documentation distributable artifact at the docs root; the offline
+  // bundle stays available at `.dmd/.singlefile/index.html`).
+  try {
+    ensureRootSiteSymlinks(targetDir, siteDir);
+    log(chalk.green(`  ✔ Linked docs index.html → .dmd SEO site entrypoint`));
+  } catch {
+    // best effort — site remains fully serveable from the hidden workspace
+  }
+
+  log(chalk.bold.green("✨ Build completed successfully!\n"));
+
+  return {
+    targetDir,
+    siteDir,
+    offlineDir: buildOfflineBundle ? offlineDir : null,
+    pages: manifest.docs.length,
+    nestedCount,
+  };
 }
 
 export async function watchBuildCommand(targetDirArg: string = "./docs", options: BuildOptions = {}): Promise<never> {
   const targetDir = path.resolve(process.cwd(), targetDirArg);
-  await buildCommand(targetDir, { ...options, watch: false });
+  void (await buildCommand(targetDir, { ...options, watch: false }));
 
   console.log(chalk.dim(`  Watching source files in: ${targetDir}`));
-  console.log(chalk.dim("  Source changes rebuild serveable files and .dist/index.html. Press Ctrl+C to stop.\n"));
+  console.log(
+    chalk.dim("  Source changes rebuild serveable files and .dmd/.singlefile/index.html. Press Ctrl+C to stop.\n"),
+  );
 
   const watcher = chokidar.watch(targetDir, {
     ignored: [
       "**/dist/**",
       "**/.dist/**",
+      "**/.dmd/**",
+      "**/dmd/**",
       "**/node_modules/**",
       "**/.git/**",
       "**/.nojekyll",
@@ -1097,7 +1488,7 @@ export async function watchBuildCommand(targetDirArg: string = "./docs", options
       const relativePath = path.relative(targetDir, changedPath);
       console.log(chalk.cyan(`[DocMeDown] Changed: ${relativePath} -> Rebuilding documentation...`));
       try {
-        await buildCommand(targetDir, { ...options, watch: false });
+        void (await buildCommand(targetDir, { ...options, watch: false }));
       } catch (err: any) {
         console.error(chalk.red(`[DocMeDown] Rebuild failed: ${err.message}`));
       }

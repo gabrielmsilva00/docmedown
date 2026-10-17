@@ -6,6 +6,41 @@ All notable changes to DocMeDown are documented here.
 
 ---
 
+## 0.9.7-c - 2026-10-17
+
+- **Quiet serve output, Network URL + QR, local-only editor gate, SEO-safe root symlink**:
+  - `serve` startup collapses nested builds into `✔ Artifacts ready (N pages + M nested)`; binds `0.0.0.0` by default with `Local:` + `Network:` URLs and a terminal QR (`--no-qr` to hide); browser opens the Network URL.
+  - Root `docs/index.html` symlink targets the serveable SEO site (`.dmd/index.html`); offline bundle stays explicit at `.dmd/.singlefile/index.html`.
+  - In-browser editor gated by `editor.enabled` (default `true`) AND a dev-server grant flag — never appears on static hosts or offline bundles.
+  - HMR preserves scroll position across in-place re-renders.
+
+## 0.9.7-b - 2026-10-17
+
+- **Documentation workspace structural cleanup**:
+  - `./docs/` now contains ONLY documentation sources plus a single `index.html` symlink distributable (→ serveable `.dmd/index.html` with its prerendered SEO shell); everything else lives under `./docs/.dmd/`.
+  - Offline bundle moved from `.dist/` to `.dmd/.singlefile/` as an explicit (non-symlinked) distributable (legacy `.dist` still read as fallback, removed on rebuild).
+  - Bare `.dmd/` as a components location deprecated in favour of `.dmd/.components/` (merged as fallback; generated files excluded from bundling).
+  - Config files default to `.dmd/.config/docs.json` (bare `docs/*.json` still honored; scaffold/migrate copies root → workspace).
+  - Pages workflow verifies/uploads `docs/.dmd/`; dev server falls back into the workspace; root cleanup drops legacy artifacts and stale prerenders while preserving sources, linked root docs, and nested roots.
+  - Same hidden names apply under any other target directory; dot-folders are never linked in navigation.
+
+## 0.9.7-a - 2026-10-16
+
+- **Native filename-based internationalization (alpha)**:
+  - Configurable original language, canonical locale tags and translations such as `guide.pt-br.md`, without language directories.
+  - Locale-aware routing, navigation, search, relative links, fallback notices, and physical source tracking for editor/HMR.
+  - Six project-language presets (English, Brazilian Portuguese, Spanish, French, German and Simplified Chinese), plus manual language names and suffixes during project creation and configuration.
+  - Locale-aware static/offline output, MCP queries and AI context artifacts.
+- **Embedded DocMeDown guides**:
+  - Built-in DMD navigation guide and For Developers subpage with six authored language versions, project-language export selection and native English fallback.
+  - Hidden/noindex prerenders and local, remote-source and offline reader integration.
+- **Distribution and release preparation**:
+  - Every successful deploy explicitly dispatches the GitHub Pages workflow, including already-published release retries; GitHub CLI authentication is checked before release mutations.
+  - Served runtime raw-size budget set to 1.5 MiB; existing gzip and other bundle budgets retained.
+  - Translation catalogs split from ESM/CJS and CLI entry bundles to keep all size gates passing.
+  - Alpha releases publish under the `alpha` npm dist-tag, without replacing `latest`.
+  - Full-corpus documentation translations, remaining legacy UI translations and visual browser validation remain unfinished; see ROADMAP.md.
+
 ## 0.9.6 - 2026-10-15
 
 - **Mobile View & Markdown Editor Overhaul**:

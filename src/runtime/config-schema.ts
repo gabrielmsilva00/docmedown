@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { canonicalLocale } from "./i18n";
 
 const nonEmptyString = z.string().trim().min(1, "Must not be empty.");
 
@@ -127,6 +128,59 @@ export const docOfflineConfigSchema = z
   })
   .strict();
 
+const localeCodeSchema = z
+  .string()
+  .trim()
+  .refine((value) => {
+    try {
+      canonicalLocale(value);
+      return true;
+    } catch {
+      return false;
+    }
+  }, "Use a valid language tag, e.g. en or pt-BR.")
+  .transform(canonicalLocale);
+
+export const docI18nConfigSchema = z
+  .object({
+    defaultLocale: localeCodeSchema.default("en"),
+    locales: z
+      .array(
+        z
+          .object({
+            code: localeCodeSchema,
+            label: nonEmptyString.optional(),
+            overrides: z
+              .object({
+                tagline: z.string().optional(),
+                description: z.string().optional(),
+                nav: z.array(navLinkSchema).optional(),
+                sidebar: z.array(sidebarItemSchema).optional(),
+                search: docSearchConfigSchema.optional(),
+                footer: z
+                  .object({
+                    copyright: z.string().optional(),
+                    links: z.array(navLinkSchema).optional(),
+                    showBuiltWith: z.boolean().optional(),
+                  })
+                  .strict()
+                  .optional(),
+              })
+              .strict()
+              .optional(),
+          })
+          .strict(),
+      )
+      .default([]),
+    fallbackToDefault: z.boolean().default(true),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    const codes = value.locales.map((item) => item.code);
+    if (new Set(codes).size !== codes.length)
+      context.addIssue({ code: "custom", path: ["locales"], message: "Duplicate locales." });
+  });
+
 /**
  * Schema for unmerged user configuration. It intentionally keeps `name` optional
  * because callers may provide a partial override that inherits the default name.
@@ -141,6 +195,7 @@ export const docConfigSchema = z
     url: z.string().url("Must be an absolute URL.").optional(),
     version: z.string().optional(),
     rootDoc: nonEmptyString.optional(),
+    i18n: docI18nConfigSchema.optional(),
     home: nonEmptyString.optional(),
     source: remoteSourceSchema.optional(),
     theme: docThemeConfigSchema.optional(),
@@ -163,6 +218,12 @@ export const docConfigSchema = z
         copyright: z.string().optional(),
         links: z.array(navLinkSchema).optional(),
         showBuiltWith: z.boolean().optional(),
+      })
+      .strict()
+      .optional(),
+    editor: z
+      .object({
+        enabled: z.boolean().optional(),
       })
       .strict()
       .optional(),

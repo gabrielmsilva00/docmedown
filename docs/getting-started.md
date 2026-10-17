@@ -92,13 +92,15 @@ my-project/
 ├── README.md                 # Your root project readme (detected & preserved)
 ├── CONTRIBUTING.md           # Root guide (linked into docs automatically)
 ├── CHANGELOG.md              # Root changelog (linked into docs automatically)
-└── docs/
-    ├── docs.json             # Site branding, theme family & navigation
+└── docs/                     # Documentation root: ONLY sources + index.html symlink
+    ├── index.html            # Symlink → .dmd/index.html (ONLY distributable: SEO site)
     ├── getting-started.md    # Starter guide (#/getting-started)
     ├── guides/
     │   └── custom-components.md  # Category document
     └── .dmd/
-        └── CounterWidget.svelte  # Svelte 5 interactive runes component
+        ├── .config/docs.json         # Site branding, theme family & navigation
+        └── .components/
+            └── CounterWidget.svelte  # Svelte 5 interactive runes component
 ```
 
 > [!NOTE]
@@ -281,7 +283,7 @@ npx docmedown build ./docs
 DocMeDown generates:
 1. **Prerendered Static Site**: Pure static HTML with SEO `<head>` tags, Open Graph cards, `sitemap.xml`, and `robots.txt`.
 2. **AI Context Files**: `llms.txt`, `llms-full.txt`, and `SKILL.md` for AI coding agents.
-3. **100% Offline Single-File HTML**: `.dist/index.html` — double-clickable without a web server or CORS errors.
+3. **100% Offline Single-File HTML**: `.dmd/.singlefile/index.html` — double-clickable without a web server or CORS errors. (The `docs/index.html` symlink targets the serveable SEO site instead.)
 
 ---
 

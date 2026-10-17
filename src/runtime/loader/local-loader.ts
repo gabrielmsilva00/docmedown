@@ -1,3 +1,4 @@
+import { getEmbeddedDmdDoc } from "../embedded-dmd";
 import type { DocManifest } from "../types";
 
 export class LocalDocLoader {
@@ -63,7 +64,7 @@ export class LocalDocLoader {
     }
 
     // 4. Check script tag containing manifest
-    const manifestEl = document.getElementById("dmd-manifest");
+    const manifestEl = typeof document !== "undefined" ? document.getElementById("dmd-manifest") : null;
     if (manifestEl?.textContent) {
       try {
         this.embeddedManifest = JSON.parse(manifestEl.textContent);
@@ -73,7 +74,7 @@ export class LocalDocLoader {
     }
 
     // 5. Check script tag containing docs map
-    const docsEl = document.getElementById("dmd-docs");
+    const docsEl = typeof document !== "undefined" ? document.getElementById("dmd-docs") : null;
     if (docsEl?.textContent) {
       try {
         const docsMap = JSON.parse(docsEl.textContent);
@@ -135,7 +136,7 @@ export class LocalDocLoader {
       this.cache.set(normalized, item.content);
       return item.content;
     }
-    return undefined;
+    return getEmbeddedDmdDoc(slug);
   }
 
   /**
@@ -156,6 +157,8 @@ export class LocalDocLoader {
   }
 
   public async fetchDocContent(slug: string, basePath: string = ""): Promise<string | null> {
+    const embedded = getEmbeddedDmdDoc(slug);
+    if (embedded && !this.cache.has(slug) && !this.cache.has(this.normalizeKey(slug))) return embedded;
     if (this.cache.has(slug)) {
       return this.cache.get(slug)!;
     }

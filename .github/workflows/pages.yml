@@ -39,13 +39,14 @@ jobs:
       - name: Verify generated Pages assets
         run: |
           test -f docs/index.html
-          test -f docs/.nojekyll
-          test -f docs/_docs.js
-          test -f docs/_manifest.json
-          test -f docs/docmedown.web.js
-          test -f docs/docmedown-mermaid.js
-          grep -q 'src="./_docs.js"' docs/index.html
-          grep -q 'src="./docmedown.web.js"' docs/index.html
+          test -f docs/.dmd/.nojekyll
+          test -f docs/.dmd/_docs.js
+          test -f docs/.dmd/_manifest.json
+          test -f docs/.dmd/docmedown.web.js
+          test -f docs/.dmd/docmedown-mermaid.js
+          test -f docs/.dmd/.singlefile/index.html
+          grep -q 'src="./_docs.js"' docs/.dmd/index.html
+          grep -q 'src="./docmedown.web.js"' docs/.dmd/index.html
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
@@ -53,7 +54,7 @@ jobs:
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: docs
+          path: docs/.dmd
 
   deploy:
     needs: build

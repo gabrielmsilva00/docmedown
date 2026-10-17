@@ -2,12 +2,40 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { test } from "node:test";
-import { incrementPatchVersion, listOutputLines, localIsoDate, promoteChangelog } from "../scripts/deploy-lib.mjs";
+import {
+  incrementPatchVersion,
+  listOutputLines,
+  localIsoDate,
+  promoteChangelog,
+  releaseDistTag,
+} from "../scripts/deploy-lib.mjs";
 
 test("deploy helper increments stable patch versions", () => {
   assert.equal(incrementPatchVersion("0.1.4"), "0.1.5");
   assert.equal(incrementPatchVersion("12.9.99"), "12.9.100");
   assert.throws(() => incrementPatchVersion("1.0.0-beta.1"), /stable semantic version/);
+});
+
+test("alpha deployments do not replace the stable latest dist-tag", () => {
+  assert.equal(releaseDistTag("0.9.7-a"), "alpha");
+  assert.equal(releaseDistTag("0.9.7"), "latest");
+  const script = fs.readFileSync(path.resolve(__dirname, "../scripts/deploy.mjs"), "utf-8");
+  assert.match(script, /"--tag", releaseDistTag\(readPackage\(\).version\)/);
+});
+
+test("every successful deploy explicitly dispatches Pages, including already-published releases", () => {
+  const script = fs.readFileSync(path.resolve(__dirname, "../scripts/deploy.mjs"), "utf-8");
+  const workflow = fs.readFileSync(path.resolve(__dirname, "../.github/workflows/pages.yml"), "utf-8");
+  assert.match(workflow, /workflow_dispatch:/);
+  assert.match(workflow, /push:\s*\n\s*branches: \[main\]/);
+  assert.match(script, /run\("gh", \["workflow", "run", "pages.yml", "--ref", "main"\]\)/);
+  assert.match(script, /if \(!isDryRun\) ensurePagesAccess\(\);/);
+  assert.ok(script.indexOf("if (!isDryRun) ensurePagesAccess();") < script.indexOf("if (needsPatchBump) {"));
+  assert.match(script, /if \(!trackedChanges && versionAlreadyPublished[^\n]+\{\s*deployPages\(\);/);
+  assert.match(script, /verifyPublishedVersion\(packageName, version\);\s*deployPages\(\);/);
+  const dryRun = script.match(/if \(isDryRun\) \{([\s\S]*?)process.exit\(0\);/)?.[1] ?? "";
+  assert.match(dryRun, /would dispatch pages.yml/);
+  assert.doesNotMatch(dryRun, /deployPages\(\);/);
 });
 
 test("deploy helper promotes Unreleased notes into a dated release", () => {

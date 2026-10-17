@@ -3,6 +3,13 @@ import path from "node:path";
 import chalk from "chalk";
 import type { ColorMode, ThemeFamily } from "../../runtime/types";
 import { buildCommand } from "../commands/build";
+import {
+  candidateConfigPaths,
+  resolveComponentsDir,
+  resolveConfigDir,
+  resolveExistingConfigPath,
+  resolveSiteDir,
+} from "./docs-layout";
 import { detectRootMarkdownFiles, linkRootMarkdownFiles } from "./link-root";
 
 interface ScaffoldItem {
@@ -28,6 +35,9 @@ export interface ProjectInfo {
 }
 
 export interface ScaffoldConfig {
+  languageEntries?: Array<{ code: string; label?: string }>;
+  defaultLocale?: string;
+  locales?: string[];
   projectName?: string;
   tagline?: string;
   themeFamily?: ThemeFamily | string;
@@ -104,13 +114,15 @@ export function planScaffold(options: {
 
   const items: ScaffoldItem[] = [];
 
-  // 1. index.html
-  const hasIndex = fs.existsSync(path.join(targetDir, "index.html"));
+  // 1. index.html — the ONLY distributable artifact at the docs root is the
+  // build-created symlink (→ serveable SEO site entrypoint); never created
+  // by the scaffold itself.
   items.push({
     relPath: "index.html",
-    type: "file",
-    action: hasIndex ? "skip" : "create",
-    annotation: hasIndex ? "(already exists, will keep)" : undefined,
+    type: "symlink",
+    action: "skip",
+    target: ".dmd/index.html",
+    annotation: "(build symlink, not scaffolded)",
   });
 
   // 2. favicon.svg
@@ -126,13 +138,16 @@ export function planScaffold(options: {
     });
   }
 
-  // 3. docs.json
-  const hasConfig = fs.existsSync(path.join(targetDir, "docs.json"));
+  // 3. docs.json — new `.dmd/.config/docs.json` default, legacy fallback honored.
+  const existingConfig = candidateConfigPaths(targetDir).find((p) => fs.existsSync(p));
+  const defaultConfigRel = path
+    .relative(targetDir, path.join(resolveConfigDir(targetDir), "docs.json"))
+    .replace(/\\/g, "/");
   items.push({
-    relPath: "docs.json",
+    relPath: defaultConfigRel,
     type: "file",
-    action: hasConfig ? "skip" : "create",
-    annotation: hasConfig ? "(already exists, will keep)" : undefined,
+    action: existingConfig ? "skip" : "create",
+    annotation: existingConfig ? "(already exists, will keep)" : undefined,
   });
 
   // 4. README.md
@@ -176,7 +191,8 @@ export function planScaffold(options: {
     });
   }
 
-  // 7. Sample guides and components
+  // 7. Sample guides and components — components default to `.dmd/.components/`
+  // (bare `.dmd/` is deprecated but honored as an existing location).
   if (includeSamples) {
     const hasGuide = fs.existsSync(path.join(targetDir, "guides/custom-components.md"));
     items.push({
@@ -186,9 +202,14 @@ export function planScaffold(options: {
       annotation: hasGuide ? "(already exists, will keep)" : undefined,
     });
 
-    const hasDmd = fs.existsSync(path.join(targetDir, ".dmd/CounterWidget.svelte"));
+    const defaultComponentRel = path
+      .relative(targetDir, path.join(resolveComponentsDir(targetDir), "CounterWidget.svelte"))
+      .replace(/\\/g, "/");
+    const hasDmd =
+      fs.existsSync(path.join(targetDir, defaultComponentRel)) ||
+      fs.existsSync(path.join(targetDir, ".dmd/CounterWidget.svelte"));
     items.push({
-      relPath: ".dmd/CounterWidget.svelte",
+      relPath: defaultComponentRel,
       type: "file",
       action: hasDmd ? "skip" : "create",
       annotation: hasDmd ? "(already exists, will keep)" : undefined,
@@ -307,29 +328,31 @@ export async function executeScaffold(plan: ScaffoldPlan, config: ScaffoldConfig
 
   const activeTemplateDir = getActiveTemplateDir();
 
-  // 3. index.html
-  const indexPath = path.join(plan.targetDir, "index.html");
-  if (!fs.existsSync(indexPath)) {
-    const templateHtml = fs.readFileSync(path.join(activeTemplateDir, "index.html"), "utf-8");
-    fs.writeFileSync(indexPath, templateHtml, "utf-8");
-    result.created.push("index.html");
-    console.log(chalk.green("  ✔ Created index.html"));
-  } else {
-    result.skipped.push("index.html");
+  // 3. index.html — the ONLY distributable artifact at the docs root is the
+  // symlink created by the build; never scaffold a real file here.
+  const indexItem = plan.items.find((i) => i.relPath === "index.html");
+  if (indexItem) {
+    indexItem.action = "skip";
+    indexItem.annotation = "(build symlink, not scaffolded)";
   }
+  result.skipped.push("index.html");
 
-  // 4. favicon.svg
-  const faviconPath = path.join(plan.targetDir, "favicon.svg");
+  // 4. favicon.svg lives in the hidden workspace (`.dmd/favicon.svg`).
+  const faviconPath = path.join(resolveSiteDir(plan.targetDir), "favicon.svg");
   const templateFavicon = path.join(activeTemplateDir, "favicon.svg");
   if (!fs.existsSync(faviconPath) && fs.existsSync(templateFavicon)) {
+    fs.mkdirSync(path.dirname(faviconPath), { recursive: true });
     fs.copyFileSync(templateFavicon, faviconPath);
-    result.created.push("favicon.svg");
-    console.log(chalk.green("  ✔ Created favicon.svg"));
+    result.created.push(".dmd/favicon.svg");
+    console.log(chalk.green("  ✔ Created .dmd/favicon.svg"));
   }
 
-  // 5. docs.json
-  const configPath = path.join(plan.targetDir, "docs.json");
+  // 5. docs.json — default `.dmd/.config/docs.json`, legacy fallback honored.
+  const existingScaffoldConfig = resolveExistingConfigPath(plan.targetDir);
+  const defaultScaffoldConfig = path.join(resolveConfigDir(plan.targetDir), "docs.json");
+  const configPath = fs.existsSync(existingScaffoldConfig) ? existingScaffoldConfig : defaultScaffoldConfig;
   if (!fs.existsSync(configPath)) {
+    fs.mkdirSync(path.dirname(configPath), { recursive: true });
     const templateConfigRaw = fs.readFileSync(path.join(activeTemplateDir, "docs.json"), "utf-8");
     let configObj: any = {};
     try {
@@ -341,6 +364,11 @@ export async function executeScaffold(plan: ScaffoldPlan, config: ScaffoldConfig
     if (config.projectName) {
       configObj.name = config.projectName;
     }
+    configObj.i18n = {
+      defaultLocale: config.defaultLocale ?? "en",
+      locales: config.languageEntries ?? (config.locales ?? [config.defaultLocale ?? "en"]).map((code) => ({ code })),
+      fallbackToDefault: true,
+    };
     if (config.tagline) {
       configObj.tagline = config.tagline;
     }
@@ -359,8 +387,8 @@ export async function executeScaffold(plan: ScaffoldPlan, config: ScaffoldConfig
     }
 
     fs.writeFileSync(configPath, JSON.stringify(configObj, null, 2), "utf-8");
-    result.created.push("docs.json");
-    console.log(chalk.green("  ✔ Created docs.json"));
+    result.created.push(".dmd/.config/docs.json");
+    console.log(chalk.green("  ✔ Created .dmd/.config/docs.json"));
   } else {
     result.skipped.push("docs.json");
   }
@@ -390,7 +418,8 @@ export async function executeScaffold(plan: ScaffoldPlan, config: ScaffoldConfig
     result.skipped.push("getting-started.md");
   }
 
-  // 8. guides/ and custom-components.md
+  // 8. guides/ and custom-components.md (samples only — the hidden workspace
+  // itself is created by the build, never by the scaffold when disabled).
   if (plan.includeSamples) {
     const guidesDir = path.join(plan.targetDir, "guides");
     if (!fs.existsSync(guidesDir)) {
@@ -406,19 +435,20 @@ export async function executeScaffold(plan: ScaffoldPlan, config: ScaffoldConfig
       result.skipped.push("guides/custom-components.md");
     }
 
-    // 9. .dmd/ and CounterWidget.svelte
-    const dmdDir = path.join(plan.targetDir, ".dmd");
+    // 9. `.dmd/.components/` + CounterWidget.svelte (bare `.dmd/` deprecated).
+    const dmdDir = resolveComponentsDir(plan.targetDir);
     if (!fs.existsSync(dmdDir)) {
       fs.mkdirSync(dmdDir, { recursive: true });
     }
     const dmdComponentPath = path.join(dmdDir, "CounterWidget.svelte");
+    const dmdRel = path.relative(plan.targetDir, dmdComponentPath).replace(/\\/g, "/");
     if (!fs.existsSync(dmdComponentPath)) {
       const templateDmd = fs.readFileSync(path.join(activeTemplateDir, ".dmd/CounterWidget.svelte"), "utf-8");
       fs.writeFileSync(dmdComponentPath, templateDmd, "utf-8");
-      result.created.push(".dmd/CounterWidget.svelte");
-      console.log(chalk.green("  ✔ Created .dmd/CounterWidget.svelte"));
+      result.created.push(dmdRel);
+      console.log(chalk.green(`  ✔ Created ${dmdRel}`));
     } else {
-      result.skipped.push(".dmd/CounterWidget.svelte");
+      result.skipped.push(dmdRel);
     }
   }
 

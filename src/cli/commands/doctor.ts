@@ -6,6 +6,7 @@ import matter from "gray-matter";
 import { compile } from "svelte/compiler";
 import { isFaviconPreset } from "../../runtime/favicons";
 import { dmdTag, ensureCustomElementTag } from "../../runtime/svelte-tag";
+import { candidateConfigPaths, resolveExistingComponentsDir } from "../utils/docs-layout";
 import { convertReactToSvelte } from "../utils/react-to-svelte";
 import { scanDirectory } from "../utils/scanner";
 
@@ -93,20 +94,19 @@ export async function doctorCommand(
     return finishReport(checks, options, targetDirArg);
   }
 
-  const docsJsonPath = path.join(targetDir, "docs.json");
-  const dmdJsonPath = path.join(targetDir, "dmd.json");
+  // New `.dmd/.config/` default with legacy bare `<targetDir>/*.json` fallback.
+  const configCandidates = candidateConfigPaths(targetDir);
+  const foundConfig = configCandidates.find((p) => fs.existsSync(p));
   let configFile: string | null = null;
   let parsedConfig: Record<string, any> | null = null;
 
-  if (fs.existsSync(docsJsonPath)) {
-    configFile = "docs.json";
-  } else if (fs.existsSync(dmdJsonPath)) {
-    configFile = "dmd.json";
+  if (foundConfig) {
+    configFile = path.relative(targetDir, foundConfig).replace(/\\/g, "/");
   }
 
-  if (configFile) {
+  if (configFile && foundConfig) {
     try {
-      parsedConfig = JSON.parse(fs.readFileSync(path.join(targetDir, configFile), "utf-8"));
+      parsedConfig = JSON.parse(fs.readFileSync(foundConfig, "utf-8"));
       checks.push({
         id: "config",
         name: "Configuration File",
@@ -269,8 +269,9 @@ export async function doctorCommand(
     });
   }
 
-  // 4. Custom Component (.dmd) Compilation Diagnostics
-  const dmdDir = path.join(targetDir, ".dmd");
+  // 4. Custom Component (.dmd/.components) Compilation Diagnostics
+  // `.dmd` bare dir is deprecated as a components location but still honored.
+  const dmdDir = resolveExistingComponentsDir(targetDir);
   if (!fs.existsSync(dmdDir)) {
     checks.push({
       id: "dmd-components",

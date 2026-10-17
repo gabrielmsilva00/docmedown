@@ -20,11 +20,11 @@ function decodeOfflineArtifact(html: string) {
 }
 
 test("serveable and single-file artifacts keep custom components, Mermaid, and typography self-contained", () => {
-  const serveableRuntime = readArtifact("docs", "docmedown.web.js");
-  const mermaidEngine = readArtifact("docs", "docmedown-mermaid.js");
-  const offlineHtml = readArtifact("docs", ".dist", "index.html");
-  const onlineHtml = readArtifact("docs", "index.html");
-  const embeddedDocs = readArtifact("docs", "_docs.js");
+  const serveableRuntime = readArtifact("docs", ".dmd", "docmedown.web.js");
+  const mermaidEngine = readArtifact("docs", ".dmd", "docmedown-mermaid.js");
+  const offlineHtml = readArtifact("docs", ".dmd", ".singlefile", "index.html");
+  const onlineHtml = readArtifact("docs", ".dmd", "index.html");
+  const embeddedDocs = readArtifact("docs", ".dmd", "_docs.js");
   const offlineEnvelope = decodeOfflineArtifact(offlineHtml);
 
   // The served runtime defers Mermaid to an on-demand classic script so pages
@@ -42,11 +42,11 @@ test("serveable and single-file artifacts keep custom components, Mermaid, and t
   // The offline shell no longer ships a plain "Opening…" placeholder.
   assert.ok(!offlineHtml.includes("Opening offline documentation"));
   assert.ok(embeddedDocs.includes("InteractiveThemeDemo"));
-  assert.ok(embeddedDocs.includes("Live appearance state"));
   assert.ok(embeddedDocs.includes("data-dmd-theme"));
   assert.ok(!embeddedDocs.includes("data-preset"));
   assert.ok(!embeddedDocs.includes('from "./'));
   assert.ok(offlineEnvelope.data.componentsSource.includes("InteractiveThemeDemo"));
+  assert.ok(offlineEnvelope.data.componentsSource.includes("data-dmd-theme"));
   assert.equal(offlineEnvelope.version, 2);
   assert.ok(offlineHtml.includes('new DecompressionStream("gzip")'));
   assert.ok(offlineHtml.includes("window.__DOCMEDOWN_OFFLINE__=true"));
@@ -63,8 +63,8 @@ test("serveable and single-file artifacts keep custom components, Mermaid, and t
 });
 
 test("nested offline artifacts embed their own bundled custom components", () => {
-  const offlineHtml = readArtifact("docs", "examples", "local-docs", ".dist", "index.html");
-  const embeddedDocs = readArtifact("docs", "examples", "local-docs", "_docs.js");
+  const offlineHtml = readArtifact("docs", "examples", "local-docs", ".dmd", ".singlefile", "index.html");
+  const embeddedDocs = readArtifact("docs", "examples", "local-docs", ".dmd", "_docs.js");
   const offlineEnvelope = decodeOfflineArtifact(offlineHtml);
 
   assert.ok(embeddedDocs.includes("OrbitCounter"));
@@ -82,7 +82,7 @@ test("nested offline artifacts embed their own bundled custom components", () =>
 });
 
 test("the root offline bundle embeds nested documentation sites for self-contained navigation", () => {
-  const offlineHtml = readArtifact("docs", ".dist", "index.html");
+  const offlineHtml = readArtifact("docs", ".dmd", ".singlefile", "index.html");
   const offlineEnvelope = decodeOfflineArtifact(offlineHtml);
   const nested = offlineEnvelope.data.nestedSites;
 
@@ -124,10 +124,10 @@ test("offline.embedNestedDocs: false keeps the single-file bundle free of nested
 
     await buildCommand(workspace);
 
-    const rootOfflineHtml = fs.readFileSync(path.join(workspace, ".dist", "index.html"), "utf-8");
+    const rootOfflineHtml = fs.readFileSync(path.join(workspace, ".dmd", ".singlefile", "index.html"), "utf-8");
     const rootEnvelope = decodeOfflineArtifact(rootOfflineHtml);
     assert.equal(rootEnvelope.data.nestedSites, undefined);
-    assert.ok(fs.existsSync(path.join(workspace, "sub", ".dist", "index.html")));
+    assert.ok(fs.existsSync(path.join(workspace, "sub", ".dmd", ".singlefile", "index.html")));
   } finally {
     fs.rmSync(workspace, { recursive: true, force: true });
   }
@@ -161,12 +161,12 @@ test("buildCommand inlines Card online sources into both _docs.js and single-fil
     await buildCommand(workspace);
 
     // 1. Verify in _docs.js
-    const docsJs = fs.readFileSync(path.join(workspace, "_docs.js"), "utf-8");
+    const docsJs = fs.readFileSync(path.join(workspace, ".dmd", "_docs.js"), "utf-8");
     assert.ok(docsJs.includes("https://example.com/remote-card.md"));
     assert.ok(docsJs.includes("Remote Card Content"));
 
     // 2. Verify in single-file offline index.html payload
-    const offlineHtml = fs.readFileSync(path.join(workspace, ".dist", "index.html"), "utf-8");
+    const offlineHtml = fs.readFileSync(path.join(workspace, ".dmd", ".singlefile", "index.html"), "utf-8");
     const envelope = decodeOfflineArtifact(offlineHtml);
     assert.ok(envelope.data.docs["https://example.com/remote-card.md"]);
     assert.ok(envelope.data.docs["https://example.com/remote-card.md"].includes("Remote Card Content"));

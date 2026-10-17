@@ -2,7 +2,13 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
-import { incrementPatchVersion, listOutputLines, localIsoDate, promoteChangelog } from "./deploy-lib.mjs";
+import {
+  incrementPatchVersion,
+  listOutputLines,
+  localIsoDate,
+  promoteChangelog,
+  releaseDistTag,
+} from "./deploy-lib.mjs";
 
 const packagePath = path.resolve(process.cwd(), "package.json");
 const changelogPath = path.resolve(process.cwd(), "CHANGELOG.md");
@@ -88,6 +94,25 @@ function ensureAuthenticated() {
   console.log(`\n✓ npm authenticated as ${verify.stdout.trim() || "(default user)"}`);
 }
 
+function ensurePagesAccess() {
+  const result = run("gh", ["auth", "status", "--hostname", "github.com"], { capture: true });
+  if (result.status !== 0) {
+    throw new Error(
+      'GitHub Pages deployment requires GitHub CLI (gh) authenticated with Actions write access. Run "gh auth login" and retry.\n' +
+        (result.stderr || result.stdout),
+    );
+  }
+}
+
+function deployPages() {
+  // Dispatch explicitly: an up-to-date push (including release retries) emits no push event.
+  // Keep the workflow's push trigger for ordinary development pushes as well.
+  run("gh", ["workflow", "run", "pages.yml", "--ref", "main"]);
+  console.log(
+    '\n✓ GitHub Pages workflow requested for main. Follow its progress with "gh run list --workflow pages.yml".',
+  );
+}
+
 function readPackage() {
   const packageJson = JSON.parse(fs.readFileSync(packagePath, "utf-8"));
   if (!packageJson.name || !packageJson.version) {
@@ -149,7 +174,7 @@ function packageVersionExists(packageName, version) {
 }
 
 function publishArgs() {
-  const args = ["publish", "--access", "public"];
+  const args = ["publish", "--access", "public", "--tag", releaseDistTag(readPackage().version)];
   if (otp) args.push("--otp", otp);
   return args;
 }
@@ -174,8 +199,8 @@ function verifyPublishedVersion(packageName, version) {
     const result = runNpm(["view", `${packageName}@${version}`, "version"], { capture: true });
     if (result.status === 0 && result.stdout.trim() === version) return;
     if (attempt < attempts) {
-      console.log(`\nRegistry metadata has not propagated yet; retrying in 5 seconds (${attempt}/${attempts})...`);
-      run(process.execPath, ["-e", "setTimeout(() => {}, 5000)"]);
+      console.log(`\nRegistry metadata has not propagated yet; retrying in 30 seconds (${attempt}/${attempts})...`);
+      run(process.execPath, ["-e", "setTimeout(() => {}, 30000)"]);
     }
   }
   throw new Error(`npm registry verification did not return ${packageName}@${version} after ${attempts} attempts.`);
@@ -188,6 +213,8 @@ ensureSafeWorkingTree();
 // Only a real (non-dry) deploy publishes to npm, so only then ensure auth.
 // A dry run validates the toolchain without needing npm credentials.
 if (!isDryRun) ensureAuthenticated();
+// Check before commits, pushes or npm publishing; the workflow itself runs only after release verification.
+if (!isDryRun) ensurePagesAccess();
 
 let packageJson = readPackage();
 let packageName = packageJson.name;
@@ -213,11 +240,13 @@ if (isDryRun) {
   console.log(
     `  GitHub: would ${initialRemote.ahead > 0 ? "push existing commits and " : ""}push main and v${plannedVersion}`,
   );
-  console.log(`  npm: would publish ${packageName}@${plannedVersion}`);
+  console.log(`  npm: would publish ${packageName}@${plannedVersion} with dist-tag ${releaseDistTag(plannedVersion)}`);
+  console.log("  Pages: would dispatch pages.yml on main (including already-deployed release retries)");
   process.exit(0);
 }
 
 if (!trackedChanges && versionAlreadyPublished && remoteTag === head && initialRemote.ahead === 0) {
+  deployPages();
   console.log(`\n✓ ${packageName}@${version} is already fully deployed.`);
   process.exit(0);
 }
@@ -263,4 +292,5 @@ if (!versionAlreadyPublished) runNpm(publishArgs());
 else console.log(`\n✓ ${packageName}@${version} is already published; verifying the registry.`);
 
 verifyPublishedVersion(packageName, version);
+deployPages();
 console.log(`\n✨ Deployment complete: ${packageName}@${version}`);

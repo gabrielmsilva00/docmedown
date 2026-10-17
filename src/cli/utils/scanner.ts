@@ -2,9 +2,11 @@ import fs from "node:fs";
 import path from "node:path";
 import matter from "gray-matter";
 import packageJson from "../../../package.json";
+import { collectVariants, defaultLocale, localizedDocs, localizeTree } from "../../runtime/i18n";
 import { buildSidebarTree, formatTitleFromFilename } from "../../runtime/loader/auto-indexer";
 import { inlineHeadingToPlainText } from "../../runtime/markdown/inline-text";
 import type { DocConfig, DocFileItem, DocHeading, DocManifest } from "../../runtime/types";
+import { candidateComponentsDirs } from "./docs-layout";
 
 export function extractHeadings(content: string): DocHeading[] {
   const headings: DocHeading[] = [];
@@ -92,15 +94,14 @@ export function generateManifest(docDir: string, config: DocConfig): DocManifest
   const docItems: DocFileItem[] = [];
   const frontmatters: Record<string, any> = {};
 
-  for (const relFile of files) {
+  for (const variant of collectVariants(files, config)) {
+    const relFile = variant.path;
     const fullPath = path.join(docDir, relFile);
     const raw = fs.readFileSync(fullPath, "utf-8");
     const { data: fm, content } = matter(raw);
 
-    const cleanSlug = relFile.replace(/\.(md|mdx)$/i, "");
-    const isOverview = cleanSlug.toLowerCase() === "readme" || cleanSlug.toLowerCase() === "index";
-    const slug = isOverview ? "README" : cleanSlug;
-    const title = fm.title || fm.sidebar_label || formatTitleFromFilename(path.basename(relFile));
+    const slug = variant.slug;
+    const title = fm.title || fm.sidebar_label || formatTitleFromFilename(path.basename(variant.docId));
 
     frontmatters[relFile] = fm;
 
@@ -109,6 +110,8 @@ export function generateManifest(docDir: string, config: DocConfig): DocManifest
     const readingTimeMinutes = Math.max(1, Math.ceil(words / 200));
 
     docItems.push({
+      docId: variant.docId,
+      locale: variant.locale,
       slug,
       path: relFile,
       title,
@@ -121,9 +124,15 @@ export function generateManifest(docDir: string, config: DocConfig): DocManifest
     });
   }
 
-  const tree = buildSidebarTree(files, frontmatters, config.sidebar);
+  const visible = localizedDocs(docItems, defaultLocale(config), config);
+  const logical = [...new Map(docItems.map((doc) => [doc.docId, doc])).values()];
+  const baseTree = buildSidebarTree(
+    logical.map((doc) => `${doc.docId}.md`),
+    Object.fromEntries(visible.map((doc) => [`${doc.docId}.md`, doc.frontmatter])),
+    config.sidebar,
+  );
+  const tree = localizeTree(baseTree, visible, defaultLocale(config), config);
 
-  const dmdDir = path.join(docDir, ".dmd");
   const COMPONENT_EXTS = [".svelte", ".tsx", ".jsx", ".ts", ".js"];
   const EXCLUDED_DMD_SCRIPTS = [
     "setup.js",
@@ -134,25 +143,46 @@ export function generateManifest(docDir: string, config: DocConfig): DocManifest
     "components.js",
     "index.js",
   ];
-  const customComponents = fs.existsSync(dmdDir)
-    ? fs
-        .readdirSync(dmdDir)
-        .filter((file) => {
-          if (file.startsWith(".") || EXCLUDED_DMD_SCRIPTS.includes(file) || file.endsWith(".d.ts")) return false;
-          return COMPONENT_EXTS.some((ext) => file.endsWith(ext));
-        })
-        .map((file) => {
-          const ext = path.extname(file);
-          return path.basename(file, ext);
-        })
-    : [];
+  const GENERATED_COMPONENT_NAMES = new Set([
+    "_docs",
+    "_manifest",
+    "docmedown.web",
+    "docmedown-mermaid",
+    "docmedown.iife",
+  ]);
+  const componentDirs = candidateComponentsDirs(docDir).filter((dir) => {
+    try {
+      return fs.existsSync(dir) && fs.statSync(dir).isDirectory();
+    } catch {
+      return false;
+    }
+  });
+  const seenComponents = new Set<string>();
+  const customComponents: string[] = [];
+  for (const dir of componentDirs) {
+    let entries: string[] = [];
+    try {
+      entries = fs.readdirSync(dir);
+    } catch {
+      continue;
+    }
+    for (const file of entries) {
+      if (file.startsWith(".") || EXCLUDED_DMD_SCRIPTS.includes(file) || file.endsWith(".d.ts")) continue;
+      if (!COMPONENT_EXTS.some((ext) => file.endsWith(ext))) continue;
+      const base = path.basename(file, path.extname(file));
+      if (GENERATED_COMPONENT_NAMES.has(base)) continue;
+      if (seenComponents.has(base)) continue;
+      seenComponents.add(base);
+      customComponents.push(base);
+    }
+  }
 
   return {
     version: packageJson.version,
     generatedAt: new Date().toISOString(),
     config,
     docs: docItems,
-    tree,
+    tree: config.i18n ? baseTree : tree,
     customComponents: customComponents.length > 0 ? customComponents : undefined,
   };
 }

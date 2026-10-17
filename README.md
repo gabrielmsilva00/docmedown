@@ -16,6 +16,30 @@ Drop a single `index.html` file into any directory of `.md` files, and you have 
 
 ## ✨ Features at a Glance
 
+### Release deployment
+
+Maintainers run `npm run deploy` from `main`. The command validates the release,
+commits tracked changes, pushes the release, publishes npm, and explicitly requests
+the GitHub Pages workflow (`pages.yml`) on `main`, even when the version is already
+fully published. GitHub CLI (`gh`) must be installed and authenticated with permission
+to run Actions (`gh auth login`); npm authentication is also required. Workflow errors
+abort the command rather than silently skipping Pages. Dispatch acceptance does not
+mean the asynchronous Pages build has finished; inspect `gh run list --workflow pages.yml`.
+Ordinary pushes to `main` still trigger Pages, so a release can also produce a push run;
+the workflow's existing concurrency group serializes/cancels superseded runs.
+`npm run deploy:dry-run` validates the release without dispatching Pages or publishing.
+
+### Native multilingual projects
+
+DocMeDown groups translations by filename (`guide.pt-br.md`), not language
+directories. Project creation offers English, Brazilian Portuguese, Spanish,
+French, German and Simplified Chinese, plus manually named language tags.
+Choose the original language separately; missing document translations can fall
+back to that original. The built-in `DMD` navigation and developer guides ship in
+all six languages and use English when a custom language has no translation.
+See [Internationalization](docs/guides/internationalization.md) for configuration,
+export behavior and the current translation-coverage limitations.
+
 - 🚀 **Zero-Config Auto-Discovery**: Automatically parses and indexes all `.md` files & subfolders into categories, builds navigation sidebars, and powers instant search out of the box.
 - 📁 **Unified Root & `./docs/` Discovery**: Automatically detects markdown files at your project root (`README.md`, `CONTRIBUTING.md`, `CHANGELOG.md`, `ROADMAP.md`, etc.) and links both root and `./docs/` together by default without creating an artificial `./docs/` subdivision.
 - 🌐 **Dual Usage: CLI Tool & Web Script**:
@@ -173,11 +197,11 @@ Every standard build produces both your serveable documentation files and a **10
 npx docmedown build ./docs
 ```
 
-The serveable manifest and runtime remain in `./docs`. The offline artifact is written to `./docs/.dist/index.html`; dot-prefixed directories are excluded from document discovery. The artifact stores compact JSON and the production runtime in a gzip-compressed, base64-encoded envelope with a minified self-extractor. Open that file directly in a browser (`file:///.../.dist/index.html`) on air-gapped machines, send it via email, or distribute it with offline desktop applications. Use `--no-single-file` to skip the offline artifact, or `--out-dir <path>` to place it elsewhere.
+The serveable site and runtime live in `./docs/.dmd/` (prerendered pages, `sitemap.xml`, `robots.txt`, per-page SEO head tags included). The `docs/index.html` symlink targets that serveable entrypoint (`.dmd/index.html`) — the ONLY distributable at the docs root — so crawlers and static hosts see the full site; dot-prefixed directories are excluded from document discovery. The offline artifact is written separately to `./docs/.dmd/.singlefile/index.html`. The artifact stores compact JSON and the production runtime in a gzip-compressed, base64-encoded envelope with a minified self-extractor. Open that file directly in a browser (`file:///.../index.html`) on air-gapped machines, send it via email, or distribute it with offline desktop applications. Use `--no-single-file` to skip the offline artifact, or `--out-dir <path>` to place it elsewhere.
 
-Serveable DocMeDown sites also include a **Download** action in the navbar. It reads the already-loaded documentation corpus and current runtime, compresses them locally with the browser's native gzip stream, and downloads the same self-contained format without requesting `.dist/index.html`. In a downloaded or CLI-built offline copy, the control is greyed out as **Offline copy** because the page is already portable.
+Serveable DocMeDown sites also include a **Download** action in the navbar. It reads the already-loaded documentation corpus and current runtime, compresses them locally with the browser's native gzip stream, and downloads the same self-contained format without requesting `.dmd/.singlefile/index.html`. In a downloaded or CLI-built offline copy, the control is greyed out as **Offline copy** because the page is already portable.
 
-`docmedown serve ./docs` and `docmedown dev ./docs` also run this standard build at startup. While the server is running, Markdown and `docs.json` changes are debounced, then rebuild the serveable artifacts and `./docs/.dist/index.html` before the browser reloads.
+`docmedown serve ./docs` and `docmedown dev ./docs` also run this standard build at startup. While the server is running, Markdown and `.dmd/.config/docs.json` changes are debounced, then rebuild the serveable artifacts and `./docs/.dmd/.singlefile/index.html` before the browser reloads.
 
 To rebuild both outputs without starting a preview server, use watch mode:
 
@@ -191,25 +215,25 @@ Within this repository, the equivalent command is `npm run build:docs:watch`.
 
 ## 🚢 GitHub Pages Hosting
 
-The repository includes `.github/workflows/pages.yml`, which builds the production runtime and generated documentation assets before publishing `./docs/` through GitHub Pages. This is required because `_docs.js`, `_manifest.json`, and `docmedown.web.js` are generated files and intentionally ignored by Git.
+The repository includes `.github/workflows/pages.yml`, which builds the production runtime and generated documentation assets before publishing `./docs/.dmd/` through GitHub Pages. This is required because `_docs.js`, `_manifest.json`, and `docmedown.web.js` are generated files and intentionally ignored by Git.
 
 To enable it for a repository fork or project site:
 
 1. Push the workflow to the `main` branch.
 2. In **Settings → Pages**, set the source to **GitHub Actions**.
-3. Push documentation or runtime changes; the workflow runs `npm ci`, `npm run build`, and `npm run build:docs`, then uploads the complete `docs/` directory.
+3. Push documentation or runtime changes; the workflow runs `npm ci`, `npm run build`, and `npm run build:docs`, then uploads the hidden `docs/.dmd/` workspace (the `docs/index.html` symlink targets that same serveable entrypoint, so local `/docs/` serving matches Pages).
 
 The generated entrypoint uses same-directory relative URLs (`./_docs.js` and `./docmedown.web.js`), so it works at both a custom domain and a project URL such as `/repository-name/`. The Pages workflow verifies those generated files before upload and includes `.nojekyll` for direct static-file compatibility. Hash routing keeps document navigation client-side without requiring server rewrites.
 
 ---
 
-## 🧩 Custom Components (.dmd)
+## 🧩 Custom Components (`.dmd/.components/`)
 
 DocMeDown provides a **Universal Component Compatibility Layer**. You can author custom widgets in **native Svelte 5**, **React with TypeScript (TSX)**, or standard **Web Elements (Lit)** with zero build setup:
 
-### 1. Svelte 5 Component (`.dmd/CounterWidget.svelte`)
+### 1. Svelte 5 Component (`.dmd/.components/CounterWidget.svelte`)
 
-```svelte title=".dmd/CounterWidget.svelte"
+```svelte title=".dmd/.components/CounterWidget.svelte"
 <script>
   let { title = "Interactive Counter" } = $props();
   let count = $state(0);
@@ -221,9 +245,9 @@ DocMeDown provides a **Universal Component Compatibility Layer**. You can author
 </div>
 ```
 
-### 2. React TSX Component (`.dmd/ReactMetricCard.tsx`)
+### 2. React TSX Component (`.dmd/.components/ReactMetricCard.tsx`)
 
-```tsx title=".dmd/ReactMetricCard.tsx"
+```tsx title=".dmd/.components/ReactMetricCard.tsx"
 import React, { useState } from "react";
 
 export default function ReactMetricCard({ label = "Query Rate", initial = 100 }) {
@@ -241,8 +265,8 @@ Use `<CounterWidget />` or `<ReactMetricCard />` directly inside any Markdown do
 
 - **Build-Time AOT Compilation**: Standard React TSX components are compiled Ahead-of-Time into native Svelte 5 custom elements during `docmedown build`, eliminating React runtime overhead.
 - **Runtime Bridge Fallback**: Complex React components mount cleanly via `ReactBridge` (`createRoot`), preserving hook fidelity.
-- **Offline Parity**: All `.dmd/` components are pre-compiled and embedded in `./docs/.dist/index.html` for 100% self-contained offline functionality.
-- **Legacy Compatibility**: Standard `.dmd/components.js` custom element modules remain fully supported.
+- **Offline Parity**: All `.dmd/.components/` components are pre-compiled and embedded in `./docs/.dmd/.singlefile/index.html` for 100% self-contained offline functionality (the root `docs/index.html` symlink instead serves the SEO site).
+- **Legacy Compatibility**: Bare `.dmd/` components and standard `.dmd/components.js` custom element modules remain fully supported as a deprecated fallback.
 
 ### Ready-to-Use Built-in Markdown Components
 

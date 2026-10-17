@@ -17,6 +17,31 @@
     },
     "version": { "type": "string" },
     "rootDoc": { "type": "string", "minLength": 1 },
+    "i18n": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "defaultLocale": { "type": "string", "minLength": 2, "default": "en" },
+        "locales": {
+          "type": "array",
+          "items": {
+            "type": "object", "additionalProperties": false, "required": ["code"],
+            "properties": {
+              "code": { "type": "string", "minLength": 2 },
+              "label": { "type": "string", "minLength": 1 },
+              "overrides": {
+                "type": "object", "additionalProperties": false,
+                "properties": {
+                  "tagline": { "type": "string" }, "description": { "type": "string" },
+                  "nav": { "$ref": "#/properties/nav" }, "sidebar": { "$ref": "#/properties/sidebar" },
+                  "search": { "$ref": "#/properties/search" }, "footer": { "$ref": "#/properties/footer" }
+                }
+              }
+            }
+          }
+        },
+        "fallbackToDefault": { "type": "boolean", "default": true }
+      }
+    },
     "home": {
       "type": "string",
       "minLength": 1,
@@ -31,6 +56,7 @@
     "search": { "$ref": "#/$defs/search" },
     "offline": { "$ref": "#/$defs/offline" },
     "footer": { "$ref": "#/$defs/footer" },
+    "editor": { "$ref": "#/$defs/editor" },
     "componentsUrl": { "type": "string" },
     "editUrl": { "type": "string" }
   },
@@ -167,6 +193,18 @@
         "copyright": { "type": "string" },
         "links": { "type": "array", "items": { "$ref": "#/$defs/navLink" } },
         "showBuiltWith": { "type": "boolean" }
+      }
+    },
+    "editor": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Browser editor availability. The editor is additionally gated by the dev server: it only appears when served locally with editor access granted, never on static hosts or offline bundles.",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Allow the in-browser 2-way editor when served by the local dev server."
+        }
       }
     },
     "sidebarItem": {

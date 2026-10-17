@@ -54,7 +54,7 @@ npx docmedown build ./docs
 
 ## 🚀 How to Distribute & Use Single-File Docs
 
-Once compiled, simply distribute `docs/.dist/index.html`:
+Once compiled, simply distribute `docs/.dmd/.singlefile/index.html` directly (the `docs/index.html` symlink targets the serveable SEO site, not this file):
 
 ### 1. The Double-Click Guarantee
 - Double-click `index.html` directly from Windows Explorer, macOS Finder, or Linux file managers.

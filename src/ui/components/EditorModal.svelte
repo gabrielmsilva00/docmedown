@@ -307,10 +307,10 @@
         if (typeof window !== "undefined") {
           const w = window as any;
           if (w.__DOCMEDOWN_DATA__?.docs) {
-            w.__DOCMEDOWN_DATA__.docs[doc.currentSlug] = draftContent;
+            w.__DOCMEDOWN_DATA__.docs[doc.sourcePath || doc.currentSlug] = draftContent;
           }
           try {
-            localStorage.setItem(`dmd-offline-doc-${doc.currentSlug}`, draftContent);
+            localStorage.setItem(`dmd-offline-doc-${doc.sourcePath || doc.currentSlug}`, draftContent);
           } catch {}
         }
         statusMessage = `✔ Saved to offline local session & browser storage at ${new Date().toLocaleTimeString()}`;
@@ -324,7 +324,7 @@
 
     statusMessage = `Saving to ${target}...`;
 
-    const fileName = doc.currentDoc?.path || `${doc.currentSlug === "README" ? "README" : doc.currentSlug}.md`;
+    const fileName = doc.sourcePath || `${doc.currentSlug === "README" ? "README" : doc.currentSlug}.md`;
 
     try {
       const res = await fetch("/__dmd_api__/save", {
@@ -357,7 +357,7 @@
   }
 
   function downloadMarkdownFile() {
-    const fileName = doc.currentDoc?.path || `${doc.currentSlug === "README" ? "README" : doc.currentSlug}.md`;
+    const fileName = doc.sourcePath || `${doc.currentSlug === "README" ? "README" : doc.currentSlug}.md`;
     const cleanFileName = fileName.split("/").pop() || "document.md";
     const blob = new Blob([draftContent], { type: "text/markdown;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -429,7 +429,7 @@
 
 <svelte:window onkeydown={handleKeyDown} />
 
-{#if doc.isEditorOpen}
+{#if doc.isEditorOpen && doc.editorAvailable}
   <div
     class="dmd-editor-backdrop"
     class:keyboard-open={keyboardOpen}
@@ -447,7 +447,7 @@
         <div class="dmd-editor-title-group">
           <span class="dmd-editor-icon">✏️</span>
           <span class="dmd-editor-title">2-Way Markdown Editor</span>
-          <span class="dmd-editor-file-badge">{doc.currentSlug}.md</span>
+          <span class="dmd-editor-file-badge">{doc.sourcePath || `${doc.currentSlug}.md`} · {doc.contentLocale}</span>
         </div>
 
         <div class="dmd-editor-tab-group" role="tablist">

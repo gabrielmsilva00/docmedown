@@ -18,8 +18,8 @@ A complete DocMeDown documentation workspace typically looks like this:
 
 ```
 my-project/
-├── docs/                               # Documentation root directory
-│   ├── docs.json                       # Core site configuration, theme & branding
+├── docs/                               # Documentation root: ONLY sources + index.html symlink
+│   ├── index.html                      # Symlink → .dmd/index.html (ONLY distributable: SEO site)
 │   ├── README.md                       # Home document (serves at #/README or /)
 │   ├── getting-started.md              # First-level document (#/getting-started)
 │   ├── configuration.md                # First-level document (#/configuration)
@@ -28,13 +28,17 @@ my-project/
 │   │   ├── architecture.md             # Document under /guides/
 │   │   ├── markdown-features.md        # Document under /guides/
 │   │   └── cli-reference.md            # Document under /guides/
-│   ├── .dmd/                           # Custom components directory (auto-discovered)
-│   │   ├── CounterWidget.svelte        # Svelte 5 custom component (<CounterWidget />)
-│   │   ├── MetricCard.tsx              # React TSX component (<MetricCard />)
-│   │   └── ClusterBadge.ts             # Lit Web Component (<ClusterBadge />)
-│   ├── .preview/                       # Staged preview documents (transient editor state)
-│   └── .dist/                          # Production offline distribution directory
-│       └── index.html                  # Standalone 100% offline single-file bundle
+│   └── .dmd/                           # Hidden build workspace (never linked in docs)
+│       ├── index.html                  # Serveable site entrypoint
+│       ├── _manifest.json              # Indexed corpus + headings
+│       ├── _docs.js                    # Offline file:/// fallback data
+│       ├── docmedown.web.js            # Serveable runtime (+ docmedown-mermaid.js)
+│       ├── .singlefile/index.html      # Self-contained offline bundle (explicit distributable)
+│       ├── .components/                # Custom components (Svelte/TSX/Lit, auto-discovered)
+│       │   ├── CounterWidget.svelte    # Svelte 5 custom component (<CounterWidget />)
+│       │   ├── MetricCard.tsx          # React TSX component (<MetricCard />)
+│       │   └── ClusterBadge.ts         # Lit Web Component (<ClusterBadge />)
+│       └── .config/docs.json           # Site configuration, theme & branding
 ├── package.json
 └── tsconfig.json
 ```
@@ -43,13 +47,14 @@ my-project/
 
 | Path | Purpose | Behavior |
 | :--- | :--- | :--- |
-| **`docs/docs.json`** | Site Configuration | Sets theme family, site title, canonical URL, custom navigation, and offline options. |
+| **`docs/index.html`** | Distributable Symlink | Points at `.dmd/index.html` (serveable SEO site); the ONLY distributable at the docs root. |
 | **`docs/README.md`** | Default Home Document | Automatically mapped to the documentation root route (`#/README` or `/`). |
-| **`docs/.dmd/`** | Custom Components | Files placed here (`.svelte`, `.tsx`, `.ts`) are precompiled and available directly in Markdown without imports. |
-| **`docs/.preview/`** | Staged Previews | Contains drafts created via the in-browser 2-way editor when working with staged previews (`--preview`). |
-| **`docs/.dist/`** | Offline Artifacts | Output directory for the self-contained single-file offline HTML bundle (`index.html`). |
-| **`_manifest.json`** | Build Cache & Index | Emitted during `docmedown build` containing the indexed documentation corpus and headings. |
-| **`_docs.js`** | Offline Fallback Data | Embedded in local static builds for fallback loading when running via `file:///`. |
+| **`docs/.dmd/`** | Hidden Build Workspace | Generated site, runtimes, static pages, SEO/AI files. Never linked in navigation. |
+| **`docs/.dmd/.singlefile/`** | Offline Artifacts | Self-contained single-file bundle (`index.html`), double-clickable via `file:///`; explicit offline distributable (NOT the root symlink). |
+| **`docs/.dmd/.components/`** | Custom Components | Files placed here (`.svelte`, `.tsx`, `.ts`) are precompiled and available directly in Markdown without imports. Bare `.dmd/` still works as a deprecated fallback. |
+| **`docs/.dmd/.config/`** | Site Configuration | `docs.json` / `dmd.json` live here by default; bare `docs/*.json` still works as a fallback. |
+| **`docs/.dmd/_manifest.json`** | Build Cache & Index | Emitted during `docmedown build` containing the indexed documentation corpus and headings. |
+| **`docs/.dmd/_docs.js`** | Offline Fallback Data | Embedded in local static builds for fallback loading when running via `file:///`. |
 
 ---
 

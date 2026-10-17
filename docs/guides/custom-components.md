@@ -1,31 +1,31 @@
 ---
-title: Custom Components (.dmd)
+title: Custom Components (`.dmd/.components/`)
 description: Author interactive custom components in Svelte 5, React TSX, or Web Elements, and explore built-in UI primitives.
 order: 4
 tags: [components, custom-elements, svelte, react, tsx, lit, builtins, interactive]
 ---
 
-# Custom Components (`.dmd`) 🧩
+# Custom Components (`.dmd/.components/`) 🧩
 
 DocMeDown provides a **Universal Component Compatibility Layer** that lets you bring interactive widgets into your documentation using **Svelte 5**, **React with TypeScript (TSX)**, or standard **Web Elements (Lit)** — with automatic registration, shared CSS variables, and zero build configuration.
 
 ---
 
-## 🏗️ 1. The `.dmd/` Directory
+## 🏗️ 1. The `.dmd/.components/` Directory
 
-To create a custom component, drop any `.svelte`, `.tsx`, or `.ts` file into the `.dmd/` folder inside your documentation directory:
+To create a custom component, drop any `.svelte`, `.tsx`, or `.ts` file into `.dmd/.components/` inside your documentation directory (bare `.dmd/` still works as a deprecated fallback):
 
 ```
 docs/
-├── docs.json
+├── .dmd/.config/docs.json
 ├── README.md
-└── .dmd/
+└── .dmd/.components/
     ├── StatusWidget.svelte       # Svelte 5 component -> <StatusWidget />
     ├── MetricCard.tsx            # React TSX component  -> <MetricCard />
     └── ClusterPill.ts            # Web Element / Lit   -> <ClusterPill />
 ```
 
-Any component created in `.dmd/` is **immediately available as an HTML-like tag in any Markdown document**:
+Any component created in `.dmd/.components/` is **immediately available as an HTML-like tag in any Markdown document**:
 
 ```markdown
 # Live Dashboard

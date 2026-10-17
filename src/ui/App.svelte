@@ -18,13 +18,15 @@
   import { dismissSplash } from "../runtime/splash";
   import { resolveFavicon } from "../runtime/favicons";
 
-  // Keyboard shortcut for search (Cmd+K / Ctrl+K) and editor (Cmd+E / Ctrl+E)
+  // Keyboard shortcut for search (Cmd+K / Ctrl+K) and editor (Cmd+E / Ctrl+E).
+  // The editor shortcut is a no-op unless the dev server granted access.
   $effect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
         doc.isSearchOpen = !doc.isSearchOpen;
       } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "e") {
+        if (!doc.editorAvailable) return;
         e.preventDefault();
         doc.isEditorOpen = !doc.isEditorOpen;
       }
@@ -104,10 +106,15 @@
   $effect(() => {
     if (doc.currentDoc || doc.error) dismissSplash();
   });
+
+  $effect(() => {
+    document.documentElement.lang = doc.contentLocale;
+    document.documentElement.dir = /^(ar|fa|he|ur)(-|$)/.test(doc.contentLocale) ? "rtl" : "ltr";
+  });
 </script>
 
 <div class="dmd-root">
-  <a href="#dmd-main-content" class="dmd-skip-to-content">Skip to content</a>
+  <a href="#dmd-main-content" class="dmd-skip-to-content">{doc.t("skip")}</a>
   <Navbar />
 
   <div class="dmd-layout-body">
@@ -128,7 +135,7 @@
     onClose={() => (doc.isSearchOpen = false)}
     searchIndex={doc.searchIndex}
     onSelect={(slug: string) => doc.navigate(slug)}
-    placeholder={doc.config?.search?.placeholder}
+    placeholder={doc.viewConfig?.i18n ? doc.viewConfig.i18n.locales.find((item) => item.code === doc.locale)?.overrides?.search?.placeholder || doc.t("search") : doc.config?.search?.placeholder}
   />
 
   <EditorModal />

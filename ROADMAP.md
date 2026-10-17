@@ -6,6 +6,32 @@
 
 ---
 
+## Native internationalization — delivery status (2026-10-16)
+
+- [x] Filename-suffix variants (`guide.pt-br.md`), configurable originals, canonical
+  language tags, locale routes, fallback notices, navigation/search isolation and
+  physical-source tracking. Directories remain categories.
+- [x] Six curated language presets: English, Brazilian Portuguese, Spanish,
+  French, German and Simplified Chinese. Interactive creation supports selection,
+  original-language choice and additional named language tags.
+- [x] Engine-provided `DMD` and `DMD/for-developers` guides have six authored language
+  versions, project-language export selection and unconditional English fallback.
+- [x] Local, remote-source and offline reader lookup for built-in guides;
+  configured guide variants are prerendered with hidden/noindex metadata.
+- [x] Served runtime raw budget approved at **1.5 MiB**; its gzip budget remains
+  **480 KiB**. Other bundle budgets remain unchanged.
+- [ ] Complete translation of **every existing documentation page** into all six
+  preset languages, including the configuration/CLI references, technical guides,
+  nested examples and repository-facing contributor documents. Native fallback is
+  not translation coverage; do not mark this milestone complete from configuration alone.
+- [ ] Extract every remaining reader/editor/component message into the UI catalog
+  and translate it for all six presets.
+- [ ] Finish keyboard/mobile/theme browser checks and cross-mode release validation.
+
+Language setup does not machine-translate a user's project. Future language packs
+should follow the existing suffix mechanism and preserve the English DMD fallback.
+See the internationalization guide (`docs/guides/internationalization.md`).
+
 ## The Vision: Svelte as Host, Multi-Framework at the Edge
 
 ### 1. Svelte Shell with Universal Interoperability

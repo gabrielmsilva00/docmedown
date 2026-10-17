@@ -1,5 +1,7 @@
 import { marked } from "marked";
-import type { DocFrontmatter, DocHeading } from "../types";
+import { documentVariant } from "../i18n";
+import { HashRouter } from "../router";
+import type { DocConfig, DocFrontmatter, DocHeading } from "../types";
 import { processAlerts } from "./callouts";
 import {
   expandSelfClosingComponents,
@@ -80,7 +82,7 @@ function calculateReadingTime(text: string): number {
   return Math.max(1, Math.ceil(words / wpm));
 }
 
-export function parseMarkdown(rawContent: string, currentSlug: string = ""): ParsedMarkdown {
+export function parseMarkdown(rawContent: string, currentSlug: string = "", config?: DocConfig): ParsedMarkdown {
   const { frontmatter, content: rawBody } = extractFrontmatter(rawContent);
   const readingTimeMinutes = calculateReadingTime(rawBody);
 
@@ -173,18 +175,35 @@ export function parseMarkdown(rawContent: string, currentSlug: string = ""): Par
       if (href.startsWith("#")) {
         targetHref = `#/${currentSlug}${href}`;
       } else {
-        let clean = href.replace(/\.(md|mdx)$/i, "");
-        if (clean.startsWith("./")) {
-          const currentDir = currentSlug.includes("/") ? currentSlug.substring(0, currentSlug.lastIndexOf("/")) : "";
-          clean = currentDir ? `${currentDir}/${clean.replace(/^\.\//, "")}` : clean.replace(/^\.\//, "");
-        } else if (!clean.startsWith("/")) {
-          const currentDir = currentSlug.includes("/") ? currentSlug.substring(0, currentSlug.lastIndexOf("/")) : "";
-          clean = currentDir ? `${currentDir}/${clean}` : clean;
+        const clean = href.replace(/\.(md|mdx)$/i, "");
+        if (clean.startsWith("/")) {
+          targetHref = `#/${clean.replace(/^\/+/, "")}`;
+        } else {
+          const currentParts = currentSlug.includes("/") ? currentSlug.split("/").slice(0, -1) : [];
+          const relParts = clean.split("/");
+          const targetParts: string[] = [];
+          for (const p of [...currentParts, ...relParts]) {
+            if (!p || p === ".") continue;
+            if (p === "..") {
+              targetParts.pop();
+            } else {
+              targetParts.push(p);
+            }
+          }
+          targetHref = `#/${targetParts.join("/")}`;
         }
-        targetHref = `#/${clean.replace(/^\//, "")}`;
       }
     }
 
+    if (!isExternal) {
+      if (config?.i18n) {
+        const router = new HashRouter();
+        router.i18nConfig = config;
+        router.locale = documentVariant(currentSlug, config).locale;
+        targetHref = router.resolveLink(href, currentSlug);
+        router.destroy();
+      }
+    }
     const titleAttr = title ? ` title="${title}"` : "";
     const targetAttr = isExternal ? ' target="_blank" rel="noopener noreferrer"' : "";
     const extIcon = isExternal

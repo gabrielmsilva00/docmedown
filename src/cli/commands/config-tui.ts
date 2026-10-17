@@ -3,25 +3,34 @@ import path from "node:path";
 import chalk from "chalk";
 import prompts from "prompts";
 import { normalizeConfig, parseDocConfigJson } from "../../runtime/config";
+import { defaultLocale, projectLocales } from "../../runtime/i18n";
 import type { ColorMode, DocConfig, ThemeFamily } from "../../runtime/types";
+import { candidateConfigPaths, resolveConfigDir, resolveExistingConfigPath } from "../utils/docs-layout";
+import { setupLanguages } from "../utils/language-setup";
 
 export async function configTuiCommand(configPathArg?: string) {
   console.log(chalk.bold.magenta("\n⚡ DocMeDown - Interactive Configuration Wizard\n"));
 
-  // Resolve config path
+  // Resolve config path — `.dmd/.config/docs.json` by default, with legacy
+  // bare `docs.json` / `dmd.json` fallbacks for backward compatibility.
   let configPath = "";
   if (configPathArg) {
     configPath = path.resolve(process.cwd(), configPathArg);
     if (fs.existsSync(configPath) && fs.statSync(configPath).isDirectory()) {
-      configPath = path.join(configPath, "docs.json");
+      const existing = resolveExistingConfigPath(configPath);
+      configPath = fs.existsSync(existing)
+        ? existing
+        : path.join(resolveConfigDir(path.resolve(process.cwd(), configPathArg)), "docs.json");
     }
   } else {
+    const cwd = process.cwd();
     const candidates = [
-      path.resolve(process.cwd(), "docs.json"),
-      path.resolve(process.cwd(), "docs/docs.json"),
-      path.resolve(process.cwd(), "dmd.json"),
+      ...candidateConfigPaths(path.join(cwd, "docs")),
+      path.resolve(cwd, "docs.json"),
+      path.resolve(cwd, "dmd.json"),
     ];
-    configPath = candidates.find((p) => fs.existsSync(p)) || path.resolve(process.cwd(), "docs/docs.json");
+    configPath =
+      candidates.find((p) => fs.existsSync(p)) || path.join(resolveConfigDir(path.join(cwd, "docs")), "docs.json");
   }
 
   let existingConfig: DocConfig = normalizeConfig();
@@ -36,6 +45,8 @@ export async function configTuiCommand(configPathArg?: string) {
     console.log(chalk.dim(`  Creating new configuration at: ${configPath}\n`));
   }
 
+  const language = await setupLanguages({}, true, projectLocales(existingConfig));
+  if (!language) return;
   const response = await prompts([
     {
       type: "text",
@@ -115,9 +126,44 @@ export async function configTuiCommand(configPathArg?: string) {
     return;
   }
 
+  const original = language.defaultLocale;
+  const locales = language.locales;
+  const fallback = await prompts({
+    type: "confirm",
+    name: "enabled",
+    message: "Show originals when translations are missing?",
+    initial: existingConfig.i18n?.fallbackToDefault !== false,
+  });
+  if (fallback.enabled === undefined) return;
+  const removed = projectLocales(existingConfig).filter((item) => !locales.includes(item.code));
+  if (original !== defaultLocale(existingConfig) || removed.length) {
+    console.log(
+      chalk.yellow(
+        "Changing the original language reinterprets unsuffixed files. Removed languages are no longer recognized. No documents will be renamed or deleted.",
+      ),
+    );
+    const answer = await prompts({
+      type: "confirm",
+      name: "proceed",
+      message: "Save these language changes?",
+      initial: false,
+    });
+    if (!answer.proceed) return;
+  }
+
   const updatedConfig = normalizeConfig({
     ...existingConfig,
     name: response.name,
+    i18n: {
+      ...existingConfig.i18n,
+      defaultLocale: original,
+      fallbackToDefault: fallback.enabled,
+      locales: locales.map((code) => ({
+        ...existingConfig.i18n?.locales.find((item) => item.code === code),
+        code,
+        label: language.languageEntries.find((item) => item.code === code)?.label,
+      })),
+    },
     tagline: response.tagline,
     theme: {
       ...existingConfig.theme,

@@ -2,19 +2,28 @@
 node_modules/
 *.tgz
 
-# Build outputs
+# Build outputs — the hidden `.dmd/` workspace owns every generated artifact;
+# the docs root keeps ONLY documentation plus the `index.html` symlink.
 dist/
+docs/**/.dmd/
 docs/**/.dist/
+docs/**/.singlefile/
 docs/**/_manifest.json
 docs/**/_docs.js
 docs/**/docmedown.iife.js
 docs/**/docmedown.web.js
 docs/**/docmedown-mermaid.js
 # Generated static-site pages and AI context artifacts (rebuilt on every build;
-# the prerendered home page stays tracked so fresh clones pass hosting tests).
+# the root symlink stays tracked so fresh clones pass hosting tests).
 docs/**/llms.txt
 docs/**/llms-full.txt
 docs/**/okf.json
+docs/**/llms.*.txt
+docs/**/llms-full.*.txt
+docs/**/okf.*.json
+# Static locale routes and engine-provided guides; Markdown sources are never ignored.
+docs/*/index.html
+docs/**/DMD*/**/index.html
 docs/**/SKILL.md
 docs/**/sitemap.xml
 docs/**/robots.txt
@@ -30,10 +39,9 @@ docs/examples/*/getting-started/
 docs/examples/*/guides/*/index.html
 docs/**/packing/
 !docs/index.html
-# The root marker is tracked so fresh clones pass the hosting contract tests;
-# nested markers are regenerated per documentation root on every build.
+# The `.dmd/` workspace is regenerated on every build; markers inside it are
+# never tracked either.
 docs/**/.nojekyll
-!docs/.nojekyll
 
 # Local configuration and credentials
 .env

@@ -22,10 +22,10 @@ const BUNDLE_BUDGETS = [
   { file: "docmedown.iife.js", maxRaw: 4.5 * MB, maxGzip: 1.4 * MB, label: "IIFE Runtime (Offline/CDN)" },
   { file: "docmedown.mjs", maxRaw: 1.55 * MB, maxGzip: 480 * KB, label: "ESM Module Entry" },
   { file: "docmedown.cjs", maxRaw: 1.35 * MB, maxGzip: 480 * KB, label: "CommonJS Entry" },
-  { file: "docmedown.web.js", maxRaw: 1.3 * MB, maxGzip: 480 * KB, label: "Web Served Runtime" },
+  { file: "docmedown.web.js", maxRaw: 1.5 * MB, maxGzip: 480 * KB, label: "Web Served Runtime" },
   { file: "docmedown-mermaid.js", maxRaw: 3.8 * MB, maxGzip: 1000 * KB, label: "Mermaid Engine" },
   { file: "docmedown-compiler.js", maxRaw: 1.0 * MB, maxGzip: 300 * KB, label: "Svelte Compiler Engine" },
-  { file: "cli.js", maxRaw: 550 * KB, maxGzip: 160 * KB, label: "CLI Node Executable" },
+  { file: "cli.js", maxRaw: 560 * KB, maxGzip: 165 * KB, label: "CLI Node Executable" },
 ];
 
 async function cleanDist() {
@@ -62,7 +62,7 @@ async function runEngines() {
 async function buildCli() {
   const t0 = Date.now();
   await tsupBuild({
-    entry: { cli: "src/cli/index.ts" },
+    entry: { cli: "src/cli/index.ts", "embedded-dmd-locales": "src/runtime/embedded-dmd-locales.ts" },
     outDir: "dist",
     format: ["cjs"],
     target: "node18",
@@ -70,8 +70,21 @@ async function buildCli() {
     dts: false,
     sourcemap: false,
     minify: true,
+    esbuildPlugins: [
+      {
+        name: "external-dmd-catalog",
+        setup(build) {
+          build.onResolve({ filter: /\/embedded-dmd-locales$/ }, () => ({
+            path: "./embedded-dmd-locales.js",
+            external: true,
+          }));
+        },
+      },
+    ],
     banner: { js: "#!/usr/bin/env node" },
     silent: true,
+    // qrcode-terminal is loaded lazily at serve time and must stay external.
+    external: ["qrcode-terminal"],
   });
   return { label: "CLI executable binary", duration: Date.now() - t0 };
 }

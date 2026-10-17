@@ -18,7 +18,8 @@ export class DocSearchIndex {
   }
 
   public addDoc(doc: DocFileItem) {
-    if (this.indexedDocs.has(doc.slug)) return;
+    if (doc.frontmatter?.hidden || doc.frontmatter?.noindex) return;
+    if (this.indexedDocs.has(doc.slug)) this.miniSearch.discard(doc.slug);
     this.indexedDocs.set(doc.slug, doc);
 
     const headingsText = (doc.headings || []).map((h) => h.text).join(" ");
@@ -40,6 +41,11 @@ export class DocSearchIndex {
     } catch {
       // ignore duplicates
     }
+  }
+
+  public clear() {
+    this.miniSearch.removeAll();
+    this.indexedDocs.clear();
   }
 
   public addDocs(docs: DocFileItem[]) {

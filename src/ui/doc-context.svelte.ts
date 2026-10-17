@@ -1,9 +1,22 @@
+import { embeddedDmdVariant, getEmbeddedDmdDoc } from "../runtime/embedded-dmd";
 import {
   findOriginalDocumentationHome,
   type HomeDocumentInput,
   type ResolvedHome,
   resolveDocumentationHome,
 } from "../runtime/home";
+import {
+  collectVariants,
+  defaultLocale,
+  documentVariant,
+  localeConfig,
+  localizedDocs,
+  localizedSlug,
+  localizeTree,
+  projectLocales,
+  resolveVariant,
+  translate,
+} from "../runtime/i18n";
 import { buildSidebarTree } from "../runtime/loader/auto-indexer";
 import { LocalDocLoader } from "../runtime/loader/local-loader";
 import { RemoteGithubLoader } from "../runtime/loader/remote-github";
@@ -39,6 +52,67 @@ function scheduleIdle(callback: () => void): void {
  * tree, search, and prev/next navigation.
  */
 export class DocStore {
+  locale = $state("en");
+  contentLocale = $state("en");
+  sourcePath = $state("");
+  private corpus: DocFileItem[] = [];
+  private sourceTree: SidebarTreeNode[] = [];
+  private knownFiles: string[] = [];
+  get viewConfig(): DocConfig | null {
+    return this.config ? localeConfig(this.config, this.locale) : null;
+  }
+
+  t(key: Parameters<typeof translate>[1]): string {
+    return translate(this.locale, key);
+  }
+
+  private get preferenceKey(): string {
+    return `dmd-locale:${this.basePath}:${this.config?.name ?? ""}`;
+  }
+
+  hasTranslation(locale: string): boolean {
+    if (embeddedDmdVariant(this.currentSlug, this.config))
+      return ["en", "pt-BR", "es", "fr", "de", "zh-CN"].includes(locale);
+    const id = documentVariant(this.currentSlug, this.config).docId;
+    return collectVariants(this.knownFiles, this.config).some((item) => item.docId === id && item.locale === locale);
+  }
+
+  selectLocale(locale: string) {
+    if (!projectLocales(this.config).some((item) => item.code === locale)) return;
+    this.locale = locale;
+    try {
+      localStorage.setItem(this.preferenceKey, locale);
+    } catch {}
+    this.refreshLocaleView();
+    const embedded = embeddedDmdVariant(this.currentSlug, this.config);
+    this.router?.navigate(
+      embedded
+        ? `${embedded.docId}.${locale.toLowerCase()}`
+        : localizedSlug(documentVariant(this.currentSlug, this.config).docId, locale, this.config),
+    );
+  }
+
+  private refreshLocaleView() {
+    if (!this.config) return;
+    if (this.router) {
+      this.router.locale = this.locale;
+      this.router.i18nConfig = this.config;
+    }
+    const docs = localizedDocs(this.corpus, this.locale, this.config);
+    this.allDocs = docs;
+    this.searchIndex.clear();
+    this.searchIndex.addDocs(docs);
+    const view = localeConfig(this.config, this.locale);
+    const tree = view.sidebar ? buildSidebarTree([], {}, view.sidebar) : this.sourceTree;
+    this.tree = localizeTree(tree, docs, this.locale, this.config);
+  }
+
+  private physicalSource(slug: string): string | undefined {
+    const embedded = embeddedDmdVariant(slug, this.config);
+    if (embedded) return embedded.path;
+    const variant = resolveVariant(this.knownFiles, slug, this.config);
+    return variant?.path;
+  }
   config = $state<DocConfig | null>(null);
   currentSlug = $state("");
   currentDoc = $state<ActiveDocData | null>(null);
@@ -50,6 +124,17 @@ export class DocStore {
   isSearchOpen = $state(false);
   isMobileSidebarOpen = $state(false);
   isEditorOpen = $state(false);
+  /**
+   * True only when the dev server explicitly grants editor access
+   * (`window.__DOCMEDOWN_DEV__.editor`). Built static sites and offline
+   * bundles never set this, so the editor stays unavailable there even when
+   * `editor.enabled` is true in docs.json.
+   */
+  editorAllowedByServer = $state(false);
+  /** Effective editor availability: config flag AND dev-server grant. */
+  get editorAvailable(): boolean {
+    return (this.config?.editor?.enabled ?? true) && this.editorAllowedByServer;
+  }
   serverMode = $state<"production" | "preview">("production");
   hasPreviewChanges = $state(false);
 
@@ -233,6 +318,10 @@ export class DocStore {
   );
 
   public navigate(slug: string, anchor: string = "") {
+    if (embeddedDmdVariant(slug, this.config)) {
+      const explicit = /\.[^./]+$/.test(slug);
+      if (!explicit) slug = `${slug}.${this.locale.toLowerCase()}`;
+    }
     this.router?.navigate(slug, anchor);
   }
 
@@ -250,6 +339,12 @@ export class DocStore {
     this.destroy();
 
     this.config = initialConfig;
+    this.locale = defaultLocale(initialConfig);
+    this.contentLocale = this.locale;
+    this.knownFiles = [];
+    this.corpus = [];
+    this.sourceTree = [];
+    this.searchIndex.clear();
     this.basePath = basePath;
     this.currentDoc = null;
     this.tree = [];
@@ -269,11 +364,33 @@ export class DocStore {
     this.remoteGitlab = initialConfig.source?.type === "gitlab" ? new RemoteGitlabLoader(initialConfig.source) : null;
 
     this.router = createRouter(initialConfig.rootDoc || "README.md");
+    this.router.i18nConfig = initialConfig;
     const initial = this.router.getCurrentRoute();
+    const initialVariant = documentVariant(initial.slug, initialConfig);
+    this.locale = initialVariant.locale;
+    if (
+      typeof window !== "undefined" &&
+      initialVariant.docId === documentVariant(initialConfig.rootDoc || "README.md", initialConfig).docId &&
+      !initialVariant.explicit &&
+      !window.location.hash &&
+      !window.location.pathname.match(/\.[a-z]{2}(?:-|\/|$)/i)
+    ) {
+      try {
+        const saved = localStorage.getItem(this.preferenceKey);
+        if (saved && projectLocales(initialConfig).some((item) => item.code === saved)) this.locale = saved;
+      } catch {}
+    }
+    initial.slug = localizedSlug(initialVariant.docId, this.locale, initialConfig);
+    this.router.locale = this.locale;
     this.currentSlug = initial.slug;
+    if (typeof window !== "undefined" && initial.slug !== this.router.getCurrentRoute().slug) {
+      this.router.navigate(initial.slug);
+    }
     this.unsubscribeRouter = this.router.subscribe((route) => {
       if (epoch !== this.epoch) return;
       const slugChanged = route.slug !== this.currentSlug;
+      this.locale = documentVariant(route.slug, this.config).locale;
+      this.refreshLocaleView();
       this.currentSlug = route.slug;
       this.isMobileSidebarOpen = false;
       if (slugChanged || !this.currentDoc) {
@@ -286,13 +403,14 @@ export class DocStore {
       }
     });
 
+    await this.initTree(epoch);
+    if (epoch !== this.epoch) return;
     if (!this.renderDocNow(initial.slug, epoch)) {
       await this.loadDoc(initial.slug, epoch);
     }
     if (typeof window !== "undefined") {
       (window as any).__DOCMEDOWN_STORE__ = this;
     }
-    void this.initTree(epoch);
     this.initHome(epoch);
     this.warmParseCache(epoch);
   }
@@ -308,12 +426,13 @@ export class DocStore {
         if (manifest.config) {
           this.config = { ...(this.config as DocConfig), ...manifest.config };
         }
-        if (manifest.tree) this.tree = manifest.tree;
+        if (manifest.tree) this.sourceTree = manifest.tree;
         if (manifest.docs) {
-          this.allDocs = manifest.docs;
-          this.searchIndex.addDocs(manifest.docs);
+          this.corpus = manifest.docs;
+          this.knownFiles = manifest.docs.map((doc) => doc.path);
           this.docPaths = manifest.docs.map((doc) => ({ slug: doc.slug, path: doc.path }));
         }
+        this.refreshLocaleView();
         return;
       }
 
@@ -321,7 +440,7 @@ export class DocStore {
       if (this.remoteGithub) {
         const files = await this.remoteGithub.discoverFiles();
         if (epoch !== this.epoch) return;
-        this.tree = buildSidebarTree(files, {}, sidebar);
+        this.initRemoteVariants(files, sidebar);
         this.docPaths = files.map((file) => ({ path: file }));
         return;
       }
@@ -330,7 +449,7 @@ export class DocStore {
       if (this.remoteGitlab) {
         const files = await this.remoteGitlab.discoverFiles();
         if (epoch !== this.epoch) return;
-        this.tree = buildSidebarTree(files, {}, sidebar);
+        this.initRemoteVariants(files, sidebar);
         this.docPaths = files.map((file) => ({ path: file }));
         return;
       }
@@ -345,6 +464,15 @@ export class DocStore {
     }
   }
 
+  private initRemoteVariants(files: string[], sidebar?: DocConfig["sidebar"]) {
+    this.knownFiles = files;
+    const variants = collectVariants(files, this.config);
+    this.corpus = variants.map((item) => ({ ...item, title: item.docId, frontmatter: {}, headings: [] }));
+    const logicalFiles = [...new Set(variants.map((item) => `${item.docId}.md`))];
+    this.sourceTree = buildSidebarTree(logicalFiles, {}, sidebar);
+    this.refreshLocaleView();
+  }
+
   /** Returns the parsed document for a slug, reusing a recent parse when the source is unchanged. */
   private parseMarkdownCached(rawContent: string, slug: string): ParsedMarkdown {
     const cached = this.parseCache.get(slug);
@@ -355,7 +483,7 @@ export class DocStore {
       return cached.parsed;
     }
 
-    const parsed = parseMarkdown(rawContent, slug);
+    const parsed = parseMarkdown(rawContent, slug, this.config ?? undefined);
     this.parseCache.set(slug, { source: rawContent, parsed });
     if (this.parseCache.size > this.parseCacheLimit) {
       const oldestSlug = this.parseCache.keys().next().value;
@@ -365,17 +493,28 @@ export class DocStore {
   }
 
   /** Applies a resolved document — the synchronous tail shared by both load paths. */
-  private renderDoc(rawContent: string, slug: string): void {
+  private renderDoc(rawContent: string, slug: string, resetScroll: boolean = true): void {
+    this.sourcePath = this.physicalSource(slug) ?? `${slug}.md`;
+    this.contentLocale =
+      embeddedDmdVariant(slug, this.config)?.locale ?? documentVariant(this.sourcePath, this.config).locale;
     const parsed = this.parseMarkdownCached(rawContent, slug);
     const title = parsed.frontmatter.title || parsed.headings[0]?.text || slug;
 
     this.currentDoc = { ...parsed, slug, title, rawContent };
+    const corpusDoc = this.corpus.find((item) => item.path === this.sourcePath);
+    if (corpusDoc)
+      Object.assign(corpusDoc, {
+        content: rawContent,
+        frontmatter: parsed.frontmatter,
+        headings: parsed.headings,
+        title,
+      });
     this.error = null;
     this.isLoading = false;
     this.isNavigating = false;
     this.searchIndex.addDoc({
       slug,
-      path: `${slug}.md`,
+      path: this.sourcePath,
       title,
       frontmatter: parsed.frontmatter,
       headings: parsed.headings,
@@ -391,7 +530,10 @@ export class DocStore {
         readingTimeMinutes: parsed.readingTimeMinutes,
       });
     }
-    this.resetScroll();
+    // Navigation resets scroll; in-place HMR/editor updates must preserve it.
+    if (resetScroll) {
+      this.resetScroll();
+    }
   }
 
   public toggleEditor(open?: boolean): void {
@@ -399,11 +541,23 @@ export class DocStore {
   }
 
   public updateDocContent(content: string, slug: string = this.currentSlug, resetScroll: boolean = false): void {
+    const physical = this.physicalSource(slug) ?? slug;
+    this.localLoader.setDocContent(physical, content);
+    this.remoteCache.delete(slug);
+    const entry = this.corpus.find(
+      (item) =>
+        item.path === physical || item.path.replace(/\.(md|mdx)$/i, "") === physical.replace(/\.(md|mdx)$/i, ""),
+    );
+    if (entry) entry.content = content;
+    for (const cached of this.remoteCache.keys()) {
+      if (this.physicalSource(cached) === entry?.path) this.remoteCache.delete(cached);
+    }
     this.localLoader.setDocContent(slug, content);
     this.parseCache.delete(slug);
+    this.refreshLocaleView();
 
     if (this.currentSlug === slug) {
-      const parsed = parseMarkdown(content, slug);
+      const parsed = parseMarkdown(content, slug, this.config ?? undefined);
       const title = parsed.frontmatter.title || parsed.headings[0]?.text || slug;
       this.currentDoc = { ...parsed, slug, title, rawContent: content };
       this.searchIndex.addDoc({
@@ -422,6 +576,27 @@ export class DocStore {
 
   public applyHmrUpdate(slug: string, content: string): void {
     this.updateDocContent(content, slug, false);
+    const physical = this.physicalSource(this.currentSlug);
+    if (physical && physical.replace(/\.(md|mdx)$/i, "") === slug.replace(/\.(md|mdx)$/i, "")) {
+      // Preserve scroll across the in-place re-render: the article DOM is
+      // rebuilt, which can collapse scrollHeight and yank the reader to top.
+      const scrollY = typeof window !== "undefined" ? window.scrollY : 0;
+      this.renderDoc(content, this.currentSlug, false);
+      if (typeof window !== "undefined") {
+        const raf =
+          typeof requestAnimationFrame === "function"
+            ? requestAnimationFrame
+            : (cb: FrameRequestCallback) => setTimeout(() => cb(Date.now()), 0);
+        raf(() => {
+          try {
+            const max = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+            window.scrollTo(0, Math.min(scrollY, max));
+          } catch {
+            // never break HMR on scroll restore
+          }
+        });
+      }
+    }
     if (typeof console !== "undefined") {
       console.log(`[DocMeDown HMR] In-place update applied for ${slug}`);
     }
@@ -430,6 +605,8 @@ export class DocStore {
   public updateConfig(newConfig: Partial<DocConfig>): void {
     if (this.config) {
       this.config = { ...this.config, ...newConfig };
+      this.parseCache.clear();
+      this.refreshLocaleView();
     }
   }
 
@@ -454,6 +631,12 @@ export class DocStore {
   private renderDocNow(slug: string, epoch: number): boolean {
     if (epoch !== this.epoch) return true;
 
+    const embedded = embeddedDmdVariant(slug, this.config);
+    if (embedded) {
+      this.renderDoc(getEmbeddedDmdDoc(embedded.docId, embedded.locale)!, slug);
+      return true;
+    }
+
     const cachedRemote = this.remoteCache.get(slug);
     if (cachedRemote !== undefined) {
       this.renderDoc(cachedRemote, slug);
@@ -462,7 +645,9 @@ export class DocStore {
 
     if (this.remoteGithub || this.remoteGitlab) return false;
 
-    const rawContent = this.localLoader.peekDocContent(slug);
+    const physical = this.physicalSource(slug);
+    if (this.knownFiles.length && !physical && !slug.startsWith("DMD")) return false;
+    const rawContent = this.localLoader.peekDocContent(physical ?? slug);
     if (rawContent === undefined) return false;
 
     this.renderDoc(rawContent, slug);
@@ -478,16 +663,25 @@ export class DocStore {
 
     try {
       let rawContent: string | null = null;
+      const physical = this.physicalSource(slug);
+      if (this.knownFiles.length && !physical && !slug.startsWith("DMD")) {
+        this.error = this.t("unavailable");
+        this.currentDoc = null;
+        this.isLoading = false;
+        this.isNavigating = false;
+        return;
+      }
+      const source = physical ?? slug;
 
       if (this.remoteGithub) {
-        rawContent = await this.remoteGithub.fetchDocContent(slug);
+        rawContent = await this.remoteGithub.fetchDocContent(source);
       } else if (this.remoteGitlab) {
-        rawContent = await this.remoteGitlab.fetchDocContent(slug);
+        rawContent = await this.remoteGitlab.fetchDocContent(source);
       } else {
-        rawContent = await this.localLoader.fetchDocContent(slug, this.basePath);
+        rawContent = await this.localLoader.fetchDocContent(source, this.basePath);
       }
 
-      if (epoch !== this.epoch) return;
+      if (epoch !== this.epoch || slug !== this.currentSlug) return;
 
       if (rawContent !== null) {
         this.remoteCache.set(slug, rawContent);

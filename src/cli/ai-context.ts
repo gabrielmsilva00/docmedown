@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { defaultLocale, localizedDocs, projectLocales } from "../runtime/i18n";
 import type { DocConfig, DocManifest } from "../runtime/types";
 
 /**
@@ -150,12 +151,22 @@ function generateOkfBundle(manifest: DocManifest, config: DocConfig): string {
 
 /** Writes all AI context files into the documentation root and returns their paths. */
 export function emitAiContextFiles(targetDir: string, manifest: DocManifest, config: DocConfig): string[] {
+  const original = { ...manifest, docs: localizedDocs(manifest.docs, defaultLocale(config), config) };
   const files: Array<[string, string]> = [
-    ["llms.txt", generateLlmsTxt(manifest, config)],
-    ["llms-full.txt", generateLlmsFullTxt(manifest, config)],
-    ["SKILL.md", generateSkillMd(manifest, config)],
-    ["okf.json", generateOkfBundle(manifest, config)],
+    ["llms.txt", generateLlmsTxt(original, config)],
+    ["llms-full.txt", generateLlmsFullTxt(original, config)],
+    ["SKILL.md", generateSkillMd(original, config)],
+    ["okf.json", generateOkfBundle(original, config)],
   ];
+  for (const locale of projectLocales(config)) {
+    if (locale.code === defaultLocale(config)) continue;
+    const localized = { ...manifest, docs: localizedDocs(manifest.docs, locale.code, config) };
+    files.push(
+      [`llms.${locale.code.toLowerCase()}.txt`, generateLlmsTxt(localized, config)],
+      [`llms-full.${locale.code.toLowerCase()}.txt`, generateLlmsFullTxt(localized, config)],
+      [`okf.${locale.code.toLowerCase()}.json`, generateOkfBundle(localized, config)],
+    );
+  }
   const written: string[] = [];
   for (const [name, content] of files) {
     const outPath = path.join(targetDir, name);

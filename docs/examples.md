@@ -9,7 +9,7 @@ tags: [examples, reference-sites, nested-docs, architecture, showcase]
 
 DocMeDown includes **three independent, fully working reference sites** directly inside this repository.
 
-Each example is a self-contained documentation site with its own `docs.json`, theme family, custom components, search index, and offline bundle. You can open and inspect each one right now:
+Each example is a self-contained documentation site with its own `.dmd/.config/docs.json`, theme family, custom components, search index, and offline bundle. You can open and inspect each one right now:
 
 ---
 
@@ -17,7 +17,7 @@ Each example is a self-contained documentation site with its own `docs.json`, th
 
 | Example Site | Theme Family | Primary Use Case | Key Highlights | Launch |
 | :--- | :--- | :--- | :--- | :--- |
-| **[Local Engineering Docs](#1-local-engineering-docs)** | `terminal` (dark) | Developer APIs & internal tools | Monospace styling, `.dmd/OrbitCounter.svelte`, nested guides | [Open Live Site](examples/local-docs/index.html) |
+| **[Local Engineering Docs](#1-local-engineering-docs)** | `terminal` (dark) | Developer APIs & internal tools | Monospace styling, `.dmd/.components/OrbitCounter.svelte`, nested guides | [Open Live Site](examples/local-docs/index.html) |
 | **[Dynamic Remote GitHub](#2-dynamic-remote-github-portal)** | `blueprint` | Open-source libraries & repos | Zero local markdown files, dynamic API tree crawl, live sync | [Open Live Site](examples/remote-github/index.html) |
 | **[Offline Air-Gapped Manual](#3-standalone-air-gapped-manual)** | `editorial` | Hardware manuals & field guides | Single-file HTML distributable, zero network requests, book layout | [Open Live Site](examples/single-file-offline/index.html) |
 
@@ -31,18 +31,18 @@ This reference site illustrates an operational, developer-centric documentation 
 
 ```
 examples/local-docs/
-├── docs.json                 # Terminal theme with compact density
+├── .dmd/.config/docs.json    # Terminal theme with compact density
 ├── README.md                 # System overview and quick reference
 ├── getting-started.md        # CLI & environment setup
 ├── guides/
 │   ├── deployment.md         # Deployment runbooks
 │   └── monitoring.md         # Observability & alert thresholds
-└── .dmd/
+└── .dmd/.components/
     └── OrbitCounter.svelte   # Interactive particle orbit widget
 ```
 
-### Configuration (`examples/local-docs/docs.json`)
-```json title="examples/local-docs/docs.json"
+### Configuration (`examples/local-docs/.dmd/.config/docs.json`)
+```json title="examples/local-docs/.dmd/.config/docs.json"
 {
   "$schema": "https://raw.githubusercontent.com/gabrielmsilva00/docmedown/main/schemas/docs.schema.json",
   "name": "Local Reference Docs",

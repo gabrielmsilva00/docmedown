@@ -5,8 +5,10 @@ import chalk from "chalk";
 import chokidar from "chokidar";
 import mime from "mime-types";
 import { WebSocket, WebSocketServer } from "ws";
+import { getEmbeddedDmdDoc } from "../../runtime/embedded-dmd";
 import { renderSplashHead, renderSplashMarkup } from "../../runtime/splash";
 import { shouldWatchDocumentationSource } from "../commands/build";
+import { resolveSiteDir } from "./docs-layout";
 import { detectRootMarkdownFiles, linkRootMarkdownFiles } from "./link-root";
 
 export interface DevServerOptions {
@@ -93,7 +95,8 @@ export function startDevServer(options: DevServerOptions): Promise<DevServerHand
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
   window.__DOCMEDOWN_DEV__ = {
     mode: ${JSON.stringify(serverMode)},
-    active: true
+    active: true,
+    editor: true
   };
 
   let ws = null;
@@ -318,6 +321,13 @@ export function startDevServer(options: DevServerOptions): Promise<DevServerHand
             res.writeHead(200, { "Content-Type": "text/plain; charset=utf-8" });
             res.end(raw);
           } else {
+            const docKey = reqSlug || reqFile || "";
+            const embedded = getEmbeddedDmdDoc(docKey);
+            if (embedded) {
+              res.writeHead(200, { "Content-Type": "text/plain; charset=utf-8" });
+              res.end(embedded);
+              return;
+            }
             res.writeHead(404, { "Content-Type": "application/json" });
             res.end(JSON.stringify({ error: "Document source not found" }));
           }
@@ -339,7 +349,21 @@ export function startDevServer(options: DevServerOptions): Promise<DevServerHand
 
       const isPreviewRequest = serverMode === "preview" || parsedUrl.searchParams.get("mode") === "preview";
 
+      // The built site lives in the hidden `.dmd/` workspace; the docs root
+      // keeps only sources + the `index.html` symlink (→ serveable SEO site
+      // entrypoint). Serving follows the symlink transparently, with an
+      // explicit workspace fallback so the dev server never 404s on
+      // generated assets.
+      const siteDir = resolveSiteDir(rootDir);
       let filePath = path.join(rootDir, reqPath);
+      const workspaceCandidate = path.join(siteDir, reqPath);
+      if (
+        (!fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) &&
+        fs.existsSync(workspaceCandidate) &&
+        fs.statSync(workspaceCandidate).isFile()
+      ) {
+        filePath = workspaceCandidate;
+      }
 
       // Check preview folder first if preview mode is active
       if (isPreviewRequest) {
@@ -352,10 +376,23 @@ export function startDevServer(options: DevServerOptions): Promise<DevServerHand
       if (!fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
         const ext = path.extname(reqPath);
         if (ext) {
-          // Asset request (js/css/json/...) — resolve from the docs root so
-          // /showcase/_docs.js still finds docs/_docs.js.
-          filePath = path.join(rootDir, path.basename(reqPath));
+          // Asset request (js/css/json/...) — resolve from the hidden site
+          // workspace (with docs-root fallback) so /guides/_docs.js style
+          // requests still resolve during local development.
+          const workspaceAsset = path.join(siteDir, path.basename(reqPath));
+          const rootAsset = path.join(rootDir, path.basename(reqPath));
+          if (fs.existsSync(workspaceAsset)) {
+            filePath = workspaceAsset;
+          } else {
+            filePath = rootAsset;
+          }
           if (!fs.existsSync(filePath)) {
+            const embedded = getEmbeddedDmdDoc(reqPath);
+            if (embedded) {
+              res.writeHead(200, { "Content-Type": "text/markdown; charset=utf-8" });
+              res.end(embedded);
+              return;
+            }
             res.writeHead(404, { "Content-Type": "text/plain" });
             res.end("404 Not Found");
             return;
@@ -456,6 +493,9 @@ export function startDevServer(options: DevServerOptions): Promise<DevServerHand
         "**/.git/**",
         "**/dist/**",
         "**/.dist/**",
+        "**/.singlefile/**",
+        "**/.dmd/**",
+        "**/dmd/**",
         "**/.nojekyll",
         "**/_manifest.json",
         "**/_docs.js",
@@ -512,8 +552,8 @@ export function startDevServer(options: DevServerOptions): Promise<DevServerHand
           }
         }
 
-        // Targeted HMR for configuration files
-        if ((rel === "docs.json" || rel === "dmd.json") && fs.existsSync(changedPath)) {
+        // Targeted HMR for configuration files (legacy root + `.dmd/.config/`)
+        if (/(^|\/)(docs|dmd)\.json$/i.test(rel) && fs.existsSync(changedPath)) {
           try {
             const rawConfig = fs.readFileSync(changedPath, "utf-8");
             const parsedConfig = JSON.parse(rawConfig);

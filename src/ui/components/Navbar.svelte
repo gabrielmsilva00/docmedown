@@ -3,6 +3,7 @@
   import { doc } from "../doc-context.svelte";
   import { theme } from "../theme.svelte";
   import AppearanceMenu from "./AppearanceMenu.svelte";
+  import LanguageMenu from "./LanguageMenu.svelte";
   import BreadcrumbItem from "./BreadcrumbItem.svelte";
   import OfflineDownloadButton from "./OfflineDownloadButton.svelte";
 
@@ -10,7 +11,7 @@
     doc.home ? (doc.home.kind === "href" ? (doc.home.href ?? "#/") : `#/${doc.home.slug}`) : "#/README",
   );
   const homeTitle = $derived(doc.home?.via === "ancestor" ? "Original documentation home" : "Documentation home");
-  const config = $derived(doc.config);
+  const config = $derived(doc.viewConfig);
   const isScrolled = $derived(doc.isScrolled);
 
   const breadcrumbs = $derived.by(() => {
@@ -43,7 +44,7 @@
   const searchShortcut = $derived(isMac ? "⌘K" : "Ctrl K");
 
   const resolvedPlaceholder = $derived.by(() => {
-    const raw = config?.search?.placeholder || "Search docs...";
+    const raw = config?.i18n ? config.i18n.locales.find((item) => item.code === doc.locale)?.overrides?.search?.placeholder || doc.t("search") : config?.search?.placeholder || "Search docs...";
     if (isMac) {
       return raw.replace(/Ctrl\+?K/gi, "⌘K");
     }
@@ -340,20 +341,22 @@
               </button>
             {/if}
           {/if}
-          <button
-            type="button"
-            class="dmd-meta-edit-btn"
-            tabindex={isScrolled ? 0 : -1}
-            title="Edit this document (Ctrl+E / ⌘E)"
-            aria-label="Edit document in 2-way editor"
-            onclick={() => (doc.isEditorOpen = true)}
-          >
+          {#if doc.editorAvailable}
+            <button
+              type="button"
+              class="dmd-meta-edit-btn"
+              tabindex={isScrolled ? 0 : -1}
+              title="Edit this document (Ctrl+E / ⌘E)"
+              aria-label="Edit document in 2-way editor"
+              onclick={() => (doc.isEditorOpen = true)}
+            >
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M12 20h9" />
               <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
             </svg>
             <span>Edit</span>
-          </button>
+            </button>
+          {/if}
         </div>
       {/if}
     </div>
@@ -414,6 +417,7 @@
 
     <OfflineDownloadButton />
     <AppearanceMenu />
+    <LanguageMenu />
 
     <!-- Dark / Light Mode Switch -->
     <button

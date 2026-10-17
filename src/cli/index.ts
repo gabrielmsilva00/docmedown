@@ -26,6 +26,8 @@ program
   .option("-p, --port <number>", "Port for local dev server", "3000")
   .option("--no-open", "Do not automatically open the browser")
   .option("-y, --yes", "Skip confirmation prompt in quickstart mode")
+  .option("--default-locale <code>", "Original document language (default: en)")
+  .option("--locales <codes>", "Additional languages, comma-separated")
   .action(async (dir, options) => {
     const targetDir = path.resolve(process.cwd(), dir);
     // If target directory or config or index doesn't exist, run quickstart
@@ -35,6 +37,8 @@ program
 
     if (!hasIndex && !hasDocs) {
       await quickstartCommand(dir, {
+        defaultLocale: options.defaultLocale,
+        locales: options.locales,
         start: options.open,
         yes: options.yes,
         port: Number(options.port) || 3000,
@@ -50,10 +54,14 @@ program
   .description("Launch the interactive setup wizard to scaffold a new DocMeDown documentation site")
   .option("-y, --yes", "Skip interactive prompts and confirmation, using defaults")
   .option("-n, --name <name>", "Project name for documentation")
+  .option("--default-locale <code>", "Original document language (default: en)")
+  .option("--locales <codes>", "Additional languages, comma-separated")
   .option("-t, --theme <family>", "Documentation theme family (atlas, blueprint, terminal, editorial)")
   .option("--no-start", "Do not start the local preview server after initialization")
   .action(async (dir, options) => {
     await initCommand(dir, {
+      defaultLocale: options.defaultLocale,
+      locales: options.locales,
       projectName: options.name,
       themeFamily: options.theme,
       start: options.start,
@@ -68,10 +76,11 @@ program
   .alias("dev")
   .description("Start local live-reload development server (serves both root *.md and ./docs/ documents seamlessly)")
   .option("-p, --port <number>", "Port to listen on", "3000")
-  .option("-H, --host <string>", "Host to bind server to", "localhost")
+  .option("-H, --host <string>", "Host to bind server to (default: 0.0.0.0 for LAN access)", "0.0.0.0")
   .option("--preview", "Serve .preview staging directory with fallback to production source")
   .option("--mode <mode>", "Serving mode: preview or production", "production")
   .option("--no-open", "Do not automatically open browser")
+  .option("--no-qr", "Do not print the network QR code")
   .action(async (dir = "./docs", options) => {
     await serveCommand(dir, options);
   });
@@ -85,7 +94,7 @@ program
   .option("-w, --watch", "Watch source files and rebuild both outputs after changes")
   .option("--no-single-file", "Skip the default standalone offline index.html bundle")
   .option("--no-static", "Skip static page prerendering and SEO/AI context files")
-  .option("-o, --out-dir <path>", "Offline bundle output directory (default: <dir>/.dist)")
+  .option("-o, --out-dir <path>", "Offline bundle output directory (default: <dir>/.dmd/.singlefile)")
   .action(async (dir = "./docs", options) => {
     if (options.watch) {
       await watchBuildCommand(dir, options);

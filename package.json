@@ -1,6 +1,6 @@
 {
   "name": "docmedown",
-  "version": "0.9.6",
+  "version": "0.9.7-c",
   "description": "The simplest MarkDown documenter yet. CLI, web script, and static-site compiler with AI-native distribution.",
   "author": "Gabriel M. P. da Silva",
   "license": "Apache-2.0",
@@ -79,12 +79,12 @@
     "test:mcp:client": "node ./scripts/test-mcp-client.mjs",
     "test:artifacts": "npx tsx --test tests/offline-artifact.test.ts",
     "test:bundle": "npx tsx --test tests/bundle-size.test.ts",
-    "test:release": "npm run typecheck && npm run lint && npm run test && npm run build && npm run test:mcp && npm run build:docs && npm run test:artifacts && npm run test:bundle && npm pack --dry-run",
+    "test:release": "npm run typecheck && npm run lint && npm run test && npm run build && npm run test:mcp && npm run build:docs && npm run test:artifacts && npm run test:bundle && npx tsx --test tests/package-smoke.test.ts && npm pack --dry-run",
     "doctor": "node ./bin/docmedown.js doctor ./docs",
     "doctor:project": "node ./scripts/doctor-project.mjs",
     "validate": "node ./bin/docmedown.js validate ./docs",
-    "config:docs": "node ./bin/docmedown.js config ./docs/docs.json",
-    "clean": "node -e \"fs.rmSync('dist', { recursive: true, force: true }); fs.rmSync('docs/.dist', { recursive: true, force: true })\"",
+    "config:docs": "node ./bin/docmedown.js config ./docs/.dmd/.config/docs.json",
+    "clean": "node -e \"fs.rmSync('dist', { recursive: true, force: true }); fs.rmSync('docs/.dmd', { recursive: true, force: true }); fs.rmSync('docs/.dist', { recursive: true, force: true })\"",
     "deploy": "node ./scripts/deploy.mjs",
     "deploy:dry-run": "npm run deploy -- --dry-run",
     "prepublishOnly": "npm run test:release"
@@ -104,6 +104,7 @@
     "mime-types": "^2.1.35",
     "open": "^10.1.0",
     "prompts": "^2.4.2",
+    "qrcode-terminal": "^0.12.0",
     "svelte": "^5.57.0",
     "ws": "^8.18.0",
     "zod": "^4.4.3"

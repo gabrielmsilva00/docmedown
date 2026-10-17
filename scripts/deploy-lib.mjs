@@ -4,6 +4,10 @@ export function incrementPatchVersion(version) {
   return `${match[1]}.${match[2]}.${Number(match[3]) + 1}`;
 }
 
+export function releaseDistTag(version) {
+  return version.includes("-") ? "alpha" : "latest";
+}
+
 export function promoteChangelog(content, version, date) {
   if (new RegExp(`^## ${version.replace(/\./g, "\\.")}\\b`, "m").test(content)) return content;
 

@@ -2,6 +2,7 @@
   import { doc } from "../doc-context.svelte";
   import BreadcrumbItem from "./BreadcrumbItem.svelte";
   import MarkdownBody from "./MarkdownBody.svelte";
+  import { localeLabel } from "../../runtime/i18n";
 
   let progressBarEl = $state<HTMLElement | null>(null);
 
@@ -53,7 +54,7 @@
 
   const breadcrumbs = $derived(doc.currentSlug.split("/").filter(Boolean));
   const currentDoc = $derived(doc.currentDoc);
-  const config = $derived(doc.config);
+  const config = $derived(doc.viewConfig);
 
   const editUrl = $derived.by(() => {
     const slug = doc.currentSlug;
@@ -61,7 +62,7 @@
     if (!url && config?.source?.type === "github" && config.source.repo) {
       const branch = config.source.branch || "main";
       const docsDir = config.source.docsDir ? `${config.source.docsDir.replace(/^\/+|\/+$/g, "")}/` : "";
-      url = `https://github.com/${config.source.repo}/edit/${branch}/${docsDir}${slug}.md`;
+      url = `https://github.com/${config.source.repo}/edit/${branch}/${docsDir}${doc.sourcePath || `${slug}.md`}`;
     }
     return url;
   });
@@ -69,7 +70,7 @@
 
 {#if doc.isLoading}
   <main class="dmd-main-content" id="dmd-main-content" tabindex="-1">
-    <div class="dmd-loading-skeleton" aria-label="Loading document" aria-busy="true">
+    <div class="dmd-loading-skeleton" aria-label={doc.t("loading")} aria-busy="true">
       <!-- Breadcrumb shimmer -->
       <div class="dmd-skeleton-shimmer dmd-skeleton-header"></div>
       <!-- Article title shimmer -->
@@ -109,6 +110,11 @@
       <button type="button" class="dmd-btn-primary" onclick={() => doc.navigate("README")}>
         Return to Overview
       </button>
+      {#if doc.error === doc.t("unavailable")}
+        <button type="button" class="dmd-btn-primary" onclick={() => doc.selectLocale(config?.i18n?.defaultLocale ?? "en")}>
+          {doc.t("original")}
+        </button>
+      {/if}
     </div>
   </main>
 {:else}
@@ -163,24 +169,29 @@
             </button>
           {/each}
         {/if}
-        <button
-          type="button"
-          class="dmd-meta-edit-btn"
-          title="Edit this document (Ctrl+E / ⌘E)"
-          aria-label="Edit document in 2-way editor"
-          onclick={() => (doc.isEditorOpen = true)}
-        >
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M12 20h9" />
-            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
-          </svg>
-          <span>Edit</span>
-        </button>
+        {#if doc.editorAvailable}
+          <button
+            type="button"
+            class="dmd-meta-edit-btn"
+            title="Edit this document (Ctrl+E / ⌘E)"
+            aria-label="Edit document in 2-way editor"
+            onclick={() => (doc.isEditorOpen = true)}
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M12 20h9" />
+              <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+            </svg>
+            <span>Edit</span>
+          </button>
+        {/if}
       </div>
     </div>
 
     <!-- Markdown Rendered Content -->
-    <article class="dmd-article">
+    {#if doc.contentLocale !== doc.locale}
+      <p role="status" lang={doc.locale}>{doc.t("unavailable")}. {doc.t("fallback")} {localeLabel(doc.contentLocale, config)}.</p>
+    {/if}
+    <article class="dmd-article" lang={doc.contentLocale}>
       <!-- A route change replaces generated Markdown placeholders. The keyed
            block remounts the body so custom elements mount against that DOM. -->
       {#key currentDoc.slug}
@@ -240,7 +251,14 @@
       {#if config?.footer?.showBuiltWith !== false}
         <p class="dmd-footer-builtwith">
           Documented with
-          <a href="https://github.com" target="_blank" rel="noreferrer">DocMeDown</a>
+          <a
+            href={doc.router ? doc.router.resolveLink("DMD", doc.currentSlug) : "#/DMD"}
+            onclick={(e) => {
+              if (e.metaKey || e.ctrlKey || e.shiftKey) return;
+              e.preventDefault();
+              doc.navigate("DMD");
+            }}
+          >DocMeDown</a>
           ⚡
         </p>
       {/if}

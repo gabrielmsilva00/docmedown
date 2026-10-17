@@ -68,15 +68,17 @@ test("Scan templates directory and generate manifest", () => {
   assert.equal(manifest.config.name, "DocMeDown");
 });
 
-test("Hidden directories are excluded and offline output defaults to .dist", () => {
+test("Hidden directories are excluded and offline output defaults to .dmd/.singlefile", () => {
   const docsDir = path.resolve(__dirname, "../docs");
   const files = scanDirectory(docsDir);
   const output = getBuildOutputPaths(docsDir);
 
+  assert.ok(!files.some((file) => file.startsWith(".dmd/")));
   assert.ok(!files.some((file) => file.startsWith(".dist/")));
-  assert.equal(DEFAULT_OFFLINE_OUTPUT_DIRECTORY, ".dist");
-  assert.equal(output.onlineDir, docsDir);
-  assert.equal(output.offlineDir, path.join(docsDir, ".dist"));
+  assert.equal(DEFAULT_OFFLINE_OUTPUT_DIRECTORY, ".singlefile");
+  assert.equal(output.onlineDir, path.join(docsDir, ".dmd"));
+  assert.equal(output.siteDir, path.join(docsDir, ".dmd"));
+  assert.equal(output.offlineDir, path.join(docsDir, ".dmd", ".singlefile"));
 });
 
 test("Build and serve watchers rebuild source files but ignore generated outputs", () => {
@@ -84,11 +86,18 @@ test("Build and serve watchers rebuild source files but ignore generated outputs
 
   assert.equal(shouldWatchDocumentationSource(docsDir, path.join(docsDir, "README.md")), true);
   assert.equal(shouldWatchDocumentationSource(docsDir, path.join(docsDir, "guides", "offline-mode.md")), true);
+  assert.equal(shouldWatchDocumentationSource(docsDir, path.join(docsDir, ".dmd", ".singlefile", "index.html")), false);
   assert.equal(shouldWatchDocumentationSource(docsDir, path.join(docsDir, ".dist", "index.html")), false);
+  assert.equal(shouldWatchDocumentationSource(docsDir, path.join(docsDir, "index.html")), false);
   assert.equal(shouldWatchDocumentationSource(docsDir, path.join(docsDir, "_manifest.json")), false);
   assert.equal(shouldWatchDocumentationSource(docsDir, path.join(docsDir, "docmedown.iife.js")), false);
+  assert.equal(
+    shouldWatchDocumentationSource(docsDir, path.join(docsDir, ".dmd", ".components", "Widget.svelte")),
+    true,
+  );
   assert.equal(shouldWatchDocumentationSource(docsDir, path.join(docsDir, ".dmd", "components.js")), true);
-  assert.equal(shouldWatchDocumentationSource(docsDir, path.join(docsDir, ".dmd", "components.jsx")), false);
+  assert.equal(shouldWatchDocumentationSource(docsDir, path.join(docsDir, ".dmd", "components.jsx")), true);
+  assert.equal(shouldWatchDocumentationSource(docsDir, path.join(docsDir, ".dmd", ".config", "docs.json")), true);
 });
 
 test("Nested documentation roots are isolated from the parent manifest", () => {

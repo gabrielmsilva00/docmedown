@@ -109,10 +109,11 @@ export class ComponentRegistry {
   }
 
   /**
-   * Loads user components from the `.dmd` directory (or the embedded
+   * Loads user components from `.dmd/.components` (or the embedded
    * `componentsSource` blob produced by the build). Components may be
    * AOT-compiled `.svelte` custom elements, runtime-compiled `.svelte` files,
-   * or legacy custom element classes.
+   * or legacy custom element classes. The deprecated bare `.dmd/` dir is
+   * tried as a fallback.
    */
   public async loadDmdDirectory(basePath: string = ""): Promise<void> {
     if (typeof window === "undefined") return;
@@ -151,7 +152,22 @@ export class ComponentRegistry {
       }
     }
 
-    const prefix = basePath ? `${basePath.replace(/\/$/, "")}/.dmd` : ".dmd";
+    const cleanBase = basePath ? basePath.replace(/\/$/, "") : "";
+    const prefixes = cleanBase ? [`${cleanBase}/.dmd/.components`, `${cleanBase}/.dmd`] : [".dmd/.components", ".dmd"];
+
+    async function fetchFirst(paths: string[]): Promise<{ res: Response; url: string } | null> {
+      for (const url of paths) {
+        try {
+          const res = await fetch(url);
+          if (res.ok) return { res, url };
+        } catch {
+          // try next prefix
+        }
+      }
+      return null;
+    }
+
+    const withPrefixes = (suffix: string): string[] => prefixes.map((p) => `${p}${suffix}`);
 
     // In dynamic/serve mode, load raw components (.svelte, .tsx, .jsx, .ts) listed in the manifest
     const manifestComps: string[] = runtimeWindow.__DOCMEDOWN_DATA__?.manifest?.customComponents || [];
@@ -162,9 +178,9 @@ export class ComponentRegistry {
 
         // 1. Try Svelte (.svelte)
         try {
-          const res = await fetch(`${prefix}/${compName}.svelte`);
-          if (res.ok) {
-            const tag = await loadAndRegisterSvelteComponent(`${prefix}/${compName}.svelte`, compName);
+          const hit = await fetchFirst(withPrefixes(`/${compName}.svelte`));
+          if (hit) {
+            const tag = await loadAndRegisterSvelteComponent(hit.url, compName);
             this.register(compName, tag);
             loaded = true;
           }
@@ -176,9 +192,9 @@ export class ComponentRegistry {
         if (!loaded) {
           for (const ext of [".tsx", ".jsx"]) {
             try {
-              const res = await fetch(`${prefix}/${compName}${ext}`);
-              if (res.ok) {
-                const source = await res.text();
+              const hit = await fetchFirst(withPrefixes(`/${compName}${ext}`));
+              if (hit) {
+                const source = await hit.res.text();
                 const { compileTsx } = await import("../runtime/ts-compiler");
                 const compiledJs = await compileTsx(source, { filename: `${compName}${ext}` });
                 const blob = new Blob([compiledJs], { type: "text/javascript" });
@@ -202,43 +218,44 @@ export class ComponentRegistry {
         // 3. Try Web Component / Lit (.ts, .js)
         if (!loaded) {
           for (const ext of [".ts", ".js"]) {
-            try {
-              const mod = await import(/* @vite-ignore */ `${prefix}/${compName}${ext}`);
-              if (mod) {
-                const ElementClass = mod.default || mod[compName] || mod;
-                if (typeof ElementClass === "function") {
-                  this.registerWebComponent(compName, ElementClass);
-                  loaded = true;
-                  break;
+            for (const candUrl of withPrefixes(`/${compName}${ext}`)) {
+              try {
+                const mod = await import(/* @vite-ignore */ candUrl);
+                if (mod) {
+                  const ElementClass = mod.default || mod[compName] || mod;
+                  if (typeof ElementClass === "function") {
+                    this.registerWebComponent(compName, ElementClass);
+                    loaded = true;
+                    break;
+                  }
                 }
+              } catch {
+                // not present, continue
               }
-            } catch {
-              // not present, continue
             }
+            if (loaded) break;
           }
         }
       }
     }
 
-    // Fallback for .dmd/setup.js, .dmd/languages.js, .dmd/components.js, or .dmd/index.js
-    for (const url of [
-      `${prefix}/setup.js`,
-      `${prefix}/languages.js`,
-      `${prefix}/components.js`,
-      `${prefix}/index.js`,
-    ]) {
-      try {
-        const mod = await import(/* @vite-ignore */ url);
-        if (mod) {
-          const comps = mod.default || mod;
-          if (comps && typeof comps === "object" && Object.keys(comps).length > 0) {
-            this.registerMultiple(comps as Record<string, DmdElementClass | string>);
-            console.log("[DocMeDown] Loaded custom .dmd components:", Object.keys(comps));
-            return;
+    // Fallback for setup/languages/components/index across both prefixes.
+    for (const base of prefixes) {
+      for (const file of ["setup.js", "languages.js", "components.js", "index.js"]) {
+        const url = `${base}/${file}`;
+        try {
+          const mod = await import(/* @vite-ignore */ url);
+          if (mod) {
+            const comps = mod.default || mod;
+            if (comps && typeof comps === "object" && Object.keys(comps).length > 0) {
+              this.registerMultiple(comps as Record<string, DmdElementClass | string>);
+              console.log("[DocMeDown] Loaded custom .dmd components:", Object.keys(comps));
+              return;
+            }
           }
+        } catch {
+          // file not present, continue
         }
-      } catch {
-        // file not present, continue
       }
     }
   }

@@ -183,6 +183,14 @@ export async function initDocMeDown(options: DocMeDownInitOptions = {}): Promise
   // custom elements upgrade together with the builtins and custom grammars
   // are active before initial document parsing.
   await ComponentRegistry.getInstance().loadDmdDirectory(options.basePath || "");
+  // The editor is only granted by the local dev server
+  // (`window.__DOCMEDOWN_DEV__.editor`). Static hosts and offline bundles
+  // never set this flag, so the editor stays locked there by default.
+  try {
+    doc.editorAllowedByServer = Boolean((window as any)?.__DOCMEDOWN_DEV__?.editor);
+  } catch {
+    doc.editorAllowedByServer = false;
+  }
   await doc.init(finalConfig, options.basePath || "");
 
   mountedInstances.get(container)?.destroy();

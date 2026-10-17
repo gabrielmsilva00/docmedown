@@ -3,20 +3,22 @@ import path from "node:path";
 import { buildSync } from "esbuild";
 import { registerLanguage } from "../../runtime/markdown/highlighter";
 
+import { resolveExistingComponentsDir } from "./docs-layout";
+
 /**
- * Loads custom setup files (e.g. `.dmd/setup.js`, `.dmd/languages.js`) at build
- * time so custom Prism grammars and runtime hooks are active when prerendering
- * static HTML pages.
+ * Loads custom setup files (e.g. `.dmd/.components/setup.js`) at build time
+ * so custom Prism grammars and runtime hooks are active when prerendering
+ * static HTML pages. The deprecated bare `.dmd/` dir is honored as fallback.
  */
 export function loadBuildTimeCustomSetup(targetPath: string): void {
   let dmdDir: string | undefined;
   if (fs.existsSync(targetPath)) {
     const stat = fs.statSync(targetPath);
     if (stat.isDirectory()) {
-      if (fs.existsSync(path.join(targetPath, ".dmd"))) {
-        dmdDir = path.join(targetPath, ".dmd");
-      } else {
+      if (path.basename(targetPath) === ".dmd" || targetPath.endsWith(".components")) {
         dmdDir = targetPath;
+      } else {
+        dmdDir = resolveExistingComponentsDir(targetPath);
       }
     } else {
       dmdDir = path.dirname(targetPath);

@@ -53,6 +53,7 @@ export default defineConfig({
           format: "es",
           entryFileNames: "docmedown.mjs",
           manualChunks: (id: string) => {
+            if (id.includes("/runtime/embedded-dmd-locales")) return "dmd-locales";
             if (id.includes("node_modules/mermaid")) return "mermaid";
             if (id.includes("node_modules/prismjs")) return "prism";
             return undefined;
@@ -63,6 +64,7 @@ export default defineConfig({
           format: "cjs",
           entryFileNames: "docmedown.cjs",
           manualChunks: (id: string) => {
+            if (id.includes("/runtime/embedded-dmd-locales")) return "dmd-locales";
             if (id.includes("node_modules/mermaid")) return "mermaid";
             if (id.includes("node_modules/prismjs")) return "prism";
             return undefined;

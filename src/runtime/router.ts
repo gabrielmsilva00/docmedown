@@ -1,4 +1,6 @@
+import { documentVariant, localizedSlug } from "./i18n";
 import { prefersReducedMotion } from "./motion";
+import type { DocConfig } from "./types";
 
 export interface RouteInfo {
   slug: string;
@@ -78,18 +80,20 @@ function deriveUrlBase(pathname: string, slug: string): string {
 }
 
 export class HashRouter {
+  public i18nConfig?: DocConfig;
+  public locale?: string;
   protected listeners: Set<(route: RouteInfo) => void> = new Set();
   protected defaultDoc: string;
 
   constructor(defaultDoc: string = "README.md") {
     this.defaultDoc = defaultDoc;
-    if (typeof window !== "undefined") {
+    if (typeof window !== "undefined" && typeof window.addEventListener === "function") {
       window.addEventListener("hashchange", this.handleHashChange);
     }
   }
 
   public destroy() {
-    if (typeof window !== "undefined") {
+    if (typeof window !== "undefined" && typeof window.removeEventListener === "function") {
       window.removeEventListener("hashchange", this.handleHashChange);
     }
     this.listeners.clear();
@@ -135,6 +139,7 @@ export class HashRouter {
   }
 
   public normalizeDocSlug(pathOrSlug: string): string {
+    if (this.i18nConfig) return documentVariant(pathOrSlug, this.i18nConfig).slug;
     const normalized = pathOrSlug.replace(/^\.?\//, "").replace(/\.(md|mdx|html)$/i, "");
     if (!normalized || normalized === "index" || normalized === "README") {
       return "README";
@@ -228,7 +233,11 @@ export class HashRouter {
     }
 
     const resolvedPath = targetParts.join("/");
-    const targetSlug = this.normalizeDocSlug(resolvedPath);
+    let targetSlug = this.normalizeDocSlug(resolvedPath);
+    if (this.i18nConfig && this.locale) {
+      const variant = documentVariant(resolvedPath, this.i18nConfig);
+      if (!variant.explicit) targetSlug = localizedSlug(variant.docId, this.locale, this.i18nConfig);
+    }
     return `#/${targetSlug}${anchor}`;
   }
 }

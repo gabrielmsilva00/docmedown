@@ -2,7 +2,11 @@ import fs from "node:fs";
 import path from "node:path";
 import chalk from "chalk";
 import matter from "gray-matter";
+import { normalizeConfig } from "../../runtime/config";
 import { docConfigSchema } from "../../runtime/config-schema";
+import { getEmbeddedDmdDoc } from "../../runtime/embedded-dmd";
+import { collectVariants, documentVariant } from "../../runtime/i18n";
+import { resolveExistingConfigPath } from "../utils/docs-layout";
 import { extractHeadings, scanDirectory } from "../utils/scanner";
 
 interface ValidationError {
@@ -165,15 +169,12 @@ export async function validateCommand(
     return { valid: false, errors, warnings, stats: { docs: 0, links: 0, headings: 0 } };
   }
 
-  // 1. Validate docs.json / dmd.json schema
-  const docsJsonPath = path.join(targetDir, "docs.json");
-  const dmdJsonPath = path.join(targetDir, "dmd.json");
+  // 1. Validate docs.json / dmd.json schema (new `.dmd/.config/` default first).
+  const foundConfig = resolveExistingConfigPath(targetDir);
   let configPath: string | null = null;
 
-  if (fs.existsSync(docsJsonPath)) {
-    configPath = docsJsonPath;
-  } else if (fs.existsSync(dmdJsonPath)) {
-    configPath = dmdJsonPath;
+  if (fs.existsSync(foundConfig)) {
+    configPath = foundConfig;
   }
 
   if (configPath) {
@@ -218,6 +219,25 @@ export async function validateCommand(
 
   // 2. Discover markdown documents
   const docFiles = scanDirectory(targetDir);
+  let i18nConfig = normalizeConfig();
+  try {
+    if (configPath) i18nConfig = normalizeConfig(JSON.parse(fs.readFileSync(configPath, "utf-8")));
+    collectVariants(docFiles, i18nConfig);
+    const seen = new Map<string, string>();
+    for (const file of docFiles) {
+      const variant = documentVariant(file, i18nConfig);
+      const key = `${variant.docId}:${variant.locale}`;
+      const previous = seen.get(key);
+      if (previous)
+        warnings.push({
+          file,
+          message: `Duplicate original variant: ${previous} and ${file}; explicit locale suffix takes precedence.`,
+        });
+      seen.set(key, file);
+    }
+  } catch (error) {
+    errors.push({ file: configPath || targetDirArg, message: String(error), type: "config" });
+  }
   const docMap = new Map<string, { fullPath: string; content: string; anchors: Set<string> }>();
 
   // First pass: parse frontmatter and index all headings/anchors
@@ -402,6 +422,22 @@ export async function validateCommand(
         }
 
         if (!resolvedFile) {
+          const embeddedCandidate = getEmbeddedDmdDoc(urlPath);
+          if (embeddedCandidate) {
+            if (anchor) {
+              const anchors = extractAllAnchors(embeddedCandidate);
+              if (!anchors.has(anchor.toLowerCase())) {
+                errors.push({
+                  file: relFile,
+                  line: link.line,
+                  message: `Broken anchor link: "${rawUrl}" (anchor "#${anchor}" does not exist in target document)`,
+                  type: "anchor",
+                });
+              }
+            }
+            continue;
+          }
+
           errors.push({
             file: relFile,
             line: link.line,

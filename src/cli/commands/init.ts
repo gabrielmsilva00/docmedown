@@ -2,10 +2,13 @@ import chalk from "chalk";
 import open from "open";
 import prompts from "prompts";
 import type { ColorMode, ThemeFamily } from "../../runtime/types";
+import { setupLanguages } from "../utils/language-setup";
 import { detectProjectInfo, executeScaffold, planScaffold, renderScaffoldTree } from "../utils/scaffold-tree";
 import { startDevServer } from "../utils/server";
 
 export interface InitOptions {
+  defaultLocale?: string;
+  locales?: string;
   projectName?: string;
   preset?: string;
   copyBundle?: boolean;
@@ -20,6 +23,8 @@ export interface InitOptions {
 }
 
 export interface QuickstartOptions {
+  defaultLocale?: string;
+  locales?: string;
   start?: boolean;
   yes?: boolean;
   port?: number;
@@ -38,6 +43,11 @@ export async function quickstartCommand(
 
   const rootDir = process.cwd();
   const projectInfo = detectProjectInfo(rootDir);
+  const language = await setupLanguages(
+    options,
+    !options.yes && Boolean(process.stdin.isTTY || (prompts as any)._injected?.length),
+  );
+  if (!language) return false;
   const plan = planScaffold({
     targetDirArg,
     rootDir,
@@ -46,6 +56,7 @@ export async function quickstartCommand(
 
   console.log(chalk.bold(`📁 Documentation Scaffold Preview for ${chalk.cyan(plan.displayDir)}:\n`));
   console.log(renderScaffoldTree(plan));
+  console.log(`  Original language: ${language.defaultLocale}; languages: ${language.locales.join(", ")}`);
   console.log("");
 
   let proceed = !!options.yes;
@@ -77,6 +88,7 @@ export async function quickstartCommand(
     tagline: projectInfo.description,
     themeFamily: "atlas",
     colorMode: "auto",
+    ...language,
   });
 
   console.log(chalk.bold.green("\n✨ DocMeDown site successfully initialized!\n"));
@@ -129,6 +141,8 @@ export async function initCommand(targetDirArg?: string, options: InitOptions = 
   let themeFamily = options.themeFamily || "atlas";
   let colorMode = options.colorMode || "auto";
   let includeSamples = options.includeSamples !== false;
+  const language = await setupLanguages(options, options.interactive !== false && !options.yes);
+  if (!language) return false;
 
   const isInteractive = options.interactive !== false && !options.yes;
 
@@ -226,6 +240,7 @@ export async function initCommand(targetDirArg?: string, options: InitOptions = 
 
   console.log(chalk.bold(`📁 Documentation Scaffold Preview for ${chalk.cyan(plan.displayDir)}:\n`));
   console.log(renderScaffoldTree(plan));
+  console.log(`  Original language: ${language.defaultLocale}; languages: ${language.locales.join(", ")}`);
   console.log("");
 
   let proceed = !!options.yes;
@@ -257,6 +272,7 @@ export async function initCommand(targetDirArg?: string, options: InitOptions = 
     tagline,
     themeFamily,
     colorMode,
+    ...language,
   });
 
   console.log(chalk.bold.green("\n✨ DocMeDown site successfully initialized!\n"));

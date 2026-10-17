@@ -41,6 +41,9 @@ export const DEFAULT_CONFIG: DocConfig = {
     copyright: `© ${new Date().getFullYear()} DocMeDown. All rights reserved.`,
     showBuiltWith: true,
   },
+  editor: {
+    enabled: true,
+  },
 };
 
 /**
@@ -84,6 +87,10 @@ export function normalizeConfig(userConfig: unknown = {}): DocConfig {
     footer: {
       ...DEFAULT_CONFIG.footer,
       ...parsedConfig.footer,
+    },
+    editor: {
+      ...DEFAULT_CONFIG.editor,
+      ...parsedConfig.editor,
     },
   };
 

@@ -347,9 +347,10 @@
       return;
     }
 
-    // Inline edit triggers on headings/blocks
+    // Inline edit triggers on headings/blocks (local dev server only)
     const editTrigger = target.closest?.("[data-dmd-inline-edit]");
     if (editTrigger) {
+      if (!doc.editorAvailable) return;
       event.preventDefault();
       doc.isEditorOpen = true;
       return;

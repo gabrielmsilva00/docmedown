@@ -215,12 +215,21 @@ export async function runProjectDoctor(options = {}) {
 
   // 6. Documentation Site Health & Link Integrity (./docs)
   const docsDir = path.join(root, "docs");
-  const docsJsonPath = path.join(docsDir, "docs.json");
-  const docsReadmePath = path.join(docsDir, "README.md");
   const docsDmdDir = path.join(docsDir, ".dmd");
+  const docsConfigDir = path.join(docsDmdDir, ".config");
+  const docsComponentsDir = path.join(docsDmdDir, ".components");
+  // Config: new `.dmd/.config/docs.json` default, legacy `docs/docs.json` fallback.
+  const docsJsonCandidates = [
+    path.join(docsConfigDir, "docs.json"),
+    path.join(docsConfigDir, "dmd.json"),
+    path.join(docsDir, "docs.json"),
+    path.join(docsDir, "dmd.json"),
+  ];
+  const docsJsonPath = docsJsonCandidates.find((p) => fs.existsSync(p));
 
   const docIssues = [];
-  if (!fs.existsSync(docsJsonPath)) docIssues.push("docs/docs.json not found");
+  const docsReadmePath = path.join(docsDir, "README.md");
+  if (!docsJsonPath) docIssues.push("docs/.dmd/.config/docs.json not found (legacy docs/docs.json fallback missing)");
   if (!fs.existsSync(docsReadmePath)) docIssues.push("docs/README.md not found");
 
   if (fs.existsSync(docsJsonPath)) {
@@ -244,10 +253,23 @@ export async function runProjectDoctor(options = {}) {
     }
   }
 
-  if (fs.existsSync(docsDmdDir)) {
-    const dmdEntries = fs.readdirSync(docsDmdDir);
-    for (const file of dmdEntries) {
-      const fullPath = path.join(docsDmdDir, file);
+  // Components: new `.dmd/.components/` default, deprecated bare `.dmd/` merged as fallback.
+  const componentDirs = [docsComponentsDir, docsDmdDir].filter((dir) => {
+    try {
+      return fs.existsSync(dir) && fs.statSync(dir).isDirectory();
+    } catch {
+      return false;
+    }
+  });
+  const seenComponents = new Set();
+  for (const dir of componentDirs) {
+    const dmdEntries = fs.readdirSync(dir, { withFileTypes: true });
+    for (const entry of dmdEntries) {
+      if (!entry.isFile() || entry.name.startsWith(".")) continue;
+      if (seenComponents.has(entry.name)) continue;
+      seenComponents.add(entry.name);
+      const file = entry.name;
+      const fullPath = path.join(dir, file);
       try {
         const raw = fs.readFileSync(fullPath, "utf-8");
         if (file.endsWith(".svelte")) {
@@ -263,11 +285,18 @@ export async function runProjectDoctor(options = {}) {
     }
   }
 
-  // Markdown link integrity verification across all docs
+  // Markdown link integrity verification across all docs (workspace excluded).
   function scanMarkdownLinks(dir) {
     if (!fs.existsSync(dir)) return;
     for (const ent of fs.readdirSync(dir, { withFileTypes: true })) {
-      if (ent.name === ".dist" || ent.name === "examples" || ent.name === "node_modules") continue;
+      if (
+        ent.name === ".dist" ||
+        ent.name === ".dmd" ||
+        ent.name === "examples" ||
+        ent.name === "node_modules" ||
+        ent.name.startsWith(".")
+      )
+        continue;
       const full = path.join(dir, ent.name);
       if (ent.isDirectory()) {
         scanMarkdownLinks(full);

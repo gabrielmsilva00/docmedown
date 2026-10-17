@@ -70,6 +70,8 @@ export interface DocFrontmatter {
 }
 
 export interface DocFileItem {
+  docId?: string;
+  locale?: string;
   slug: string;
   path: string;
   title: string;

@@ -1,11 +1,14 @@
 import fs from "node:fs";
 import path from "node:path";
 import chalk from "chalk";
+import { embeddedDmdDocs, embeddedDmdVariant } from "../runtime/embedded-dmd";
 import { resolveFavicon } from "../runtime/favicons";
+import { defaultLocale, localeConfig, localizedDocs, projectLocales } from "../runtime/i18n";
 import { parseMarkdown } from "../runtime/markdown/parser";
 import { renderSplashHead, renderSplashMarkup, type SplashOptions } from "../runtime/splash";
 import type { DocConfig, DocFileItem, DocManifest } from "../runtime/types";
 import { loadBuildTimeCustomSetup } from "./utils/custom-setup";
+import { resolveExistingComponentsDir } from "./utils/docs-layout";
 
 const DESCRIPTION_MAX_LENGTH = 160;
 
@@ -104,6 +107,7 @@ export function getStaticPagePath(slug: string): string {
 }
 
 export interface StaticPageInput {
+  alternatives?: DocFileItem[];
   config: DocConfig;
   doc: DocFileItem;
   /** Prerendered article HTML from the shared markdown pipeline. */
@@ -111,7 +115,7 @@ export interface StaticPageInput {
 }
 
 /** Renders a full standalone HTML page with SEO head tags and the runtime bootstrap. */
-export function renderStaticPage({ config, doc, contentHtml }: StaticPageInput): string {
+export function renderStaticPage({ config, doc, contentHtml, alternatives = [] }: StaticPageInput): string {
   const slug = doc.slug;
   const assetPrefix = getAssetPrefix(slug);
   const siteName = config.name || "Documentation";
@@ -134,6 +138,16 @@ export function renderStaticPage({ config, doc, contentHtml }: StaticPageInput):
     `<title>${escapeHtml(title)}</title>`,
   ];
   if (description) head.push(`<meta name="description" content="${escapeHtml(description)}" />`);
+  const locale = doc.locale ?? defaultLocale(config);
+  if (config.url) {
+    for (const alternative of alternatives.filter((item) => item.docId === doc.docId && item.docId)) {
+      const href = getPageUrl(config, alternative.slug);
+      if (href)
+        head.push(
+          `<link rel="alternate" hreflang="${escapeHtml(alternative.locale ?? defaultLocale(config))}" href="${escapeHtml(href)}" />`,
+        );
+    }
+  }
   if (noindex) {
     head.push('<meta name="robots" content="noindex, nofollow" />');
   } else if (pageUrl) {
@@ -186,7 +200,7 @@ export function renderStaticPage({ config, doc, contentHtml }: StaticPageInput):
   const splash = resolveSplashOptions({ ...config, name: siteName });
 
   return `<!DOCTYPE html>
-<html lang="en">
+<html lang="${escapeHtml(locale)}" dir="${/^(ar|fa|he|ur)(-|$)/.test(locale) ? "rtl" : "ltr"}">
 <head>
   ${head.join("\n  ")}
   ${renderSplashHead(splash)}
@@ -272,15 +286,20 @@ export function emitStaticSite(
   manifest: DocManifest,
   docsMap: Record<string, string>,
   config: DocConfig,
+  options: { silent?: boolean } = {},
 ): StaticSiteEmitResult {
+  const silent = options.silent === true;
+  const log = (...args: unknown[]) => {
+    if (!silent) console.log(...(args as [unknown, ...unknown[]]));
+  };
   const written: string[] = [];
   let homeSkipped = false;
-  loadBuildTimeCustomSetup(path.join(targetDir, ".dmd"));
+  loadBuildTimeCustomSetup(resolveExistingComponentsDir(targetDir));
 
   for (const doc of manifest.docs) {
     if (doc.frontmatter?.hidden === true) continue;
-    const raw = docsMap[doc.slug] ?? docsMap[doc.path] ?? doc.content ?? "";
-    const parsed = parseMarkdown(raw, doc.slug);
+    const raw = docsMap[doc.path] ?? docsMap[doc.slug] ?? doc.content ?? "";
+    const parsed = parseMarkdown(raw, doc.slug, config);
     const pagePath = getStaticPagePath(doc.slug);
 
     if (doc.slug === "README") {
@@ -291,11 +310,66 @@ export function emitStaticSite(
       }
     }
 
-    const html = renderStaticPage({ config, doc, contentHtml: parsed.html });
+    const html = renderStaticPage({
+      config: localeConfig(config, doc.locale ?? defaultLocale(config)),
+      doc,
+      contentHtml: parsed.html,
+      alternatives: manifest.docs,
+    });
     const outPath = path.join(targetDir, pagePath);
     fs.mkdirSync(path.dirname(outPath), { recursive: true });
     fs.writeFileSync(outPath, html, "utf-8");
     written.push(pagePath);
+  }
+
+  // Fallback routes are real HTML entry points too, but canonicalize to the original.
+  for (const locale of projectLocales(config)) {
+    for (const doc of localizedDocs(manifest.docs, locale.code, config)) {
+      const pagePath = getStaticPagePath(doc.slug);
+      if (written.includes(pagePath) || manifest.docs.some((item) => item.slug === doc.slug)) continue;
+      const original = manifest.docs.find((item) => item.path === doc.path);
+      if (!original) continue;
+      const raw = docsMap[doc.path] ?? original.content ?? "";
+      const parsed = parseMarkdown(raw, doc.slug, config);
+      let html = renderStaticPage({ config: localeConfig(config, locale.code), doc, contentHtml: parsed.html });
+      const requestedUrl = getPageUrl(config, doc.slug);
+      const canonicalUrl = getPageUrl(config, original.slug);
+      if (requestedUrl && canonicalUrl)
+        html = html.replace(
+          `<link rel="canonical" href="${escapeHtml(requestedUrl)}"`,
+          `<link rel="canonical" href="${escapeHtml(canonicalUrl)}"`,
+        );
+      const outPath = path.join(targetDir, pagePath);
+      fs.mkdirSync(path.dirname(outPath), { recursive: true });
+      fs.writeFileSync(outPath, html, "utf-8");
+      written.push(pagePath);
+    }
+  }
+
+  // Prerender embedded DMD documentation if present in docsMap
+  const embeddedDmdSlugs = Object.keys(embeddedDmdDocs(config)).filter((slug) => !slug.endsWith(".md"));
+  for (const slug of embeddedDmdSlugs) {
+    const raw = docsMap[slug];
+    const pagePath = getStaticPagePath(slug);
+    if (raw && !written.includes(pagePath)) {
+      const parsed = parseMarkdown(raw, slug);
+      const docItem: DocFileItem = {
+        docId: embeddedDmdVariant(slug, config)?.docId,
+        locale: embeddedDmdVariant(slug, config)?.locale,
+        slug,
+        path: `${slug}.md`,
+        title: parsed.frontmatter?.title || parsed.headings[0]?.text || slug,
+        frontmatter: parsed.frontmatter,
+        headings: parsed.headings,
+        content: raw,
+        readingTimeMinutes: parsed.readingTimeMinutes,
+      };
+      const html = renderStaticPage({ config, doc: docItem, contentHtml: parsed.html });
+      const outPath = path.join(targetDir, pagePath);
+      fs.mkdirSync(path.dirname(outPath), { recursive: true });
+      fs.writeFileSync(outPath, html, "utf-8");
+      written.push(pagePath);
+    }
   }
 
   fs.writeFileSync(path.join(targetDir, "404.html"), renderStatic404Page(config), "utf-8");
@@ -305,14 +379,14 @@ export function emitStaticSite(
   const robots = generateRobotsTxt(config);
   if (robots) fs.writeFileSync(path.join(targetDir, "robots.txt"), robots, "utf-8");
 
-  console.log(chalk.green(`  ✔ Prerendered ${written.length} static page${written.length === 1 ? "" : "s"}`));
+  log(chalk.green(`  ✔ Prerendered ${written.length} static page${written.length === 1 ? "" : "s"}`));
   if (config.url) {
-    console.log(chalk.green(`  ✔ Generated sitemap.xml and robots.txt for ${config.url}`));
+    log(chalk.green(`  ✔ Generated sitemap.xml and robots.txt for ${config.url}`));
   } else {
-    console.log(chalk.dim('    Set "url" in docs.json to also generate sitemap.xml, robots.txt, and canonical URLs.'));
+    log(chalk.dim('    Set "url" in docs.json to also generate sitemap.xml, robots.txt, and canonical URLs.'));
   }
   if (homeSkipped) {
-    console.log(
+    log(
       chalk.yellow(
         "  ⚠ Skipped prerendering the home page: index.html is a custom shell without the standard DocMeDown runtime tag.",
       ),

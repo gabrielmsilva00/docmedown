@@ -3,6 +3,7 @@ import fs from "node:fs";
 import http from "node:http";
 import path from "node:path";
 import { test } from "node:test";
+import { getLanIpv4 } from "../src/cli/commands/serve";
 import { startDevServer } from "../src/cli/utils/server";
 import { LocalDocLoader } from "../src/runtime/loader/local-loader";
 import { makeTempDir } from "./helpers/temp";
@@ -109,6 +110,11 @@ test("DevServer API mode and preview toggle endpoints", async () => {
   } finally {
     serverHandle.close();
   }
+});
+
+test("getLanIpv4 returns a dotted IPv4 or null without throwing", () => {
+  const ip = getLanIpv4();
+  assert.ok(ip === null || /^\d{1,3}(\.\d{1,3}){3}$/.test(ip), `unexpected LAN IP: ${ip}`);
 });
 
 test("DevServer 2-way edit save to source and .preview targets", async () => {

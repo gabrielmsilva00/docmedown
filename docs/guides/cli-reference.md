@@ -23,7 +23,7 @@ npm install -g docmedown
 | :--- | :--- | :--- | :--- |
 | **[`docmedown`](#0-docmedown--quickstart-dev-server)** | `dmd` | Quickstart setup if empty, or starts local preview server | `-p, --port`, `-y, --yes`, `--no-open` |
 | **[`init`](#1-init--interactive-setup-wizard)** | — | Interactive setup wizard to configure and scaffold docs | `-y, --yes`, `-n, --name`, `-t, --theme`, `--no-start` |
-| **[`serve`](#2-serve-alias-dev-hot-live-reload)** | `dev` | High-speed local dev server with WebSocket hot reload | `-p, --port`, `-H, --host`, `--no-open` |
+| **[`serve`](#2-serve-alias-dev-hot-live-reload)** | `dev` | High-speed local dev server with WebSocket hot reload | `-p, --port`, `-H, --host`, `--no-open`, `--no-qr` |
 | **[`build`](#3-build-static-compiler-bundler)** | — | Prerender static HTML, SEO, AI context, and offline bundle | `-w, --watch`, `--no-single-file`, `-o, --out-dir` |
 | **[`validate`](#4-validate-link-frontmatter-linter)** | — | Deep linter for broken links, missing anchors, and YAML errors | `--json` |
 | **[`doctor`](#5-doctor-system-component-diagnostics)** | — | Environmental health, missing assets, and .dmd component testing | `--json` |
@@ -72,17 +72,17 @@ npx docmedown init ./docs -y --no-start
 
 ### What gets created:
 ```
-docs/
-├── index.html                # Single-page runtime shell
-├── favicon.svg               # Vector documentation icon
-├── docs.json                 # Core configuration (theme, navigation, branding)
-├── README.md                 # Primary documentation home page (or linked from root)
-├── getting-started.md        # Starter guide (#/getting-started)
-├── CHANGELOG.md              # Linked from root (if present)
+docs/                        # Documentation root: ONLY sources + index.html symlink
+├── index.html               # Symlink → .dmd/index.html (ONLY distributable: SEO site, via build)
+├── README.md                # Primary documentation home page (or linked from root)
+├── getting-started.md       # Starter guide (#/getting-started)
+├── CHANGELOG.md             # Linked from root (if present)
 ├── guides/
-│   └── custom-components.md  # Custom component reference
+│   └── custom-components.md # Custom component reference
 └── .dmd/
-    └── CounterWidget.svelte  # Svelte 5 runes component starter
+    ├── .config/docs.json         # Core configuration (theme, navigation, branding)
+    └── .components/
+        └── CounterWidget.svelte  # Svelte 5 runes component starter
 ```
 
 ---
@@ -104,8 +104,11 @@ npx docmedown serve ./docs --port 8080 --host 0.0.0.0 --no-open
 
 ### Options:
 - `-p, --port <number>`: Port to listen on (default: `3000`; auto-increments if already in use).
-- `-H, --host <string>`: Host to bind server to (default: `localhost`).
+- `-H, --host <string>`: Host to bind server to (default: `0.0.0.0` so phones/tablets on your LAN can connect).
 - `--no-open`: Prevents automatically opening your default web browser on startup.
+- `--no-qr`: Hides the terminal QR code for the Network URL.
+
+On startup the server prints a compact banner (`✔ Artifacts ready (N pages)`) instead of the full build checklist, plus `Local:` and `Network:` URLs with a scannable QR for the Network address.
 
 > [!TIP]
 > **Preserved Reading Position**: When you edit any Markdown file or `.dmd/` custom component, DocMeDown pushes updates over WebSocket and re-renders the document **without losing your current scroll position**.
@@ -117,7 +120,7 @@ npx docmedown serve ./docs --port 8080 --host 0.0.0.0 --no-open
 Recursively scans all Markdown documents, extracts headings, generates navigation trees, prerenders static pages with full SEO metadata, emits AI context files, and produces an air-gapped offline bundle.
 
 ```bash
-# Build production assets and offline bundle in ./docs/.dist:
+# Build production assets and offline bundle in ./docs/.dmd/.singlefile:
 npx docmedown build ./docs
 
 # Watch mode (automatically rebuilds on source changes):
@@ -130,14 +133,14 @@ npx docmedown build ./docs --out-dir ./dist
 ### Generated Artifacts:
 1. **Prerendered Static Pages**: Compiles every markdown file to `<slug>/index.html` with full semantic HTML, inlined Prism syntax highlighting, and JSON-LD schema.
 2. **SEO Assets**: Generates `sitemap.xml` and `robots.txt` when `url` is configured in `docs.json`.
-3. **AI Context Files**: Emits `llms.txt`, `llms-full.txt`, `SKILL.md`, and `okf.json` directly at the documentation root for AI coding agents.
-4. **Standalone Offline Distributable**: Compresses all documents, custom components, and runtime into a single, self-extracting `.dist/index.html` that works over `file:///` URLs.
+3. **AI Context Files**: Emits `llms.txt`, `llms-full.txt`, `SKILL.md`, and `okf.json` into `.dmd/` for AI coding agents.
+4. **Standalone Offline Distributable**: Compresses all documents, custom components, and runtime into a single, self-extracting `.dmd/.singlefile/index.html` that works over `file:///` URLs. The `docs/index.html` symlink instead targets the serveable SEO site (`.dmd/index.html`) so crawlers and static hosts see the full prerendered site.
 
 ### Options:
 - `-w, --watch`: Watch source files and rebuild assets on change.
 - `--no-single-file`: Build serveable files only; skip offline single-file bundling.
 - `--no-static`: Skip prerendered static pages and SEO/AI files.
-- `-o, --out-dir <path>`: Output directory for the offline bundle (default: `<dir>/.dist`).
+- `-o, --out-dir <path>`: Output directory for the offline bundle (default: `<dir>/.dmd/.singlefile`).
 
 ---
 

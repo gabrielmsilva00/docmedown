@@ -57,13 +57,13 @@ test("planScaffold identifies linked root markdown files without mutating disk",
 
   const indexItem = plan.items.find((i) => i.relPath === "index.html");
   assert.ok(indexItem);
-  assert.equal(indexItem.action, "create");
+  assert.equal(indexItem.action, "skip");
 
   const guideItem = plan.items.find((i) => i.relPath === "guides/custom-components.md");
   assert.ok(guideItem);
   assert.equal(guideItem.action, "create");
 
-  const dmdItem = plan.items.find((i) => i.relPath === ".dmd/CounterWidget.svelte");
+  const dmdItem = plan.items.find((i) => i.relPath === ".dmd/.components/CounterWidget.svelte");
   assert.ok(dmdItem);
   assert.equal(dmdItem.action, "create");
 });
@@ -97,7 +97,8 @@ test("planScaffold marks existing files as skip with preservation annotation", (
     includeSamples: true,
   });
 
-  const configItem = plan.items.find((i) => i.relPath === "docs.json");
+  // Legacy bare `docs.json` counts as an existing config (backward compat).
+  const configItem = plan.items.find((i) => i.relPath === ".dmd/.config/docs.json");
   assert.ok(configItem);
   assert.equal(configItem.action, "skip");
   assert.equal(configItem.annotation, "(already exists, will keep)");
@@ -117,7 +118,7 @@ test("planScaffold omits guides and custom components when includeSamples is fal
     false,
   );
   assert.equal(
-    plan.items.some((i) => i.relPath.startsWith(".dmd/")),
+    plan.items.some((i) => i.relPath === ".dmd/.components/CounterWidget.svelte"),
     false,
   );
 });
@@ -160,7 +161,7 @@ test("quickstartCommand does NOT create any files when confirmation is declined"
     process.chdir(root);
 
     // Inject confirmation: false
-    prompts.inject([false]);
+    prompts.inject([["en"], false, "en", false]);
 
     const result = await quickstartCommand("./docs", { start: false });
     assert.equal(result, false, "quickstartCommand should return false on cancel");
@@ -181,13 +182,25 @@ test("quickstartCommand scaffolds files and builds artifacts when confirmed or -
     const result = await quickstartCommand("./docs", { yes: true, start: false });
     assert.equal(result, true, "quickstartCommand should return true on success");
     assert.equal(fs.existsSync(targetDir), true, "target directory must exist");
-    assert.equal(fs.existsSync(path.join(targetDir, "index.html")), true, "index.html must exist");
-    assert.equal(fs.existsSync(path.join(targetDir, "docs.json")), true, "docs.json must exist");
+    assert.equal(
+      fs.existsSync(path.join(targetDir, ".dmd", ".config", "docs.json")),
+      true,
+      "docs.json must exist in .dmd/.config",
+    );
     assert.equal(fs.existsSync(path.join(targetDir, "README.md")), true, "README.md must exist");
     assert.equal(fs.existsSync(path.join(targetDir, "getting-started.md")), true, "getting-started.md must exist");
     assert.equal(fs.existsSync(path.join(targetDir, "guides/custom-components.md")), true);
-    assert.equal(fs.existsSync(path.join(targetDir, ".dmd/CounterWidget.svelte")), true);
-    assert.equal(fs.existsSync(path.join(targetDir, ".dist/index.html")), true, "offline bundle must be built");
+    assert.equal(fs.existsSync(path.join(targetDir, ".dmd", ".components", "CounterWidget.svelte")), true);
+    assert.equal(
+      fs.existsSync(path.join(targetDir, ".dmd", ".singlefile", "index.html")),
+      true,
+      "offline bundle must be built",
+    );
+    assert.ok(
+      fs.lstatSync(path.join(targetDir, "index.html")).isSymbolicLink() ||
+        fs.existsSync(path.join(targetDir, "index.html")),
+      "root index.html distributable must exist",
+    );
   } finally {
     process.chdir(originalCwd);
   }
@@ -221,7 +234,18 @@ test("initCommand does NOT create any files when confirmation prompt is declined
     process.chdir(root);
 
     // dir, name, tagline, family, defaultMode, includeSamples, proceed (false)
-    prompts.inject(["./docs", "My Test Project", "Awesome Tagline", "terminal", "dark", true, false]);
+    prompts.inject([
+      ["en"],
+      false,
+      "en",
+      "./docs",
+      "My Test Project",
+      "Awesome Tagline",
+      "terminal",
+      "dark",
+      true,
+      false,
+    ]);
 
     const result = await initCommand(undefined, { start: false });
     assert.equal(result, false);
@@ -240,21 +264,34 @@ test("initCommand applies interactive choices to docs.json and scaffolds when co
     process.chdir(root);
 
     // dir, name, tagline, family, defaultMode, includeSamples (false), proceed (true), startServer (false)
-    prompts.inject(["./docs", "Custom Docs", "Fast and Beautiful", "blueprint", "dark", false, true, false]);
+    prompts.inject([
+      ["en"],
+      false,
+      "en",
+      "./docs",
+      "Custom Docs",
+      "Fast and Beautiful",
+      "blueprint",
+      "dark",
+      false,
+      true,
+      false,
+    ]);
 
     const result = await initCommand(undefined, { start: false });
     assert.equal(result, true);
     assert.equal(fs.existsSync(targetDir), true);
 
-    const config = JSON.parse(fs.readFileSync(path.join(targetDir, "docs.json"), "utf-8"));
+    const config = JSON.parse(fs.readFileSync(path.join(targetDir, ".dmd", ".config", "docs.json"), "utf-8"));
     assert.equal(config.name, "Custom Docs");
     assert.equal(config.tagline, "Fast and Beautiful");
     assert.equal(config.theme.family, "blueprint");
     assert.equal(config.theme.defaultMode, "dark");
 
-    // includeSamples was false, so guides/ and .dmd/ should NOT exist
+    // includeSamples was false, so guides/ must NOT exist; the hidden workspace
+    // itself is still created by the build (config/components may exist).
     assert.equal(fs.existsSync(path.join(targetDir, "guides")), false);
-    assert.equal(fs.existsSync(path.join(targetDir, ".dmd")), false);
+    assert.equal(fs.existsSync(path.join(targetDir, ".dmd", ".components", "CounterWidget.svelte")), false);
   } finally {
     process.chdir(originalCwd);
   }

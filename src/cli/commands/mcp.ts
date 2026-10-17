@@ -7,7 +7,9 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 import packageJson from "../../../package.json";
 import { normalizeConfig, parseDocConfigJson } from "../../runtime/config";
+import { canonicalLocale, defaultLocale, localizedDocs, localizedSlug } from "../../runtime/i18n";
 import type { DocFileItem, DocManifest } from "../../runtime/types";
+import { candidateSiteDirs, resolveExistingConfigPath } from "../utils/docs-layout";
 import { generateManifest, scanDirectory } from "../utils/scanner";
 
 export interface DocToolkit {
@@ -48,13 +50,16 @@ function parseDocsJs(source: string): Record<string, string> | null {
  * the directory has not been built yet.
  */
 export function loadBuiltSite(targetDir: string): DocToolkit | null {
-  const manifestPath = path.join(targetDir, "_manifest.json");
-  const docsJsPath = path.join(targetDir, "_docs.js");
-  if (!fs.existsSync(manifestPath)) return null;
+  // Hidden workspace first (`.dmd/_manifest.json`), legacy docs root fallback.
+  const siteDirs = candidateSiteDirs(targetDir);
+  const manifestPath = siteDirs.map((dir) => path.join(dir, "_manifest.json")).find((p) => fs.existsSync(p));
+  if (!manifestPath) return null;
 
   try {
     const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf-8")) as DocManifest;
     let docs: Record<string, string> = {};
+    const siteDir = path.dirname(manifestPath);
+    const docsJsPath = path.join(siteDir, "_docs.js");
     if (fs.existsSync(docsJsPath)) {
       docs = parseDocsJs(fs.readFileSync(docsJsPath, "utf-8")) ?? {};
     }
@@ -76,13 +81,10 @@ export function loadOrCreateToolkit(targetDir: string): DocToolkit | null {
 
   try {
     let config = normalizeConfig();
-    const docsJsonPath = path.join(targetDir, "docs.json");
-    const dmdJsonPath = path.join(targetDir, "dmd.json");
-
-    if (fs.existsSync(docsJsonPath)) {
-      config = normalizeConfig(parseDocConfigJson(fs.readFileSync(docsJsonPath, "utf-8"), docsJsonPath));
-    } else if (fs.existsSync(dmdJsonPath)) {
-      config = normalizeConfig(parseDocConfigJson(fs.readFileSync(dmdJsonPath, "utf-8"), dmdJsonPath));
+    // New `.dmd/.config/docs.json` default, legacy bare `docs.json` fallback.
+    const configPath = resolveExistingConfigPath(targetDir);
+    if (fs.existsSync(configPath)) {
+      config = normalizeConfig(parseDocConfigJson(fs.readFileSync(configPath, "utf-8"), configPath));
     }
 
     const files = scanDirectory(targetDir);
@@ -143,11 +145,16 @@ export function searchDocs(
   toolkit: DocToolkit,
   query: string,
   limit = 10,
+  locale?: string,
 ): Array<{ slug: string; title: string; snippet: string; score: number }> {
   const terms = tokenize(query);
   if (terms.length === 0) return [];
 
-  const results = toolkit.manifest.docs
+  const results = localizedDocs(
+    toolkit.manifest.docs,
+    locale ? canonicalLocale(locale) : defaultLocale(toolkit.manifest.config),
+    toolkit.manifest.config,
+  )
     .filter((doc) => doc.frontmatter?.hidden !== true)
     .map((doc) => {
       const title = doc.title.toLowerCase();
@@ -194,17 +201,28 @@ const registerDocTools: RegisterTools = (server, toolkit) => {
     "list_docs",
     {
       description: `List every document in the ${siteName} documentation corpus with titles, categories, and reading times.`,
-      inputSchema: {},
+      inputSchema: {
+        locale: z.string().optional().describe("Language tag; defaults to the original document language."),
+      },
     },
-    async () => ({
+    async ({ locale }) => ({
       content: [
         {
           type: "text",
           text: JSON.stringify(
             {
               site: siteName,
-              count: toolkit.manifest.docs.length,
-              docs: toolkit.manifest.docs.map((doc) => ({
+              count: localizedDocs(
+                toolkit.manifest.docs,
+                locale ? canonicalLocale(locale) : defaultLocale(toolkit.manifest.config),
+                toolkit.manifest.config,
+              ).length,
+              docs: localizedDocs(
+                toolkit.manifest.docs,
+                locale ? canonicalLocale(locale) : defaultLocale(toolkit.manifest.config),
+                toolkit.manifest.config,
+              ).map((doc) => ({
+                locale: doc.locale ?? defaultLocale(toolkit.manifest.config),
                 slug: doc.slug,
                 path: doc.path,
                 title: doc.title,
@@ -228,17 +246,25 @@ const registerDocTools: RegisterTools = (server, toolkit) => {
         "Read the full markdown content of one documentation page, including its headings and last-modified date.",
       inputSchema: {
         slug: z.string().describe('Document slug (e.g. "README" or "guides/custom-components").'),
+        locale: z.string().optional().describe("Optional language tag."),
       },
     },
-    async ({ slug }) => {
-      const doc = findDoc(toolkit, slug);
+    async ({ slug, locale }) => {
+      const targetSlug = locale ? localizedSlug(slug, canonicalLocale(locale), toolkit.manifest.config) : slug;
+      const doc =
+        findDoc(toolkit, targetSlug) ??
+        (locale
+          ? localizedDocs(toolkit.manifest.docs, canonicalLocale(locale), toolkit.manifest.config).find(
+              (item) => item.slug === targetSlug,
+            )
+          : undefined);
       if (!doc) {
         return {
           isError: true,
           content: [{ type: "text", text: `Document not found: ${slug}. Use list_docs to see available slugs.` }],
         };
       }
-      const content = toolkit.docs[doc.slug] ?? toolkit.docs[doc.path] ?? doc.content ?? "";
+      const content = toolkit.docs[doc.path] ?? toolkit.docs[doc.slug] ?? doc.content ?? "";
       return {
         content: [
           {
@@ -267,11 +293,12 @@ const registerDocTools: RegisterTools = (server, toolkit) => {
       description: `Search the ${siteName} documentation by keyword. Returns matching documents with a content snippet.`,
       inputSchema: {
         query: z.string().describe("Search query, one or more keywords."),
+        locale: z.string().optional().describe("Language tag; defaults to original language."),
         limit: z.number().int().positive().max(25).optional().describe("Maximum results (default 10)."),
       },
     },
-    async ({ query, limit }) => {
-      const results = searchDocs(toolkit, query, limit ?? 10);
+    async ({ query, limit, locale }) => {
+      const results = searchDocs(toolkit, query, limit ?? 10, locale);
       return {
         content: [
           {

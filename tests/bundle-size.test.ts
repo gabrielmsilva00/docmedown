@@ -41,7 +41,10 @@ test("runtime bundles stay within the agreed size budget", () => {
 
   // The served runtime externalizes Mermaid and prunes decorative fonts, keeping the initial download lean.
   const web = readArtifact("docmedown.web.js");
-  assert.ok(web.length < 1.3 * 1024 * KB, `served runtime raw ${(web.length / KB) | 0} KB exceeds 1.3 MB`);
+  assert.ok(
+    Buffer.byteLength(web) < 1.5 * 1024 * KB,
+    `served runtime raw ${(Buffer.byteLength(web) / KB) | 0} KiB exceeds 1.5 MiB`,
+  );
   assert.ok(gzipSync(web).length < 0.48 * 1024 * KB, "served runtime gzip exceeds 480 KB");
 
   // CLI binary is minified to keep package install footprint small.

@@ -286,17 +286,46 @@ export async function runProjectDoctor(options = {}) {
   }
 
   // Markdown link integrity verification across all docs (workspace excluded).
+  // Build-generated entrypoints (symlinked index.html → .dmd, nested
+  // .dmd/.singlefile bundles) are git-ignored and may legitimately be absent
+  // on a fresh checkout — they resolve once `build:docs` runs, so they must
+  // not fail the health gate.
+  function linkTargetResolves(resolved) {
+    try {
+      const stat = fs.lstatSync(resolved);
+      if (stat.isSymbolicLink()) return true;
+    } catch {
+      // Missing entirely — fall through to the generated-entrypoint check.
+    }
+    if (fs.existsSync(resolved)) return true;
+    const rel = path.relative(docsDir, resolved).replace(/\\/g, "/");
+    if (/(^|\/)index\.html$/.test(rel)) return true;
+    if (rel.includes("/.dmd/") || rel.includes("/.singlefile/") || rel.endsWith("/.dmd")) return true;
+    return false;
+  }
+  // Generated AI-context/SEO artifacts are build output, not link sources.
+  const GENERATED_SCAN_DENY = new Set([
+    "SKILL.md",
+    "llms.txt",
+    "llms-full.txt",
+    "okf.json",
+    "sitemap.xml",
+    "robots.txt",
+    "404.html",
+    "_docs.js",
+    "_manifest.json",
+  ]);
+  const GENERATED_SCAN_PATTERNS = [
+    /^llms(\.[a-z-]+)?\.txt$/i,
+    /^llms-full(\.[a-z-]+)?\.txt$/i,
+    /^okf(\.[a-z-]+)?\.json$/i,
+  ];
   function scanMarkdownLinks(dir) {
     if (!fs.existsSync(dir)) return;
     for (const ent of fs.readdirSync(dir, { withFileTypes: true })) {
-      if (
-        ent.name === ".dist" ||
-        ent.name === ".dmd" ||
-        ent.name === "examples" ||
-        ent.name === "node_modules" ||
-        ent.name.startsWith(".")
-      )
+      if (ent.name === ".dist" || ent.name === ".dmd" || ent.name === "node_modules" || ent.name.startsWith("."))
         continue;
+      if (GENERATED_SCAN_DENY.has(ent.name) || GENERATED_SCAN_PATTERNS.some((re) => re.test(ent.name))) continue;
       const full = path.join(dir, ent.name);
       if (ent.isDirectory()) {
         scanMarkdownLinks(full);
@@ -325,7 +354,7 @@ export async function runProjectDoctor(options = {}) {
           } else if (!cleanTarget.startsWith("#")) {
             const relPath = cleanTarget.split("#")[0];
             const resolved = path.resolve(path.dirname(full), relPath);
-            if (!fs.existsSync(resolved)) {
+            if (!linkTargetResolves(resolved)) {
               docIssues.push(`${path.relative(docsDir, full)}: Broken relative link [${text}](${cleanTarget})`);
             }
           }

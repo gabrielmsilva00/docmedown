@@ -87,7 +87,8 @@
     "clean": "node -e \"fs.rmSync('dist', { recursive: true, force: true }); fs.rmSync('docs/.dmd', { recursive: true, force: true }); fs.rmSync('docs/.dist', { recursive: true, force: true })\"",
     "deploy": "node ./scripts/deploy.mjs",
     "deploy:dry-run": "npm run deploy -- --dry-run",
-    "prepublishOnly": "npm run test:release"
+    "prepublishOnly": "npm run test:release",
+    "commit": "git add . && git commit && git push origin main"
   },
   "overrides": {
     "tsup": {

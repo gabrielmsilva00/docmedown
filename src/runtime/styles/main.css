@@ -2383,6 +2383,125 @@ html {
   background: var(--dmd-accent-subtle);
 }
 
+/* Diagram Type Badge */
+.dmd-diagram-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: var(--dmd-radius-sm);
+  background: var(--dmd-bg-elevated);
+  border: 1px solid var(--dmd-border-color);
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--dmd-text-secondary);
+  user-select: none;
+}
+
+.dmd-diagram-badge-icon {
+  font-size: 0.8rem;
+}
+
+/* Dropdown Menus (Copy & Export) */
+.dmd-diagram-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.dmd-diagram-dropdown-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.dmd-chevron {
+  font-size: 0.65rem;
+  color: var(--dmd-text-muted);
+  transition: transform var(--dmd-transition);
+}
+
+.dmd-diagram-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 50;
+  min-width: 220px;
+  padding: 0.35rem;
+  background: var(--dmd-bg-card, #181825);
+  border: 1px solid var(--dmd-border-color);
+  border-radius: var(--dmd-radius-md, 8px);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.45);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  animation: dmdDropdownFade 0.16s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes dmdDropdownFade {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.dmd-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  width: 100%;
+  padding: 0.48rem 0.68rem;
+  border: none;
+  background: transparent;
+  color: var(--dmd-text-primary);
+  font-size: 0.76rem;
+  border-radius: var(--dmd-radius-sm);
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--dmd-transition), color var(--dmd-transition);
+}
+
+.dmd-dropdown-item:hover {
+  background: var(--dmd-accent-subtle);
+  color: var(--dmd-accent);
+}
+
+.dmd-dropdown-icon {
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+
+.dmd-dropdown-label code {
+  font-size: 0.7rem;
+  padding: 1px 4px;
+  background: var(--dmd-bg-code);
+  border-radius: 3px;
+}
+
+/* Icon Utilities */
+.dmd-icon {
+  width: 0.92rem;
+  height: 0.92rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.dmd-icon-sm {
+  width: 0.8rem;
+  height: 0.8rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 .dmd-diagram-stage {
   position: relative;
   width: 100%;
@@ -2400,6 +2519,11 @@ html {
   cursor: grab;
   touch-action: none;
   contain: layout paint;
+}
+
+.dmd-diagram-stage:focus-visible {
+  outline: 2px solid var(--dmd-accent);
+  outline-offset: -2px;
 }
 
 .dmd-diagram-stage.is-panning {
@@ -2442,7 +2566,7 @@ html {
 .dmd-diagram-svg .pele-node,
 .dmd-diagram-svg text,
 .dmd-diagram-svg tspan {
-  cursor: text;
+  cursor: pointer;
   user-select: text;
 }
 
@@ -2483,6 +2607,212 @@ html {
   to {
     stroke-dashoffset: -26;
   }
+}
+
+/* Contextual Subgraph Hover Pill (Clean & Non-Intrusive) */
+.dmd-diagram-subgraph-pill {
+  position: absolute;
+  z-index: 25;
+  translate: -100% 0;
+  pointer-events: auto;
+  animation: dmdPillFade 0.16s ease-out both;
+}
+
+@keyframes dmdPillFade {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.dmd-subgraph-pill-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.65rem;
+  color: var(--dmd-text-primary);
+  background: var(--dmd-bg-card, #181825);
+  border: 1px solid var(--dmd-border-color);
+  border-radius: 9999px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  font-size: 0.72rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: all var(--dmd-transition);
+}
+
+.dmd-subgraph-pill-btn:hover {
+  border-color: var(--dmd-accent);
+  color: var(--dmd-accent);
+  background: var(--dmd-bg-elevated);
+}
+
+.dmd-subgraph-pill-btn.copied {
+  border-color: #a6e3a1;
+  color: #a6e3a1;
+  background: rgba(166, 227, 161, 0.15);
+}
+
+/* Floating Corner Navigation Controls */
+.dmd-diagram-floating-controls {
+  position: absolute;
+  bottom: clamp(0.75rem, 2vw, 1.25rem);
+  right: clamp(0.75rem, 2vw, 1.25rem);
+  z-index: 20;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  background: var(--dmd-bg-card, rgba(24, 24, 37, 0.85));
+  border: 1px solid var(--dmd-border-color);
+  border-radius: 9999px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  user-select: none;
+}
+
+.dmd-diagram-pill-btn {
+  display: grid;
+  place-items: center;
+  min-width: 1.8rem;
+  height: 1.8rem;
+  padding: 0 0.45rem;
+  border: none;
+  background: transparent;
+  color: var(--dmd-text-secondary);
+  font-size: 0.76rem;
+  font-weight: 600;
+  border-radius: 9999px;
+  cursor: pointer;
+  transition: background var(--dmd-transition), color var(--dmd-transition);
+}
+
+.dmd-diagram-pill-btn:hover:not(:disabled) {
+  background: var(--dmd-accent-subtle);
+  color: var(--dmd-accent);
+}
+
+.dmd-diagram-pill-btn.active {
+  background: var(--dmd-accent);
+  color: #11111b;
+}
+
+.dmd-diagram-pill-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.dmd-diagram-zoom-badge {
+  font-family: var(--dmd-font-mono);
+  font-size: 0.72rem;
+  min-width: 3.4ch;
+  color: var(--dmd-text-muted);
+}
+
+.dmd-floating-divider {
+  width: 1px;
+  height: 1rem;
+  background: var(--dmd-border-color);
+  margin: 0 2px;
+}
+
+/* Interactive Minimap Card */
+.dmd-diagram-minimap {
+  position: absolute;
+  bottom: clamp(3.5rem, 6vw, 4.5rem);
+  right: clamp(0.75rem, 2vw, 1.25rem);
+  z-index: 20;
+  width: clamp(140px, 20vw, 200px);
+  aspect-ratio: 16 / 11;
+  background: var(--dmd-bg-card, #181825);
+  border: 1px solid var(--dmd-border-color);
+  border-radius: var(--dmd-radius-md, 8px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  animation: dmdMinimapEnter 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes dmdMinimapEnter {
+  from {
+    opacity: 0;
+    transform: scale(0.92) translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.dmd-minimap-header {
+  height: 22px;
+  padding: 0 6px 0 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--dmd-border-color);
+  background: var(--dmd-bg-surface, #1e1e2e);
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--dmd-text-muted);
+  user-select: none;
+}
+
+.dmd-minimap-close {
+  background: transparent;
+  border: none;
+  color: var(--dmd-text-muted);
+  cursor: pointer;
+  font-size: 0.7rem;
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
+.dmd-minimap-close:hover {
+  color: var(--dmd-text-primary);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.dmd-minimap-track {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  cursor: crosshair;
+  overflow: hidden;
+  background: var(--dmd-bg-primary);
+}
+
+.dmd-minimap-svg-preview {
+  position: absolute;
+  inset: 4px;
+  pointer-events: none;
+  opacity: 0.75;
+}
+
+.dmd-minimap-svg-preview svg {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+}
+
+.dmd-minimap-viewport {
+  position: absolute;
+  border: 1.5px solid var(--dmd-accent);
+  background: var(--dmd-accent-subtle, rgba(49, 92, 245, 0.18));
+  border-radius: 3px;
+  pointer-events: none;
+  transition: border-color var(--dmd-transition);
 }
 
 .dmd-diagram-subgraph-copy {

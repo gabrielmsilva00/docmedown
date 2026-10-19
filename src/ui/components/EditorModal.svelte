@@ -4,6 +4,7 @@
   import MarkdownBody from "./MarkdownBody.svelte";
   import { parseMarkdown } from "../../runtime/markdown/parser";
   import { isOfflineDocumentation } from "../../runtime/offline-export";
+  import { detectDiagramType, encodeDiagramSource } from "../../runtime/markdown/mermaid";
 
   const isOffline = $derived(isOfflineDocumentation());
 
@@ -74,7 +75,7 @@
     isMobile && vvHeight ? `top:${vvTop}px;height:${vvHeight}px;bottom:auto;` : undefined,
   );
 
-  let activeTab = $state<"editor" | "frontmatter" | "table">("editor");
+  let activeTab = $state<"editor" | "frontmatter" | "table" | "mermaid">("editor");
 
   // Frontmatter Form state
   let fmTitle = $state("");
@@ -185,6 +186,189 @@
     doc.updateDocContent(draftContent, doc.currentSlug, false);
     statusMessage = "✔ Markdown table inserted at end of document";
     activeTab = "editor";
+  }
+
+  // Mermaid Helper state -----------------------------------------------------
+  const SEQ_DIR = ["sequence", "Diagram"].join("");
+  const MERMAID_PRESETS = [
+    {
+      id: "flowchart-td",
+      name: "Flowchart (Top-Down)",
+      source: `flowchart TD\n  Start([Start]) --> Process[Process Request]\n  Process --> Decision{Valid?}\n  Decision -->|Yes| Success[Done]\n  Decision -->|No| Retry[Retry]\n  Retry --> Process`,
+    },
+    {
+      id: "flowchart-lr",
+      name: "Flowchart (Left-Right)",
+      source: `flowchart LR\n  Client[Browser] --> Gateway[API Gateway]\n  Gateway --> Service[Core Service]\n  Service --> DB[(Database)]`,
+    },
+    {
+      id: "sequence",
+      name: "Sequence Diagram",
+      source: `${SEQ_DIR}\n  autonumber\n  actor User\n  participant App\n  participant API\n  User->>App: Request\n  App->>API: Query\n  API-->>App: JSON Result\n  App-->>User: Update View`,
+    },
+    {
+      id: "architecture",
+      name: "Architecture / Services",
+      source: `flowchart TB\n  subgraph Ingestion ["Ingestion"]\n    CDN["Edge CDN"]\n    LB["Load Balancer"]\n  end\n  subgraph Services ["Backend"]\n    API1["API Service"]\n    Cache[("Redis")]\n  end\n  CDN --> LB --> API1 --> Cache`,
+    },
+    {
+      id: "gitgraph",
+      name: "Git Graph",
+      source: `gitGraph\n  commit id: "Init"\n  branch feature\n  checkout feature\n  commit id: "Pele Engine"\n  checkout main\n  merge feature id: "v0.9.8"`,
+    },
+    {
+      id: "statediagram",
+      name: "State Diagram",
+      source: `stateDiagram-v2\n  [*] --> Idle\n  Idle --> Processing : Submit\n  Processing --> Success : Done\n  Processing --> Error : Fail\n  Error --> Idle : Retry\n  Success --> [*]`,
+    },
+    {
+      id: "classdiagram",
+      name: "Class Diagram",
+      source: `classDiagram\n  class Engine {\n    +String family\n    +render(src)\n  }\n  class Viewer {\n    -Number zoom\n    +fitCamera()\n  }\n  Engine <|-- Viewer`,
+    },
+    {
+      id: "mindmap",
+      name: "Mindmap",
+      source: `mindmap\n  root((DocMeDown))\n    Pele Renderer\n    Navigation Minimap\n    Interactive Viewer\n    Helper Editor`,
+    },
+  ];
+
+  let mermaidDraft = $state(MERMAID_PRESETS[0].source);
+  let mermaidLineCount = $derived(mermaidDraft.split("\n").length);
+  let detectedMermaidType = $derived(detectDiagramType(mermaidDraft));
+  let encodedMermaidDraft = $derived(encodeDiagramSource(mermaidDraft));
+
+  let mermaidNodeId = $state("Step1");
+  let mermaidNodeLabel = $state("Action");
+  let mermaidNodeShape = $state<"rect" | "round" | "decision" | "stadium" | "circle" | "db">("rect");
+
+  let mermaidEdgeFrom = $state("Step1");
+  let mermaidEdgeTo = $state("Step2");
+  let mermaidEdgeType = $state<"-->" | "---" | "-.->" | "==>">("-->");
+  let mermaidEdgeLabel = $state("");
+
+  let mermaidCopySuccess = $state<"source" | "markdown" | null>(null);
+
+  function initMermaidDraft() {
+    if (!mermaidDraft.trim()) {
+      extractMermaidFromDoc();
+    }
+  }
+
+  function extractMermaidFromDoc() {
+    const match = draftContent.match(/```mermaid\s*\n([\s\S]*?)```/);
+    if (match && match[1].trim()) {
+      mermaidDraft = match[1].trim();
+      statusMessage = "Loaded existing Mermaid diagram from document";
+    } else if (!mermaidDraft.trim()) {
+      mermaidDraft = MERMAID_PRESETS[0].source;
+    }
+  }
+
+  function loadMermaidPreset(presetId: string) {
+    const preset = MERMAID_PRESETS.find((p) => p.id === presetId);
+    if (preset) {
+      mermaidDraft = preset.source;
+    }
+  }
+
+  function setMermaidDirection(dir: "TD" | "LR" | "BT" | "RL") {
+    if (/^\s*(flowchart|graph)\s+[A-Z]{2}/m.test(mermaidDraft)) {
+      mermaidDraft = mermaidDraft.replace(/^\s*(flowchart|graph)\s+[A-Z]{2}/m, `$1 ${dir}`);
+    } else {
+      mermaidDraft = `flowchart ${dir}\n${mermaidDraft.trimStart()}`;
+    }
+  }
+
+  function addMermaidNode() {
+    const id = mermaidNodeId.trim() || "Node";
+    const label = mermaidNodeLabel.trim() || id;
+    let nodeStr = "";
+    switch (mermaidNodeShape) {
+      case "round":
+        nodeStr = `  ${id}("${label}")`;
+        break;
+      case "decision":
+        nodeStr = `  ${id}{"${label}"}`;
+        break;
+      case "stadium":
+        nodeStr = `  ${id}(["${label}"])`;
+        break;
+      case "circle":
+        nodeStr = `  ${id}(("${label}"))`;
+        break;
+      case "db":
+        nodeStr = `  ${id}[("${label}")]`;
+        break;
+      case "rect":
+      default:
+        nodeStr = `  ${id}["${label}"]`;
+        break;
+    }
+    mermaidDraft = `${mermaidDraft.trimEnd()}\n${nodeStr}`;
+    const match = id.match(/^(.*?)(\d+)$/);
+    if (match) {
+      mermaidNodeId = `${match[1]}${Number(match[2]) + 1}`;
+    }
+  }
+
+  function addMermaidEdge() {
+    const from = mermaidEdgeFrom.trim() || "A";
+    const to = mermaidEdgeTo.trim() || "B";
+    const arrow = mermaidEdgeType;
+    const label = mermaidEdgeLabel.trim() ? `|${mermaidEdgeLabel.trim()}| ` : "";
+    const edgeStr = `  ${from} ${arrow} ${label}${to}`;
+    mermaidDraft = `${mermaidDraft.trimEnd()}\n${edgeStr}`;
+  }
+
+  function insertMermaidIntoDraft() {
+    const block = `\n\n\`\`\`mermaid\n${mermaidDraft.trim()}\n\`\`\`\n\n`;
+    if (textareaEl && typeof textareaEl.selectionStart === "number") {
+      const s = textareaEl.selectionStart;
+      const e = textareaEl.selectionEnd;
+      draftContent = draftContent.slice(0, s) + block + draftContent.slice(e);
+    } else {
+      draftContent = `${draftContent.trimEnd()}${block}`;
+    }
+    doc.updateDocContent(draftContent, doc.currentSlug, false);
+    statusMessage = "✔ Mermaid diagram inserted into document";
+    activeTab = "editor";
+  }
+
+  async function copyMermaidSource() {
+    try {
+      await navigator.clipboard.writeText(mermaidDraft.trim());
+      mermaidCopySuccess = "source";
+      setTimeout(() => (mermaidCopySuccess = null), 2000);
+      statusMessage = "✔ Copied Mermaid source to clipboard";
+    } catch {
+      statusMessage = "✖ Failed to copy to clipboard";
+    }
+  }
+
+  async function copyMermaidMarkdown() {
+    try {
+      const md = `\`\`\`mermaid\n${mermaidDraft.trim()}\n\`\`\``;
+      await navigator.clipboard.writeText(md);
+      mermaidCopySuccess = "markdown";
+      setTimeout(() => (mermaidCopySuccess = null), 2000);
+      statusMessage = "✔ Copied Mermaid markdown code block to clipboard";
+    } catch {
+      statusMessage = "✖ Failed to copy to clipboard";
+    }
+  }
+
+  function handleMermaidKeyDown(e: KeyboardEvent) {
+    if (e.key === "Tab") {
+      e.preventDefault();
+      const textarea = e.currentTarget as HTMLTextAreaElement;
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      mermaidDraft = `${mermaidDraft.substring(0, start)}  ${mermaidDraft.substring(end)}`;
+      setTimeout(() => {
+        textarea.selectionStart = textarea.selectionEnd = start + 2;
+      }, 0);
+    }
   }
 
   // Initialize draft content when editor opens or current document changes
@@ -478,6 +662,15 @@
           >
             Table<span class="dmd-hide-sm"> Assistant</span>
           </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'mermaid'}
+            class="dmd-editor-tab-btn {activeTab === 'mermaid' ? 'active' : ''}"
+            onclick={() => { initMermaidDraft(); activeTab = 'mermaid'; mobilePane = 'write'; }}
+          >
+            Mermaid<span class="dmd-hide-sm"> Helper</span>
+          </button>
         </div>
 
         <div class="dmd-editor-header-controls">
@@ -574,7 +767,7 @@
           <!-- Editor Input Pane -->
           <div class="dmd-editor-pane editor">
             {#if isMobile}
-              <!-- svelte-ignore a11y_no_static_element_interactions -->
+              <!-- svelte-ignore a11y_no_static_element_interactions a11y_no_noninteractive_element_interactions -->
               <div
                 class="dmd-editor-toolbar"
                 role="group"
@@ -705,6 +898,171 @@
                     {/each}
                   </tbody>
                 </table>
+              </div>
+            </div>
+          </div>
+        {:else if activeTab === 'mermaid'}
+          <!-- Mermaid Visual Assistant Pane -->
+          <div class="dmd-editor-pane mermaid-pane">
+            <div class="dmd-mermaid-builder">
+              <!-- Toolbar -->
+              <div class="dmd-mermaid-toolbar">
+                <div class="dmd-mermaid-toolbar-left">
+                  <div class="dmd-mermaid-title-group">
+                    <span class="dmd-mermaid-icon">📐</span>
+                    <h3 class="dmd-pane-title">Mermaid Helper</h3>
+                    <span class="dmd-mermaid-type-badge">{detectedMermaidType}</span>
+                  </div>
+
+                  <!-- Preset selector -->
+                  <div class="dmd-mermaid-preset-picker">
+                    <label for="mermaid-preset-select" class="dmd-sr-only">Templates</label>
+                    <select
+                      id="mermaid-preset-select"
+                      class="dmd-mermaid-select"
+                      onchange={(e) => loadMermaidPreset((e.target as HTMLSelectElement).value)}
+                    >
+                      <option value="" disabled selected>Templates...</option>
+                      {#each MERMAID_PRESETS as preset (preset.id)}
+                        <option value={preset.id}>{preset.name}</option>
+                      {/each}
+                    </select>
+                  </div>
+
+                  <!-- Direction switcher (for flowcharts) -->
+                  <div class="dmd-mermaid-dir-group" title="Flowchart Direction">
+                    <span class="dmd-dir-label">Dir:</span>
+                    <button type="button" class="dmd-dir-btn" onclick={() => setMermaidDirection("TD")}>TD</button>
+                    <button type="button" class="dmd-dir-btn" onclick={() => setMermaidDirection("LR")}>LR</button>
+                    <button type="button" class="dmd-dir-btn" onclick={() => setMermaidDirection("BT")}>BT</button>
+                    <button type="button" class="dmd-dir-btn" onclick={() => setMermaidDirection("RL")}>RL</button>
+                  </div>
+                </div>
+
+                <div class="dmd-mermaid-toolbar-actions">
+                  <button
+                    type="button"
+                    class="dmd-btn-xs"
+                    onclick={extractMermaidFromDoc}
+                    title="Load first Mermaid block found in current document"
+                  >
+                    Load from Doc
+                  </button>
+                  <button
+                    type="button"
+                    class="dmd-btn-xs {mermaidCopySuccess === 'source' ? 'active' : ''}"
+                    onclick={copyMermaidSource}
+                  >
+                    {mermaidCopySuccess === "source" ? "✔ Copied" : "Copy Source"}
+                  </button>
+                  <button
+                    type="button"
+                    class="dmd-btn-xs {mermaidCopySuccess === 'markdown' ? 'active' : ''}"
+                    onclick={copyMermaidMarkdown}
+                  >
+                    {mermaidCopySuccess === "markdown" ? "✔ Copied" : "Copy Markdown"}
+                  </button>
+                  <button
+                    type="button"
+                    class="dmd-btn-primary dmd-btn-xs"
+                    onclick={insertMermaidIntoDraft}
+                    title="Insert diagram into markdown document"
+                  >
+                    Insert into Doc
+                  </button>
+                </div>
+              </div>
+
+              <!-- Quick Builder bar for Flowchart elements -->
+              <div class="dmd-mermaid-quickbar">
+                <div class="dmd-quickbar-section">
+                  <span class="dmd-quickbar-label">Node:</span>
+                  <input
+                    type="text"
+                    class="dmd-quick-input sm"
+                    placeholder="ID"
+                    bind:value={mermaidNodeId}
+                    aria-label="Node ID"
+                  />
+                  <input
+                    type="text"
+                    class="dmd-quick-input"
+                    placeholder="Label"
+                    bind:value={mermaidNodeLabel}
+                    aria-label="Node Label"
+                  />
+                  <select class="dmd-quick-select" bind:value={mermaidNodeShape} aria-label="Node Shape">
+                    <option value="rect">[ Square ]</option>
+                    <option value="round">( Rounded )</option>
+                    <option value="decision">{"{ Decision }"}</option>
+                    <option value="stadium">([ Stadium ])</option>
+                    <option value="circle">(( Circle ))</option>
+                    <option value="db">[( Database )]</option>
+                  </select>
+                  <button type="button" class="dmd-btn-xs" onclick={addMermaidNode}>+ Node</button>
+                </div>
+
+                <div class="dmd-quickbar-section">
+                  <span class="dmd-quickbar-label">Edge:</span>
+                  <input
+                    type="text"
+                    class="dmd-quick-input sm"
+                    placeholder="From"
+                    bind:value={mermaidEdgeFrom}
+                    aria-label="From node"
+                  />
+                  <select class="dmd-quick-select" bind:value={mermaidEdgeType} aria-label="Arrow type">
+                    <option value="-->">--&gt; (Arrow)</option>
+                    <option value="---">--- (Line)</option>
+                    <option value="-.->">-.-&gt; (Dotted)</option>
+                    <option value="==>">==&gt; (Thick)</option>
+                  </select>
+                  <input
+                    type="text"
+                    class="dmd-quick-input sm"
+                    placeholder="Label"
+                    bind:value={mermaidEdgeLabel}
+                    aria-label="Edge label"
+                  />
+                  <input
+                    type="text"
+                    class="dmd-quick-input sm"
+                    placeholder="To"
+                    bind:value={mermaidEdgeTo}
+                    aria-label="To node"
+                  />
+                  <button type="button" class="dmd-btn-xs" onclick={addMermaidEdge}>+ Edge</button>
+                </div>
+              </div>
+
+              <!-- Workspace: Split between Code Textarea & Live Diagram View -->
+              <div class="dmd-mermaid-workspace">
+                <div class="dmd-mermaid-editor-side">
+                  <div class="dmd-mermaid-subhead">
+                    <span>Source (Live Two-Way)</span>
+                    <span class="dmd-mermaid-stats">{mermaidLineCount} lines</span>
+                  </div>
+                  <textarea
+                    class="dmd-mermaid-textarea"
+                    bind:value={mermaidDraft}
+                    onkeydown={handleMermaidKeyDown}
+                    placeholder="Enter Mermaid diagram syntax..."
+                    spellcheck="false"
+                    autocapitalize="off"
+                    autocomplete="off"
+                    {...{ autocorrect: "off" }}
+                  ></textarea>
+                </div>
+
+                <div class="dmd-mermaid-preview-side">
+                  <div class="dmd-mermaid-subhead">
+                    <span>Live Interactive Preview</span>
+                    <span class="dmd-mermaid-engine-tag">Pele v1.6.0</span>
+                  </div>
+                  <div class="dmd-mermaid-viewer-wrap">
+                    <dmd-mermaid source={encodedMermaidDraft}></dmd-mermaid>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -1369,6 +1727,283 @@
   .dmd-td-actions {
     width: 32px;
     text-align: center;
+  }
+
+  /* Mermaid Helper Styles -------------------------------------------------- */
+  .mermaid-pane {
+    background: var(--dmd-bg-card, #181825);
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .dmd-mermaid-builder {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    gap: 12px;
+  }
+
+  .dmd-mermaid-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+
+  .dmd-mermaid-toolbar-left {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .dmd-mermaid-title-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .dmd-mermaid-icon {
+    font-size: 14px;
+  }
+
+  .dmd-mermaid-type-badge {
+    padding: 2px 7px;
+    border-radius: 4px;
+    background: var(--dmd-accent-subtle, rgba(137, 180, 250, 0.15));
+    border: 1px solid var(--dmd-accent, #89b4fa);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--dmd-accent, #89b4fa);
+  }
+
+  .dmd-mermaid-select {
+    background: var(--dmd-bg-surface, #1e1e2e);
+    border: 1px solid var(--dmd-border-color, #313244);
+    color: var(--dmd-text-primary, #cdd6f4);
+    font-size: 11px;
+    font-weight: 500;
+    padding: 3px 8px;
+    border-radius: 5px;
+    outline: none;
+    cursor: pointer;
+  }
+
+  .dmd-mermaid-select:focus {
+    border-color: var(--dmd-accent, #89b4fa);
+  }
+
+  .dmd-mermaid-dir-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    background: var(--dmd-bg-surface, #1e1e2e);
+    border: 1px solid var(--dmd-border-color, #313244);
+    padding: 2px 5px;
+    border-radius: 5px;
+  }
+
+  .dmd-dir-label {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--dmd-text-muted, #a6adc8);
+    margin-right: 2px;
+  }
+
+  .dmd-dir-btn {
+    border: none;
+    background: transparent;
+    color: var(--dmd-text-secondary, #bac2de);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 5px;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 0.12s ease;
+  }
+
+  .dmd-dir-btn:hover {
+    background: var(--dmd-accent-subtle, rgba(137, 180, 250, 0.2));
+    color: var(--dmd-accent, #89b4fa);
+  }
+
+  .dmd-mermaid-toolbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .dmd-mermaid-quickbar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+    padding: 6px 12px;
+    background: var(--dmd-bg-surface, #1e1e2e);
+    border: 1px solid var(--dmd-border-color, #313244);
+    border-radius: 7px;
+    flex-shrink: 0;
+  }
+
+  .dmd-quickbar-section {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .dmd-quickbar-label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--dmd-text-muted, #a6adc8);
+  }
+
+  .dmd-quick-input {
+    background: var(--dmd-bg-card, #181825);
+    border: 1px solid var(--dmd-border-color, #313244);
+    color: var(--dmd-text-primary, #cdd6f4);
+    font-size: 11px;
+    padding: 3px 6px;
+    border-radius: 4px;
+    outline: none;
+    width: 90px;
+  }
+
+  .dmd-quick-input.sm {
+    width: 55px;
+  }
+
+  .dmd-quick-input:focus {
+    border-color: var(--dmd-accent, #89b4fa);
+  }
+
+  .dmd-quick-select {
+    background: var(--dmd-bg-card, #181825);
+    border: 1px solid var(--dmd-border-color, #313244);
+    color: var(--dmd-text-primary, #cdd6f4);
+    font-size: 11px;
+    padding: 2px 4px;
+    border-radius: 4px;
+    outline: none;
+    cursor: pointer;
+  }
+
+  .dmd-mermaid-workspace {
+    display: grid;
+    grid-template-columns: minmax(260px, 1fr) minmax(320px, 1.25fr);
+    gap: 12px;
+    flex: 1;
+    min-height: 0;
+  }
+
+  .dmd-mermaid-editor-side,
+  .dmd-mermaid-preview-side {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    border: 1px solid var(--dmd-border-color, #313244);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .dmd-mermaid-editor-side {
+    background: var(--dmd-bg-surface, #1e1e2e);
+  }
+
+  .dmd-mermaid-preview-side {
+    background: var(--dmd-bg-canvas, #11111b);
+  }
+
+  .dmd-mermaid-subhead {
+    height: 32px;
+    padding: 0 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--dmd-border-color, #313244);
+    background: rgba(0, 0, 0, 0.15);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--dmd-text-muted, #a6adc8);
+    flex-shrink: 0;
+  }
+
+  .dmd-mermaid-stats {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 10px;
+    color: var(--dmd-text-muted, #a6adc8);
+  }
+
+  .dmd-mermaid-engine-tag {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--dmd-accent, #89b4fa);
+  }
+
+  .dmd-mermaid-textarea {
+    flex: 1;
+    width: 100%;
+    resize: none;
+    padding: 12px;
+    background: transparent;
+    border: none;
+    outline: none;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 12px;
+    line-height: 1.55;
+    color: var(--dmd-text-primary, #cdd6f4);
+    tab-size: 2;
+    overflow-y: auto;
+  }
+
+  .dmd-mermaid-viewer-wrap {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .dmd-mermaid-viewer-wrap :global(.dmd-diagram-viewer) {
+    margin: 0 !important;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    height: 100%;
+  }
+
+  .dmd-mermaid-viewer-wrap :global(.dmd-diagram-frame) {
+    flex: 1;
+    height: 100%;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+
+  .dmd-mermaid-viewer-wrap :global(.dmd-diagram-stage) {
+    flex: 1;
+    min-height: 240px;
+  }
+
+  @media (max-width: 900px) {
+    .dmd-mermaid-workspace {
+      grid-template-columns: 1fr;
+      grid-template-rows: 1fr 1fr;
+    }
   }
 
   /* New header wrappers (desktop defaults) --------------------------------- */

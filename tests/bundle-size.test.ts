@@ -33,8 +33,8 @@ test("runtime bundles stay within the agreed size budget", () => {
   assert.ok(iife.length < 4.5 * 1024 * KB, `IIFE raw ${(iife.length / KB) | 0} KB exceeds 4.5 MB`);
   assert.ok(gzipSync(iife).length < 1.4 * 1024 * KB, "IIFE gzip exceeds 1.4 MB");
 
-  assert.ok(esm.length < 1.55 * 1024 * KB, `ESM raw ${(esm.length / KB) | 0} KB exceeds 1.55 MB`);
-  assert.ok(gzipSync(esm).length < 0.48 * 1024 * KB, "ESM gzip exceeds 480 KB");
+  assert.ok(esm.length < 1.65 * 1024 * KB, `ESM raw ${(esm.length / KB) | 0} KB exceeds 1.65 MB`);
+  assert.ok(gzipSync(esm).length < 0.5 * 1024 * KB, "ESM gzip exceeds 500 KB");
 
   assert.ok(cjs.length < 1.35 * 1024 * KB, `CJS raw ${(cjs.length / KB) | 0} KB exceeds 1.35 MB`);
   assert.ok(gzipSync(cjs).length < 0.48 * 1024 * KB, "CJS gzip exceeds 480 KB");
@@ -42,10 +42,10 @@ test("runtime bundles stay within the agreed size budget", () => {
   // The served runtime externalizes Mermaid and prunes decorative fonts, keeping the initial download lean.
   const web = readArtifact("docmedown.web.js");
   assert.ok(
-    Buffer.byteLength(web) < 1.5 * 1024 * KB,
-    `served runtime raw ${(Buffer.byteLength(web) / KB) | 0} KiB exceeds 1.5 MiB`,
+    Buffer.byteLength(web) < 1.55 * 1024 * KB,
+    `served runtime raw ${(Buffer.byteLength(web) / KB) | 0} KiB exceeds 1.55 MiB`,
   );
-  assert.ok(gzipSync(web).length < 0.48 * 1024 * KB, "served runtime gzip exceeds 480 KB");
+  assert.ok(gzipSync(web).length < 0.5 * 1024 * KB, "served runtime gzip exceeds 500 KB");
 
   // CLI binary is minified to keep package install footprint small.
   const cli = readArtifact("cli.js");

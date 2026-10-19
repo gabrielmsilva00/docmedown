@@ -90,6 +90,42 @@ export function calculateDiagramFit(diagram: DiagramSize, viewport: DiagramSize,
   return Math.max(0.05, allowUpscale ? scale : Math.min(1, scale));
 }
 
+/** Returns the scale that fits the diagram's width to the viewport width. */
+export function calculateDiagramFitWidth(diagram: DiagramSize, viewport: DiagramSize, allowUpscale = false): number {
+  if (diagram.width <= 0 || viewport.width <= 0) return 1;
+  const scale = viewport.width / diagram.width;
+  return Math.max(0.05, allowUpscale ? scale : Math.min(1, scale));
+}
+
+/** Returns the scale that fits the diagram's height to the viewport height. */
+export function calculateDiagramFitHeight(diagram: DiagramSize, viewport: DiagramSize, allowUpscale = false): number {
+  if (diagram.height <= 0 || viewport.height <= 0) return 1;
+  const scale = viewport.height / diagram.height;
+  return Math.max(0.05, allowUpscale ? scale : Math.min(1, scale));
+}
+
+/** Identifies human-readable diagram type from Mermaid source. */
+export function detectDiagramType(source: string): string {
+  const cleaned = source.replace(/^\s*(?:---\r?\n[\s\S]*?\r?\n---\s*|%%[^\n]*\n\s*)*/, "").trim();
+  const match = cleaned.match(/^([a-zA-Z0-9_-]+)/);
+  if (!match) return "Diagram";
+  const raw = match[1].toLowerCase();
+  if (raw === "flowchart" || raw === "graph") return "Flowchart";
+  if (raw === "sequencediagram") return "Sequence";
+  if (raw === "classdiagram") return "Class";
+  if (raw === "statediagram" || raw === "statediagram-v2") return "State";
+  if (raw === "erdiagram") return "ER Diagram";
+  if (raw === "gitgraph") return "Git Graph";
+  if (raw === "mindmap") return "Mindmap";
+  if (raw === "pie") return "Pie Chart";
+  if (raw === "gantt") return "Gantt";
+  if (raw === "timeline") return "Timeline";
+  if (raw === "journey") return "User Journey";
+  if (raw === "kanban") return "Kanban";
+  if (raw === "architecture" || raw === "architecture-beta") return "Architecture";
+  return raw.charAt(0).toUpperCase() + raw.slice(1);
+}
+
 /** Returns the camera travel available on each axis around a centered diagram. */
 export function calculateDiagramCameraBounds(diagram: DiagramSize, viewport: DiagramSize): DiagramCameraBounds {
   return {

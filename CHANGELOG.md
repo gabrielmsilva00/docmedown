@@ -14,6 +14,18 @@ All notable changes to DocMeDown are documented here.
   - Theming moves from Mermaid `themeVariables` to `--pele-*` CSS variables written onto the SVG root, so exported SVGs keep their colors.
   - Syntax errors now report the line and a source snippet.
   - Per-diagram frontmatter and `%%{init}%%` directives are still read, but support varies by diagram type and Mermaid theme names/`securityLevel` have no effect; see [Pele's compatibility notes](https://pele.run/compatibility) for syntax differences.
+- **Revamped Mermaid diagram viewer & navigation overhaul**:
+  - Clean toolbar with consolidated **Copy** dropdown (Markdown block, raw Mermaid source, SVG markup, PNG image via crisp 2x canvas rendering) and **Export** download dropdown (SVG, PNG).
+  - Eliminates permanent visual clutter from floating subgraph buttons in favor of an on-hover contextual pill over the specific hovered cluster.
+  - Navigation overhaul: Ctrl/Cmd + wheel cursor-centered zoom (and trackpad pinch), double-click to zoom in / reset to fit, click node/cluster to focus camera, full keyboard navigation (`+`, `-`, `0`, `f`, arrow keys), and floating corner controls with zoom %, 1:1, and multi-mode fit cycling (all, width, height).
+  - Interactive minimap overview card with draggable viewport rectangle.
+  - Diagram type header badge auto-detected from diagram source.
+- **New Mermaid Helper editor tab**:
+  - Added dedicated Mermaid Helper tab in the 2-way Markdown Editor alongside Markdown, Frontmatter Form, and Table Assistant.
+  - Interactive visual builder with presets gallery (Flowchart TD/LR, Sequence, Architecture, Git Graph, State, Class, Mindmap).
+  - Quick direction switcher (`TD`, `LR`, `BT`, `RL`) and quick node/edge form inputs for rapid diagram construction.
+  - Live two-way synchronized code editor with embedded interactive diagram preview.
+  - "Insert into Doc", "Load from Doc", and one-click clipboard copy actions.
 
 ---
 

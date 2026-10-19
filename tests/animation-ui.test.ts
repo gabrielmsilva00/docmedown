@@ -18,6 +18,20 @@ test("carousel control navigation has a single scroll owner and stops on teardow
   assert.doesNotMatch(grid, /viewport\.scrollTo\(/);
 });
 
+test("carousel boundaries use buffered windows and recenter after native scrolling", () => {
+  const grid = source("ui/builtins/CardGrid.svelte");
+  assert.match(grid, /cardCount \+ 2 \* perView/);
+  assert.match(grid, /card\.cloneCard\?\.\(\)/);
+  assert.match(grid, /slide\.inert = true/);
+  assert.match(grid, /scrollToSlide\(active - 1\)/);
+  assert.match(grid, /scrollToSlide\(active \+ 1\)/);
+  assert.match(grid, /onscrollend=\{settleScroll\}/);
+  assert.match(grid, /jumpTo\(perView \+ active\)/);
+  assert.match(grid, /untrack\(cacheOffsets\)/);
+  assert.match(grid, /await tick\(\)/);
+  assert.doesNotMatch(grid, /disabled=\{active/);
+});
+
 test("tabs animate their visible panel and indicator without animating indicator width", () => {
   const tabs = source("ui/builtins/Tabs.svelte");
   const indicatorCss = css.match(/\.dmd-tab-indicator\s*\{[^}]*\}/)?.[0] ?? "";

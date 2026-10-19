@@ -186,6 +186,8 @@ export async function initCommand(targetDirArg?: string, options: InitOptions = 
           { title: "Blueprint (Structured and schematic)", value: "blueprint" },
           { title: "Terminal (Compact operational console)", value: "terminal" },
           { title: "Editorial (Spacious publication reading)", value: "editorial" },
+          { title: "Botanical (Sage field guide)", value: "botanical" },
+          { title: "Studio (Expressive graphic workbook)", value: "studio" },
         ],
         initial: 0,
       });

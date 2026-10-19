@@ -240,6 +240,9 @@ if (isDryRun) {
   console.log(
     `  GitHub: would ${initialRemote.ahead > 0 ? "push existing commits and " : ""}push main and v${plannedVersion}`,
   );
+  console.log(
+    `  GitHub Release: would create GitHub Release v${plannedVersion} (prerelease: ${plannedVersion.includes("-")}) with offline docs bundle`,
+  );
   console.log(`  npm: would publish ${packageName}@${plannedVersion} with dist-tag ${releaseDistTag(plannedVersion)}`);
   console.log("  Pages: would dispatch pages.yml on main (including already-deployed release retries)");
   process.exit(0);
@@ -291,6 +294,36 @@ if (!existingTagMatchesHead) {
 if (!versionAlreadyPublished) runNpm(publishArgs());
 else console.log(`\n✓ ${packageName}@${version} is already published; verifying the registry.`);
 
+function createGitHubRelease(tagName, version) {
+  const isPrerelease = version.includes("-");
+  const args = ["release", "create", tagName, "--title", tagName, "--generate-notes"];
+  if (isPrerelease) args.push("--prerelease");
+
+  const offlineBundle = path.resolve(process.cwd(), "docs/.dmd/.singlefile/index.html");
+  let tempAsset = null;
+  if (fs.existsSync(offlineBundle)) {
+    tempAsset = path.resolve(process.cwd(), "docmedown-docs-offline.html");
+    fs.copyFileSync(offlineBundle, tempAsset);
+    args.push(tempAsset);
+  }
+
+  const result = run("gh", args, { capture: true });
+  if (tempAsset && fs.existsSync(tempAsset)) {
+    try {
+      fs.unlinkSync(tempAsset);
+    } catch {}
+  }
+
+  if (result.status === 0) {
+    console.log(`\n✓ GitHub Release created for ${tagName}`);
+  } else {
+    console.log(
+      `\nℹ GitHub Release: ${result.stderr.trim() || result.stdout.trim() || "handled via CI release workflow on tag push"}.`,
+    );
+  }
+}
+
 verifyPublishedVersion(packageName, version);
 deployPages();
+createGitHubRelease(tagName, version);
 console.log(`\n✨ Deployment complete: ${packageName}@${version}`);

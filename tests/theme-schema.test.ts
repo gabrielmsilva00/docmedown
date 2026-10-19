@@ -72,7 +72,7 @@ test("theme schema alignment across Zod, JSON schema, and docs", () => {
 
 test("CSS token architecture, responsive shell layout, and navbar typography", () => {
   const themesCss = fs.readFileSync(path.join(packageRoot, "src/runtime/styles/themes.css"), "utf-8");
-  for (const family of ["atlas", "blueprint", "terminal", "editorial"]) {
+  for (const family of ["atlas", "blueprint", "terminal", "editorial", "botanical", "studio"]) {
     assert.match(themesCss, new RegExp(`data-dmd-theme='${family}'`), `light layer missing for ${family}`);
     assert.match(
       themesCss,
@@ -118,6 +118,8 @@ test("CSS token architecture, responsive shell layout, and navbar typography", (
   assert.match(mainCss, /\.dmd-offline-download-btn\s*\{[^}]*white-space:\s*nowrap/);
   assert.match(mainCss, /\.dmd-appearance-trigger\s*\{[^}]*white-space:\s*nowrap/);
   assert.match(mainCss, /\.dmd-appearance-panel\s*\{[^}]*white-space:\s*normal/);
+  assert.match(mainCss, /\.dmd-lang-trigger\s*\{[^}]*white-space:\s*nowrap/);
+  assert.match(mainCss, /\.dmd-lang-panel\s*\{[^}]*white-space:\s*normal/);
   assert.match(mainCss, /\.dmd-offline-download-error\s*\{[^}]*white-space:\s*normal/);
 
   // Navbar route bar and search icon replacement transition contracts

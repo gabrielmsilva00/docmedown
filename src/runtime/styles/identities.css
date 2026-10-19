@@ -1,0 +1,254 @@
+/* Six design identities. Layout stays in main.css; these rules change the
+   material, typography and visual hierarchy without changing reading order. */
+
+/* ATLAS — cobalt index tabs on a measured mineral reference surface. */
+[data-dmd-theme='atlas'] .dmd-navbar {
+  border-top: 3px solid var(--dmd-accent);
+}
+[data-dmd-theme='atlas'] .dmd-sidebar-link.active {
+  box-shadow: inset 3px 0 var(--dmd-accent);
+  border-radius: 0 var(--dmd-radius-sm) var(--dmd-radius-sm) 0;
+}
+[data-dmd-theme='atlas'] .dmd-markdown-body h1 {
+  font-weight: 800;
+  letter-spacing: -0.045em;
+}
+[data-dmd-theme='atlas'] .dmd-markdown-body h2 {
+  border-bottom: 2px solid var(--dmd-border-color);
+}
+[data-dmd-theme='atlas'] .dmd-card {
+  border-top: 3px solid var(--dmd-accent);
+}
+
+/* BLUEPRINT — graph paper belongs to chrome, never behind reading text. */
+[data-dmd-theme='blueprint'] .dmd-sidebar {
+  background-color: var(--dmd-bg-secondary);
+  background-image: linear-gradient(var(--dmd-border-subtle) 1px, transparent 1px),
+    linear-gradient(90deg, var(--dmd-border-subtle) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+[data-dmd-theme='blueprint'] .dmd-markdown-body h1 {
+  border: 1px solid var(--dmd-border-color);
+  border-left: 5px solid var(--dmd-accent);
+  padding: clamp(0.8rem, 2vw, 1.5rem);
+  letter-spacing: -0.035em;
+}
+[data-dmd-theme='blueprint'] .dmd-category-header,
+[data-dmd-theme='blueprint'] .dmd-toc-header,
+[data-dmd-theme='blueprint'] .dmd-markdown-body h3,
+[data-dmd-theme='blueprint'] .dmd-markdown-body th {
+  font-family: var(--dmd-font-mono);
+}
+[data-dmd-theme='blueprint'] .dmd-card,
+[data-dmd-theme='blueprint'] .dmd-markdown-body blockquote {
+  border: 1px solid var(--dmd-border-color);
+  border-left: 3px solid var(--dmd-accent);
+  box-shadow: none;
+}
+[data-dmd-theme='blueprint'] .dmd-sidebar-link.active {
+  background: var(--dmd-bg-card);
+  outline: 1px solid var(--dmd-accent);
+  outline-offset: -1px;
+}
+
+/* TERMINAL — a static operational console, not a flickering CRT effect. */
+[data-dmd-theme='terminal'] .dmd-markdown-body h1 {
+  font-size: clamp(1.8rem, 3.6vw, 2.8rem);
+  letter-spacing: -0.05em;
+}
+[data-dmd-theme='terminal'] .dmd-markdown-body h2::before {
+  content: '> ';
+  color: var(--dmd-accent);
+}
+[data-dmd-theme='terminal'] .dmd-markdown-body h3,
+[data-dmd-theme='terminal'] .dmd-toc-header,
+[data-dmd-theme='terminal'] .dmd-markdown-body th {
+  font-family: var(--dmd-font-mono);
+}
+[data-dmd-theme='terminal'] .dmd-markdown-body h2 {
+  border-bottom: 1px dashed var(--dmd-border-color);
+}
+[data-dmd-theme='terminal'] .dmd-sidebar-link.active {
+  background: var(--dmd-accent-subtle);
+  box-shadow: inset 3px 0 var(--dmd-accent);
+}
+[data-dmd-theme='terminal'] .dmd-card {
+  box-shadow: none;
+  border: 1px solid var(--dmd-border-color);
+}
+
+/* EDITORIAL — publication typography rather than rounded application chrome. */
+[data-dmd-theme='editorial'] .dmd-markdown-body {
+  font-family: var(--dmd-font-display);
+  font-size: 1.125rem;
+  line-height: 1.85;
+}
+[data-dmd-theme='editorial'] .dmd-markdown-body h1 {
+  font-size: clamp(2.5rem, 5vw, 4rem);
+  font-weight: 500;
+  letter-spacing: -0.04em;
+  padding-bottom: 1.25rem;
+  border-bottom: 3px double var(--dmd-text-primary);
+}
+[data-dmd-theme='editorial'] .dmd-markdown-body h2 {
+  font-weight: 500;
+  font-size: 1.9rem;
+  border-bottom-color: var(--dmd-border-color);
+}
+[data-dmd-theme='editorial'] .dmd-markdown-body h3 {
+  font-family: var(--dmd-font-display);
+  font-style: italic;
+}
+[data-dmd-theme='editorial'] .dmd-markdown-body blockquote {
+  font-size: 1.2em;
+  font-style: italic;
+  border-left: 2px solid var(--dmd-accent);
+  background: transparent;
+}
+[data-dmd-theme='editorial'] .dmd-navbar {
+  background: var(--dmd-bg-primary);
+  border-bottom: 1px solid var(--dmd-text-primary);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+[data-dmd-theme='editorial'] .dmd-sidebar-link.active {
+  background: transparent;
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 5px;
+}
+
+/* BOTANICAL — book-cloth navigation and leaf-shaped field notes. */
+[data-dmd-theme='botanical'] .dmd-sidebar {
+  background: var(--dmd-bg-secondary);
+  border-right: 1px solid var(--dmd-border-color);
+}
+[data-dmd-theme='botanical'] .dmd-brand-title,
+[data-dmd-theme='botanical'] .dmd-markdown-body h3 {
+  font-family: var(--dmd-font-display);
+}
+[data-dmd-theme='botanical'] .dmd-markdown-body h1 {
+  font-size: clamp(2.5rem, 4.7vw, 3.8rem);
+  font-weight: 500;
+  letter-spacing: -0.025em;
+}
+[data-dmd-theme='botanical'] .dmd-markdown-body h2 {
+  font-weight: 500;
+  border-bottom: 1px solid var(--dmd-border-color);
+  padding-bottom: 0.7rem;
+}
+[data-dmd-theme='botanical'] .dmd-card,
+[data-dmd-theme='botanical'] .dmd-markdown-body blockquote {
+  border-radius: 3px 24px 3px 24px;
+  border: 1px solid var(--dmd-border-color);
+  background: var(--dmd-bg-card);
+}
+[data-dmd-theme='botanical'] .dmd-sidebar-link.active {
+  border-radius: 3px 16px 3px 16px;
+  background: var(--dmd-accent-subtle);
+  box-shadow: inset 3px 0 var(--dmd-accent);
+}
+[data-dmd-theme='botanical'] .dmd-markdown-body th {
+  background: var(--dmd-bg-secondary);
+  color: var(--dmd-text-primary);
+}
+
+/* STUDIO — offset-print frames; boldness stays out of body copy. */
+[data-dmd-theme='studio'] .dmd-navbar {
+  background: var(--dmd-bg-card);
+  border-bottom: 2px solid var(--dmd-text-primary);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+[data-dmd-theme='studio'] .dmd-brand-title {
+  font-family: var(--dmd-font-display);
+  letter-spacing: -0.04em;
+}
+[data-dmd-theme='studio'] .dmd-markdown-body h1 {
+  font-size: clamp(2.4rem, 4.7vw, 3.8rem);
+  font-weight: 900;
+  letter-spacing: -0.055em;
+  line-height: 1.08;
+}
+[data-dmd-theme='studio'] .dmd-markdown-body h2 {
+  border-bottom: 3px solid var(--dmd-accent);
+  padding-bottom: 0.65rem;
+}
+[data-dmd-theme='studio'] .dmd-card,
+[data-dmd-theme='studio'] .dmd-markdown-body blockquote {
+  border: 2px solid var(--dmd-border-color);
+  box-shadow: var(--dmd-shadow-md);
+  background: var(--dmd-bg-card);
+}
+[data-dmd-theme='studio'] .dmd-sidebar-link.active {
+  border: 1px solid var(--dmd-accent);
+  box-shadow: 2px 2px 0 var(--dmd-accent);
+  background: var(--dmd-bg-card);
+}
+[data-dmd-theme='studio'] .dmd-markdown-body th {
+  background: var(--dmd-bg-tertiary);
+  font-family: var(--dmd-font-mono);
+}
+
+/* Code surfaces share syntax highlighting but retain family-specific frames. */
+[data-dmd-theme='atlas'] .dmd-code-block-wrapper {
+  border-top: 3px solid var(--dmd-accent);
+}
+[data-dmd-theme='blueprint'] .dmd-code-block-wrapper {
+  border-radius: 0;
+  border: 1px solid var(--dmd-border-color);
+}
+[data-dmd-theme='terminal'] .dmd-code-block-wrapper {
+  border: 1px solid var(--dmd-border-color);
+  box-shadow: none;
+}
+[data-dmd-theme='editorial'] .dmd-code-block-wrapper {
+  border-radius: 2px;
+  box-shadow: none;
+}
+[data-dmd-theme='botanical'] .dmd-code-block-wrapper {
+  border-radius: 3px 18px 3px 18px;
+}
+[data-dmd-theme='studio'] .dmd-code-block-wrapper {
+  border: 2px solid var(--dmd-border-color);
+  box-shadow: var(--dmd-shadow-md);
+}
+
+/* Fixed miniature materials make every choice identifiable in any active theme. */
+.dmd-theme-preview-blueprint {
+  background-image: linear-gradient(#c6d3da70 1px, transparent 1px),
+    linear-gradient(90deg, #c6d3da70 1px, transparent 1px);
+  background-size: 8px 8px;
+}
+.dmd-theme-preview-editorial {
+  border-block: 2px solid #665e4c;
+  border-radius: 0;
+}
+.dmd-theme-preview-editorial > span:nth-child(1) { width: 3%; border-radius: 0; }
+.dmd-theme-preview-botanical { background: #f2f6ef; border-radius: 2px 12px 2px 12px; }
+.dmd-theme-preview-botanical > span:nth-child(1) { background: #276642; border-radius: 2px 10px 2px 10px; }
+.dmd-theme-preview-botanical > span:nth-child(2),
+.dmd-theme-preview-botanical > span:nth-child(3) { background: #b9ccb1; }
+.dmd-theme-preview-studio { background: #f4f0ff; border: 1px solid #713ac3; box-shadow: 2px 2px 0 #b8a5d8; }
+.dmd-theme-preview-studio > span:nth-child(1) { background: #713ac3; box-shadow: 2px 2px 0 #b8a5d8; }
+.dmd-theme-preview-studio > span:nth-child(2),
+.dmd-theme-preview-studio > span:nth-child(3) { background: #b8a5d8; }
+.dmd-theme-mark-botanical { border-radius: 2px 8px 2px 8px; }
+.dmd-theme-mark-studio { box-shadow: 2px 2px 0 var(--dmd-border-color); }
+.dmd-theme-mark-blueprint { border-radius: 0; }
+
+/* Six choices remain reachable on short screens and phones. */
+.dmd-appearance-panel {
+  max-height: calc(100dvh - var(--dmd-nav-height) - 24px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.dmd-theme-family-card { min-width: 0; }
+.dmd-theme-family-description { overflow-wrap: anywhere; }
+.dmd-appearance :focus-visible { outline-color: var(--dmd-accent); }
+
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-dmd-motion='full']):not([data-dmd-motion='on']) .dmd-appearance-panel { animation: none; }
+}
+:root[data-dmd-motion='reduced'] .dmd-appearance-panel,
+:root[data-dmd-motion='off'] .dmd-appearance-panel { animation: none; }

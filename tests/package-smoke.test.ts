@@ -51,7 +51,7 @@ test("maintained documentation examples use theme families instead of legacy pre
   for (const relativePath of configPaths) {
     const config = JSON.parse(fs.readFileSync(path.join(packageRoot, relativePath), "utf-8"));
     assert.equal(config.theme?.preset, undefined, `${relativePath} must not teach the deprecated preset field`);
-    assert.match(config.theme?.family, /^(atlas|blueprint|terminal|editorial)$/);
+    assert.match(config.theme?.family, /^(atlas|blueprint|terminal|editorial|botanical|studio)$/);
     assert.match(config.theme?.density, /^(comfortable|compact)$/);
     families.add(config.theme.family);
   }
@@ -59,5 +59,5 @@ test("maintained documentation examples use theme families instead of legacy pre
   assert.deepEqual([...families].sort(), ["atlas", "blueprint", "editorial", "terminal"]);
   const readme = fs.readFileSync(path.join(packageRoot, "README.md"), "utf-8");
   assert.doesNotMatch(readme, /"preset"\s*:/);
-  assert.match(readme, /Four Complete Theme Families/);
+  assert.match(readme, /Six Complete Theme Families/);
 });

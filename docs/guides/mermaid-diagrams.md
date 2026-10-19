@@ -28,7 +28,7 @@ Every Mermaid diagram rendered in DocMeDown comes with built-in interactive came
 
 DocMeDown automatically recalculates and injects custom Mermaid CSS variables whenever the user switches between:
 - **Light & Dark modes**
-- **Theme Families** (`atlas`, `blueprint`, `terminal`, `editorial`)
+- **Theme Families** (`atlas`, `blueprint`, `terminal`, `editorial`, `botanical`, `studio`)
 
 For instance, in the **`terminal`** theme, diagrams render with green monospace borders and phosphor tints; in **`blueprint`**, they render with architectural cyan grids and sharp angles; and in **`editorial`**, they adopt classic muted warm ink palettes.
 

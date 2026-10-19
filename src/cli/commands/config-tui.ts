@@ -69,8 +69,12 @@ export async function configTuiCommand(configPathArg?: string) {
         { title: "Blueprint (Structured and schematic)", value: "blueprint" },
         { title: "Terminal (Compact operational console)", value: "terminal" },
         { title: "Editorial (Spacious publication reading)", value: "editorial" },
+        { title: "Botanical (Sage field guide)", value: "botanical" },
+        { title: "Studio (Expressive graphic workbook)", value: "studio" },
       ],
-      initial: ["atlas", "blueprint", "terminal", "editorial"].indexOf(existingConfig.theme?.family || "atlas"),
+      initial: ["atlas", "blueprint", "terminal", "editorial", "botanical", "studio"].indexOf(
+        existingConfig.theme?.family || "atlas",
+      ),
     },
     {
       type: "select",

@@ -1,6 +1,6 @@
 <svelte:options customElement={{ tag: "dmd-card-grid" }} />
 <script lang="ts">
-  import { onMount, onDestroy } from "svelte";
+  import { onMount, onDestroy, tick, untrack } from "svelte";
   import { carouselWindow, clampCarouselCols, resolveCarouselPerView } from "./carousel";
   import { adoptSharedStyles } from "./shared-styles";
   import { prefersReducedMotion, smoothScroll } from "../../runtime/motion";
@@ -27,18 +27,56 @@
   let offsetRetry = 0;
   let trackRef = $state<HTMLElement>();
   let resizeObserver: ResizeObserver | null = null;
+  let mutationObserver: MutationObserver | null = null;
+  let slidesKey = "";
+  let settleTimer: ReturnType<typeof setTimeout> | undefined;
+  let offsetAttempts = 0;
+
+  function stopNavigation() {
+    navigation?.stop();
+    navigation = null;
+    navigationIndex = null;
+  }
+
+  function jumpTo(index: number) {
+    if (!viewport || childOffsets[index] == null) return;
+    const snap = viewport.style.scrollSnapType;
+    viewport.style.scrollSnapType = "none";
+    viewport.scrollLeft = childOffsets[index];
+    // Commit the jump before restoring snap, without painting the duplicate window.
+    void viewport.offsetWidth;
+    viewport.style.scrollSnapType = snap;
+  }
 
   function syncSlideSlots() {
     if (!trackRef) return;
+    const key = `${cardCount}:${perView}`;
     const existing = trackRef.querySelectorAll(".dmd-carousel-slide");
-    if (existing.length === cardCount && cardCount > 0) return;
+    if (slidesKey === key && existing.length > 0) return;
+    stopNavigation();
+    slidesKey = key;
+    offsetsKey = "";
+    childOffsets = [];
+    offsetAttempts = 0;
     existing.forEach((s) => s.remove());
-    for (let i = 0; i < cardCount; i++) {
+    for (let physical = 0; physical < cardCount + 2 * perView; physical++) {
+      const i = ((physical - perView) % cardCount + cardCount) % cardCount;
       const slide = document.createElement("div");
       slide.className = "dmd-carousel-slide";
-      const slot = document.createElement("slot");
-      slot.name = `dmd-carousel-${i}`;
-      slide.appendChild(slot);
+      if (physical >= perView && physical < perView + cardCount) {
+        const slot = document.createElement("slot");
+        slot.name = `dmd-carousel-${i}`;
+        slide.appendChild(slot);
+      } else {
+        const card = cards[i] as HTMLElement & { cloneCard?: () => HTMLElement };
+        const copy = card.cloneCard?.() ?? card.cloneNode(true) as HTMLElement;
+        copy.removeAttribute("slot");
+        copy.removeAttribute("id");
+        copy.querySelectorAll("[id]").forEach((el) => el.removeAttribute("id"));
+        slide.setAttribute("aria-hidden", "true");
+        slide.inert = true;
+        slide.appendChild(copy);
+      }
       trackRef.appendChild(slide);
     }
   }
@@ -75,25 +113,30 @@
     if (!slides || slides.length === 0 || !viewport) return;
     const key = `${slides.length}:${perView}:${viewport.clientWidth}`;
     if (key === offsetsKey && childOffsets.length > 0 && (slides.length <= 1 || childOffsets[1] > 0)) return;
-    const offsets = [...slides].slice(0, cardCount).map((slide) => slide.offsetLeft);
+    // Match native start snapping, including the viewport's horizontal padding.
+    const offsets = [...slides].map((slide) => slide.offsetLeft);
     if (offsets.length > 1 && offsets[1] === 0) {
       // The slotted slides may not have laid out yet; never schedule an unbounded RAF loop.
-      if (!offsetRetry) offsetRetry = requestAnimationFrame(() => { offsetRetry = 0; cacheOffsets(); });
+      if (!offsetRetry && offsetAttempts++ < 10) offsetRetry = requestAnimationFrame(() => { offsetRetry = 0; cacheOffsets(); });
       return;
     }
     offsetsKey = key;
     childOffsets = offsets;
+    active = carouselWindow(cardCount, perView, active).index;
+    jumpTo(perView + active);
   }
 
-  function updatePerView() {
+  async function updatePerView() {
     if (!viewport) return;
-    navigation?.stop();
-    navigation = null;
-    navigationIndex = null;
+    stopNavigation();
     const next = resolveCarouselPerView(maxPerView, viewport.clientWidth);
     if (perView !== next) {
       perView = next;
     }
+    // Wait until the new flex-basis variable reaches the DOM before measuring.
+    await tick();
+    if (!viewport) return;
+    offsetsKey = "";
     if (isCarousel) {
       syncSlideSlots();
     }
@@ -107,39 +150,48 @@
   function scrollToSlide(index: number, behavior: ScrollBehavior = "smooth") {
     if (!viewport) return;
     if (childOffsets.length === 0) cacheOffsets();
-    const rawOffset = childOffsets[index];
+    // Finish an interrupted boundary crossing at its equivalent real window
+    // before starting the next step (including rapid repeated clicks).
+    if (navigationIndex !== null) {
+      stopNavigation();
+      jumpTo(perView + active);
+    }
+    const target = carouselWindow(cardCount, perView, index).index;
+    const physical = index < 0 ? perView - 1 : index >= positions ? perView + cardCount : perView + target;
+    const rawOffset = childOffsets[physical];
     if (rawOffset == null) return;
     navigation?.stop();
     navigation = null;
     navigationIndex = null;
-    active = index;
-    const baseOffset = childOffsets[0] || 0;
-    const offset = Math.max(0, rawOffset - baseOffset);
+    active = target;
+    const offset = rawOffset;
     if (prefersReducedMotion() || behavior === "instant" || behavior === "auto") {
-      viewport.scrollLeft = offset;
+      jumpTo(perView + target);
       return;
     }
-    navigationIndex = index;
+    navigationIndex = physical;
     const handle = smoothScroll(viewport, offset, { duration: 320 });
     navigation = handle;
     void handle.finished.then(() => {
       if (navigation === handle) {
         navigation = null;
         navigationIndex = null;
-        onScroll();
+        settleScroll();
       }
     });
   }
 
   function goPrev() {
-    scrollToSlide(Math.max(0, active - 1));
+    scrollToSlide(active - 1);
   }
 
   function goNext() {
-    scrollToSlide(Math.min(positions - 1, active + 1));
+    scrollToSlide(active + 1);
   }
 
   function onScroll() {
+    clearTimeout(settleTimer);
+    settleTimer = setTimeout(settleScroll, 160);
     if (scrollRaf) return;
     scrollRaf = requestAnimationFrame(() => {
       scrollRaf = 0;
@@ -147,25 +199,34 @@
       if (navigationIndex !== null) return;
       if (childOffsets.length === 0) cacheOffsets();
       if (childOffsets.length === 0) return;
-      const baseOffset = childOffsets[0] || 0;
       const viewportLeft = viewport.scrollLeft;
       let closest = 0;
       let closestDist = Infinity;
-      for (let i = 0; i < Math.min(positions, childOffsets.length); i++) {
-        const slidePos = Math.max(0, childOffsets[i] - baseOffset);
+      for (let i = 0; i < childOffsets.length; i++) {
+        const slidePos = childOffsets[i];
         const dist = Math.abs(slidePos - viewportLeft);
         if (dist < closestDist) {
           closestDist = dist;
           closest = i;
         }
       }
-      if (closest !== active) {
-        active = closest;
-      }
+      active = carouselWindow(cardCount, perView, closest - perView).index;
     });
   }
 
+  function settleScroll() {
+    if (!viewport || navigationIndex !== null || childOffsets.length === 0) return;
+    let closest = 0;
+    for (let i = 1; i < childOffsets.length; i++) {
+      if (Math.abs(childOffsets[i] - viewport.scrollLeft) < Math.abs(childOffsets[closest] - viewport.scrollLeft)) closest = i;
+    }
+    active = carouselWindow(cardCount, perView, closest - perView).index;
+    if (closest < perView || closest >= perView + cardCount) jumpTo(perView + active);
+  }
+
   function onKeyDown(event: KeyboardEvent) {
+    const target = event.composedPath()[0];
+    if (target instanceof HTMLElement && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName))) return;
     if (event.key === "ArrowLeft") {
       event.preventDefault();
       goPrev();
@@ -176,10 +237,9 @@
   }
 
   function onSlotChange(event: Event) {
-    const slot = event.target as HTMLSlotElement;
-    if (slot.name) return;
+    const slot = event.target instanceof HTMLSlotElement ? event.target : null;
+    if (slot?.name) return;
     const currentCards = lightCards();
-    if (currentCards.length === 0) return;
     const sameCards =
       currentCards.length === cards.length && currentCards.every((card, i) => card === cards[i]);
     cards = currentCards;
@@ -190,6 +250,7 @@
       navigationIndex = null;
       offsetsKey = "";
       childOffsets = [];
+      slidesKey = "";
     }
 
     if (!isCarousel) {
@@ -218,7 +279,7 @@
           perView = next;
         }
         syncSlideSlots();
-        cacheOffsets();
+        untrack(cacheOffsets);
         if (resizeObserver && !observing) {
           resizeObserver.observe(viewport);
           observing = true;
@@ -236,7 +297,11 @@
   onMount(() => {
     adoptSharedStyles(root);
     const host = getHost();
-    if (host) host.addEventListener("keydown", onKeyDown);
+    if (host) {
+      host.addEventListener("keydown", onKeyDown);
+      mutationObserver = new MutationObserver(() => onSlotChange(new Event("change")));
+      mutationObserver.observe(host, { childList: true });
+    }
 
     if (typeof ResizeObserver !== "undefined") {
       resizeObserver = new ResizeObserver(() => updatePerView());
@@ -249,6 +314,8 @@
 
   onDestroy(() => {
     navigation?.stop();
+    mutationObserver?.disconnect();
+    clearTimeout(settleTimer);
     if (offsetRetry) cancelAnimationFrame(offsetRetry);
     const host = getHost();
     if (host) host.removeEventListener("keydown", onKeyDown);
@@ -270,6 +337,7 @@
         bind:this={viewport}
         class="dmd-carousel-viewport"
         onscroll={onScroll}
+        onscrollend={settleScroll}
       >
         <div bind:this={trackRef} class="dmd-carousel-track" style="--dmd-carousel-per-view: {perView};">
           <slot onslotchange={onSlotChange} style="display: contents;"></slot>
@@ -281,7 +349,7 @@
           type="button"
           class="dmd-carousel-btn"
           onclick={goPrev}
-          disabled={active <= 0}
+          disabled={positions <= 1}
           aria-label="Previous cards"
         >
           <span aria-hidden="true">‹</span>
@@ -302,7 +370,7 @@
           type="button"
           class="dmd-carousel-btn"
           onclick={goNext}
-          disabled={active >= positions - 1}
+          disabled={positions <= 1}
           aria-label="Next cards"
         >
           <span aria-hidden="true">›</span>

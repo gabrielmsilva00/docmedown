@@ -48,7 +48,7 @@ export behavior and the current translation-coverage limitations.
 - ✍️ **2-Way In-Browser Editor & Live HMR**: Press `Ctrl+E` / `⌘E` to edit documents in a split-view editor modal with live keystroke rendering, instant disk save, zero-page-reload WebSocket HMR, and staged preview support (`--preview`).
 - ⚡ **Dynamic Remote GitHub / GitLab Mode**: Document any GitHub or GitLab repository *live* without hosting markdown files statically! Changes pushed to your repo dynamically update the documentation website immediately.
 - 📦 **Compressed Offline Copies**: Generate or download a minified, self-extracting `index.html` containing the complete documentation corpus, custom components, Mermaid renderer, styles, and runtime. Double-click it under `file:///` without a web server.
-- 🎨 **Four Complete Theme Families & Favicon Presets**: Atlas, Blueprint, Terminal, and Editorial each redefine surfaces, geometry, typography, spacing, and diagram palettes. Choose from 5 crisp SVG favicon presets with automatic offline inlining.
+- 🎨 **Six Complete Theme Families & Favicon Presets**: Atlas, Blueprint, Terminal, Editorial, Botanical, and Studio each redefine surfaces, geometry, typography, spacing, and diagram palettes. Choose from 5 crisp SVG favicon presets with automatic offline inlining.
 - 📊 **Interactive Data Tables & Delimited Text Toolbar**: Fenced `csv`, `tsv`, and standard GFM tables automatically render as interactive data tables with column/row descriptors and one-click copy export (Markdown, HTML, CSV).
 - 🌐 **Static + SEO Output**: every build prerenders complete static pages per document with canonical URLs, Open Graph, Twitter cards, JSON-LD structured data, `sitemap.xml`, and `robots.txt` — crawlers see everything, no JS required.
 - 🤖 **AI-Native Distribution**: auto-generated `llms.txt` / `llms-full.txt` / `SKILL.md` / `okf.json`, plus a built-in MCP server (`docmedown mcp`) so Claude, Cursor, and Windsurf can read and search your docs directly.
@@ -288,7 +288,7 @@ Use `<CounterWidget />` or `<ReactMetricCard />` directly inside any Markdown do
   />
   <Card
     title="Complete Theme Families"
-    description="Atlas, Blueprint, Terminal, and Editorial change the entire reading system."
+    description="Atlas, Blueprint, Terminal, Editorial, Botanical, and Studio change the entire reading system."
     badge="New"
     badgeType="new"
   />
@@ -350,6 +350,8 @@ Unknown keys are rejected. The npm package also ships the portable schema at `sc
 | `blueprint` | Architecture and technical specifications | Squared geometry, drafting rules, coral signals |
 | `terminal` | CLI, operations, and infrastructure manuals | Dark-first console character, compact rhythm, monospace utilities |
 | `editorial` | Guides, handbooks, and long-form reading | Warm paper surfaces, serif display type, generous article rhythm |
+| `botanical` | Research notes, learning resources, and field guides | Sage book-cloth surfaces, fern accents, serif headings, leaf-shaped notes |
+| `studio` | Design systems and creative product documentation | Lilac stock, violet ink, bold display type, offset-print frames |
 
 Use the **Appearance** menu to switch family, color mode, and reading density at runtime. Set `accentColor` and `accentColorDark` only when a brand color must override the family default. Legacy accent-only presets remain accepted temporarily for migration but should not be used in new configurations.
 

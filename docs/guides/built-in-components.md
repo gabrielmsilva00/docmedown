@@ -10,7 +10,7 @@ tags: [components, built-in, primitives, card, tabs, badge, callout, button, med
 
 DocMeDown includes a comprehensive library of **20 built-in UI primitives** that you can use directly inside standard Markdown without installing packages or writing import statements.
 
-Every element is styled according to the active theme family (`atlas`, `blueprint`, `terminal`, `editorial`) and seamlessly adapts to light and dark modes.
+Every element is styled according to the active theme family (`atlas`, `blueprint`, `terminal`, `editorial`, `botanical`, `studio`) and seamlessly adapts to light and dark modes.
 
 ---
 

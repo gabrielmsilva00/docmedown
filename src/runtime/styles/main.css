@@ -4388,8 +4388,8 @@ html {
 
 /* CardGrid carousel — activates when cards outnumber columns.
    Native scroll-snap track; slides are flex items sized to the viewport so
-   the track overflows horizontally. Navigation is linear: it stops at the
-   first and last windows rather than wrapping around. */
+   the track overflows horizontally. Buffered slides connect the last card to
+   the first; JS recenters the track after crossing either boundary. */
 .dmd-card-carousel {
   margin: 1.5rem 0;
   --dmd-carousel-gap: 1rem;
@@ -5952,6 +5952,14 @@ a.dmd-btn { display: inline-flex; }
   border-color: var(--dmd-accent);
 }
 
+.dmd-lang-trigger {
+  white-space: nowrap;
+}
+
+.dmd-lang-panel {
+  white-space: normal;
+}
+
 .dmd-appearance-panel {
   position: absolute;
   top: calc(100% + 10px);
@@ -6175,7 +6183,7 @@ fieldset.dmd-appearance-section {
   box-shadow: inset 0 0 0 1px #c6d3da;
   border-radius: 0;
 }
-.dmd-theme-preview-blueprint > span:nth-child(1) { background: #ef5340; border-radius: 0; }
+.dmd-theme-preview-blueprint > span:nth-child(1) { background: #be3827; border-radius: 0; }
 .dmd-theme-preview-blueprint > span:nth-child(2),
 .dmd-theme-preview-blueprint > span:nth-child(3) { background: #c6d3da; border-radius: 0; }
 
@@ -6708,7 +6716,8 @@ fieldset.dmd-appearance-section {
   .dmd-navbar .dmd-social-btn,
   .dmd-navbar .dmd-theme-toggle-btn,
   .dmd-navbar .dmd-offline-download-btn,
-  .dmd-navbar .dmd-appearance-trigger {
+  .dmd-navbar .dmd-appearance-trigger,
+  .dmd-navbar .dmd-lang-trigger {
     width: 40px;
     min-width: 40px;
     height: 40px;
@@ -6729,7 +6738,9 @@ fieldset.dmd-appearance-section {
   }
 
   .dmd-navbar .dmd-offline-download-btn span,
-  .dmd-navbar .dmd-appearance-trigger-label {
+  .dmd-navbar .dmd-appearance-trigger-label,
+  .dmd-navbar .dmd-lang-trigger-label,
+  .dmd-navbar .dmd-lang-chevron {
     display: none;
   }
 

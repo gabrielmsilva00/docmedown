@@ -221,7 +221,7 @@ Create a \`docs.json\` file in your documentation directory to customize appeara
 
 ### Key Configuration Options:
 - **\`name\` / \`tagline\` / \`version\`**: Displayed in the navbar and header splash.
-- **\`theme.family\`**: Choose between curated design systems (\`"atlas"\`, \`"blueprint"\`, \`"terminal"\`, \`"editorial"\`).
+- **\`theme.family\`**: Choose between curated design systems (\`"atlas"\`, \`"blueprint"\`, \`"terminal"\`, \`"editorial"\`, \`"botanical"\`, \`"studio"\`).
 - **\`theme.accentColor\`**: Brand primary color in hex, HSL, or CSS format.
 - **\`footer.showBuiltWith\`**: Defaults to \`true\`. Displays the *Documented with DocMeDown* link that leads to the navigation guide.
 - **\`url\`**: Setting your production URL automatically generates valid \`sitemap.xml\` and \`robots.txt\` files.
@@ -316,7 +316,9 @@ const ENGLISH_EMBEDDED_DOCS: Record<string, string> = {
   "DMD/for-developers.md": DMD_FOR_DEVELOPERS_MARKDOWN,
 };
 
-const dmdConfig = { i18n: { defaultLocale: "en", locales: [...BUILTIN_LOCALES], fallbackToDefault: true } };
+const dmdConfig = {
+  i18n: { defaultLocale: "en", locales: [...BUILTIN_LOCALES], fallbackToDefault: true, showUntranslated: false },
+};
 
 export function embeddedDmdVariant(slug: string, config?: DocConfig | null) {
   const effective = {

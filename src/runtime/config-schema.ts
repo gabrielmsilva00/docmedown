@@ -7,7 +7,7 @@ const nonEmptyString = z.string().trim().min(1, "Must not be empty.");
 export const themePresetSchema = z.enum(["indigo", "emerald", "sunset", "violet", "rose", "slate", "cyberpunk"]);
 
 /** Complete visual systems, not merely accent-color variations. */
-export const themeFamilySchema = z.enum(["atlas", "blueprint", "terminal", "editorial"]);
+export const themeFamilySchema = z.enum(["atlas", "blueprint", "terminal", "editorial", "botanical", "studio"]);
 export const themeDensitySchema = z.enum(["comfortable", "compact"]);
 
 export const colorModeSchema = z.enum(["light", "dark", "auto"]);
@@ -173,6 +173,7 @@ export const docI18nConfigSchema = z
       )
       .default([]),
     fallbackToDefault: z.boolean().default(true),
+    showUntranslated: z.boolean().default(false),
   })
   .strict()
   .superRefine((value, context) => {

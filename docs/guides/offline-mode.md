@@ -42,7 +42,7 @@ npx docmedown build ./docs
 │  standalone index.html (~1.2 MB Gzip)                       │
 │  ├─ Self-Extracting DecompressionStream Bootstrap          │
 │  ├─ Production Svelte 5 Runtime & Router                    │
-│  ├─ Theme Tokens (Atlas, Blueprint, Terminal, Editorial)   │
+│  ├─ Theme Tokens (Atlas, Blueprint, Terminal, Editorial, Botanical, Studio)   │
 │  ├─ Offline Mermaid Diagram Engine                         │
 │  ├─ Compiled .dmd Custom Components                         │
 │  ├─ Losslessly Embedded Media (Images, SVGs, Audio, Video)  │

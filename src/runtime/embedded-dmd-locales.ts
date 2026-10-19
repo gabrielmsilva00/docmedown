@@ -60,7 +60,7 @@ Para automação, use \`npx docmedown init ./docs --yes --default-locale en --lo
 
 Mantenha os documentos em \`docs/\`, as opções em \`docs.json\` e os componentes em \`.dmd/\`. Diretórios representam categorias, não idiomas. \`guide.md\` usa \`i18n.defaultLocale\`; \`guide.pt-br.md\` é sua tradução. \`guide.en.md\` tem precedência sobre o original sem sufixo quando o padrão é inglês. Registre os idiomas em \`i18n.locales\` e execute \`npx docmedown config ./docs\` para alterar as opções.
 
-Configure \`name\`, \`tagline\`, \`version\`, \`theme.family\` e \`theme.accentColor\` para identidade visual. Os temas são Atlas, Blueprint, Terminal e Editorial. \`footer.showBuiltWith\` controla o acesso a este guia. \`url\` habilita URLs canônicas, sitemap e robots. Cada idioma aceita \`overrides\` para navegação, busca e rodapé.
+Configure \`name\`, \`tagline\`, \`version\`, \`theme.family\` e \`theme.accentColor\` para identidade visual. Os temas são Atlas, Blueprint, Terminal, Editorial, Botanical e Studio. \`footer.showBuiltWith\` controla o acesso a este guia. \`url\` habilita URLs canônicas, sitemap e robots. Cada idioma aceita \`overrides\` para navegação, busca e rodapé.
 
 ## Comandos
 
@@ -143,7 +143,7 @@ Para automatizar: \`npx docmedown init ./docs --yes --default-locale en --locale
 
 Los documentos están en \`docs/\`, las opciones en \`docs.json\` y los componentes en \`.dmd/\`. Las carpetas representan categorías, no idiomas. \`guide.md\` usa \`i18n.defaultLocale\`; \`guide.es.md\` es su traducción. Con inglés como original, \`guide.en.md\` tiene prioridad sobre el archivo sin sufijo. Registre los idiomas en \`i18n.locales\`. Use \`npx docmedown config ./docs\` para ajustar las opciones.
 
-Configure \`name\`, \`tagline\`, \`version\`, \`theme.family\` y \`theme.accentColor\` para personalizar la identidad. Elija Atlas, Blueprint, Terminal o Editorial. \`footer.showBuiltWith\` controla el enlace a esta guía y \`url\` habilita URLs canónicas, sitemap y robots. Cada idioma admite \`overrides\` de navegación, búsqueda y pie de página.
+Configure \`name\`, \`tagline\`, \`version\`, \`theme.family\` y \`theme.accentColor\` para personalizar la identidad. Elija Atlas, Blueprint, Terminal, Editorial, Botanical o Studio. \`footer.showBuiltWith\` controla el enlace a esta guía y \`url\` habilita URLs canónicas, sitemap y robots. Cada idioma admite \`overrides\` de navegación, búsqueda y pie de página.
 
 ## Comandos
 
@@ -226,7 +226,7 @@ Pour automatiser : \`npx docmedown init ./docs --yes --default-locale en --local
 
 Placez les documents dans \`docs/\`, les options dans \`docs.json\` et les composants dans \`.dmd/\`. Les dossiers représentent des catégories, pas des langues. \`guide.md\` utilise \`i18n.defaultLocale\` ; \`guide.fr.md\` est sa traduction. Avec l’anglais comme original, \`guide.en.md\` est prioritaire sur le fichier sans suffixe. Déclarez les langues dans \`i18n.locales\`. Utilisez \`npx docmedown config ./docs\` pour modifier les réglages.
 
-Personnalisez \`name\`, \`tagline\`, \`version\`, \`theme.family\` et \`theme.accentColor\`. Les thèmes sont Atlas, Blueprint, Terminal et Editorial. \`footer.showBuiltWith\` contrôle le lien vers ce guide. \`url\` active les URL canoniques, le sitemap et robots. Chaque langue accepte des \`overrides\` pour la navigation, la recherche et le pied de page.
+Personnalisez \`name\`, \`tagline\`, \`version\`, \`theme.family\` et \`theme.accentColor\`. Les thèmes sont Atlas, Blueprint, Terminal, Editorial, Botanical et Studio. \`footer.showBuiltWith\` contrôle le lien vers ce guide. \`url\` active les URL canoniques, le sitemap et robots. Chaque langue accepte des \`overrides\` pour la navigation, la recherche et le pied de page.
 
 ## Commandes
 
@@ -309,7 +309,7 @@ Für Automatisierung: \`npx docmedown init ./docs --yes --default-locale en --lo
 
 Dokumente liegen in \`docs/\`, Einstellungen in \`docs.json\` und Komponenten in \`.dmd/\`. Ordner sind Kategorien, keine Sprachen. \`guide.md\` verwendet \`i18n.defaultLocale\`; \`guide.de.md\` ist die Übersetzung. Bei Englisch als Original hat \`guide.en.md\` Vorrang vor der Datei ohne Suffix. Registrieren Sie Sprachen in \`i18n.locales\`. \`npx docmedown config ./docs\` öffnet die Einstellungen.
 
-Passen Sie \`name\`, \`tagline\`, \`version\`, \`theme.family\` und \`theme.accentColor\` an. Verfügbar sind Atlas, Blueprint, Terminal und Editorial. \`footer.showBuiltWith\` steuert den Link zu dieser Hilfe. \`url\` aktiviert kanonische URLs, Sitemap und robots. Sprachbezogene \`overrides\` passen Navigation, Suche und Fußzeile an.
+Passen Sie \`name\`, \`tagline\`, \`version\`, \`theme.family\` und \`theme.accentColor\` an. Verfügbar sind Atlas, Blueprint, Terminal, Editorial, Botanical und Studio. \`footer.showBuiltWith\` steuert den Link zu dieser Hilfe. \`url\` aktiviert kanonische URLs, Sitemap und robots. Sprachbezogene \`overrides\` passen Navigation, Suche und Fußzeile an.
 
 ## Befehle
 
@@ -392,7 +392,7 @@ Der Build erzeugt \`llms.txt\`, \`llms-full.txt\`, \`SKILL.md\`, \`okf.json\` un
 
 文档放在 \`docs/\`，配置放在 \`docs.json\`，组件放在 \`.dmd/\`。目录表示分类，而不是语言。\`guide.md\` 使用 \`i18n.defaultLocale\`，\`guide.zh-cn.md\` 是对应译文。当英语为原始语言时，\`guide.en.md\` 优先于无语言后缀的文件。在 \`i18n.locales\` 中注册语言，使用 \`npx docmedown config ./docs\` 修改配置。
 
-使用 \`name\`、\`tagline\`、\`version\`、\`theme.family\` 和 \`theme.accentColor\` 设置品牌与外观。可选主题为 Atlas、Blueprint、Terminal 和 Editorial。\`footer.showBuiltWith\` 控制本指南的入口。\`url\` 启用规范链接、站点地图和 robots。各语言的 \`overrides\` 可覆盖导航、搜索及页脚。
+使用 \`name\`、\`tagline\`、\`version\`、\`theme.family\` 和 \`theme.accentColor\` 设置品牌与外观。可选主题为 Atlas、Blueprint、Terminal、Editorial、Botanical 和 Studio。\`footer.showBuiltWith\` 控制本指南的入口。\`url\` 启用规范链接、站点地图和 robots。各语言的 \`overrides\` 可覆盖导航、搜索及页脚。
 
 ## 命令
 

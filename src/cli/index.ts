@@ -56,7 +56,10 @@ program
   .option("-n, --name <name>", "Project name for documentation")
   .option("--default-locale <code>", "Original document language (default: en)")
   .option("--locales <codes>", "Additional languages, comma-separated")
-  .option("-t, --theme <family>", "Documentation theme family (atlas, blueprint, terminal, editorial)")
+  .option(
+    "-t, --theme <family>",
+    "Documentation theme family (atlas, blueprint, terminal, editorial, botanical, studio)",
+  )
   .option("--no-start", "Do not start the local preview server after initialization")
   .action(async (dir, options) => {
     await initCommand(dir, {

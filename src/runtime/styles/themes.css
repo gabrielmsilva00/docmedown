@@ -63,7 +63,7 @@
 
   --dmd-text-primary: #1a1d21;
   --dmd-text-secondary: #575f66;
-  --dmd-text-muted: #788089;
+  --dmd-text-muted: #636d76;
 
   --dmd-accent: #315cf5;
   --dmd-accent-hover: #2449c8;
@@ -95,7 +95,7 @@
 
   --dmd-text-primary: #ededef;
   --dmd-text-secondary: #a8afb6;
-  --dmd-text-muted: #767e87;
+  --dmd-text-muted: #929ba5;
 
   --dmd-accent: #5b8cff;
   --dmd-accent-hover: #7ba4ff;
@@ -131,10 +131,10 @@
 
   --dmd-text-primary: #14212b;
   --dmd-text-secondary: #45606f;
-  --dmd-text-muted: #6c8494;
+  --dmd-text-muted: #566e7e;
 
-  --dmd-accent: #ef5340;
-  --dmd-accent-hover: #d43d2b;
+  --dmd-accent: #be3827;
+  --dmd-accent-hover: #a83021;
   --dmd-accent-subtle: rgba(239, 83, 64, 0.09);
   --dmd-accent-glow: rgba(239, 83, 64, 0.3);
 
@@ -171,7 +171,7 @@
 
   --dmd-text-primary: #dbe6ec;
   --dmd-text-secondary: #92aab8;
-  --dmd-text-muted: #66808f;
+  --dmd-text-muted: #8aa3b2;
 
   --dmd-accent: #ff6a55;
   --dmd-accent-hover: #ff8571;
@@ -204,9 +204,9 @@
 
   --dmd-text-primary: #161c17;
   --dmd-text-secondary: #4a564d;
-  --dmd-text-muted: #6f7b70;
+  --dmd-text-muted: #59675b;
 
-  --dmd-accent: #0c7c40;
+  --dmd-accent: #0b773d;
   --dmd-accent-hover: #076132;
   --dmd-accent-subtle: rgba(12, 124, 64, 0.09);
   --dmd-accent-glow: rgba(12, 124, 64, 0.28);
@@ -247,7 +247,7 @@
 
   --dmd-text-primary: #d8e6d8;
   --dmd-text-secondary: #93a794;
-  --dmd-text-muted: #647864;
+  --dmd-text-muted: #8caa90;
 
   --dmd-accent: #39e87f;
   --dmd-accent-hover: #75f2a5;
@@ -281,7 +281,7 @@
 
   --dmd-text-primary: #22201a;
   --dmd-text-secondary: #665e4c;
-  --dmd-text-muted: #857c68;
+  --dmd-text-muted: #716751;
 
   --dmd-accent: #a34a33;
   --dmd-accent-hover: #873623;
@@ -298,9 +298,9 @@
   --dmd-shadow-md: 0 4px 12px -2px rgba(58, 48, 30, 0.09), 0 2px 5px -2px rgba(58, 48, 30, 0.05);
   --dmd-shadow-lg: 0 16px 30px -10px rgba(58, 48, 30, 0.2), 0 5px 12px -6px rgba(58, 48, 30, 0.08);
 
-  --dmd-radius-sm: 8px;
-  --dmd-radius-md: 12px;
-  --dmd-radius-lg: 20px;
+  --dmd-radius-sm: 2px;
+  --dmd-radius-md: 3px;
+  --dmd-radius-lg: 4px;
 
   --dmd-sidebar-width: 268px;
   --dmd-space-section: 3.5rem;
@@ -319,7 +319,7 @@
 
   --dmd-text-primary: #ece7db;
   --dmd-text-secondary: #b0a78f;
-  --dmd-text-muted: #7e7560;
+  --dmd-text-muted: #a49a82;
 
   --dmd-accent: #dd805f;
   --dmd-accent-hover: #eda385;
@@ -331,6 +331,114 @@
   --dmd-code-text: #e3dbc9;
   --dmd-inline-code-bg: #282219;
   --dmd-inline-code-text: #ece5d4;
+}
+
+
+/* BOTANICAL — fern, sage and field-guide book cloth. */
+:root[data-dmd-theme='botanical'] {
+  --dmd-bg-primary: #f2f6ef;
+  --dmd-bg-secondary: #e5eddf;
+  --dmd-bg-tertiary: #d6e2ce;
+  --dmd-bg-card: #fbfdf8;
+  --dmd-border-color: #b9ccb1;
+  --dmd-border-subtle: #d3dfcb;
+  --dmd-text-primary: #20392b;
+  --dmd-text-secondary: #4d6653;
+  --dmd-text-muted: #586e56;
+  --dmd-accent: #276642;
+  --dmd-accent-hover: #1a5030;
+  --dmd-code-bg: #11251b;
+  --dmd-code-header-bg: #0b1a12;
+  --dmd-code-text: #dcebd8;
+  --dmd-inline-code-bg: #e0ead9;
+  --dmd-inline-code-text: #264732;
+  --dmd-bg-elevated: var(--dmd-bg-card);
+  --dmd-accent-subtle: color-mix(in srgb, var(--dmd-accent) 11%, transparent);
+  --dmd-accent-glow: color-mix(in srgb, var(--dmd-accent) 35%, transparent);
+  --dmd-font-display: "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
+  --dmd-radius-sm: 6px;
+  --dmd-radius-md: 14px;
+  --dmd-radius-lg: 28px;
+  --dmd-sidebar-width: 260px;
+  --dmd-space-section: 3.25rem;
+  --dmd-shadow-sm: 0 2px 4px #17351c08;
+  --dmd-shadow-md: 0 6px 18px #17351c10;
+  --dmd-shadow-lg: 0 18px 44px #07180b30;
+}
+:root[data-dmd-theme='botanical'][data-theme='dark'] {
+  --dmd-bg-primary: #101c16;
+  --dmd-bg-secondary: #17291e;
+  --dmd-bg-tertiary: #203827;
+  --dmd-bg-card: #17271d;
+  --dmd-border-color: #35543c;
+  --dmd-border-subtle: #263e2d;
+  --dmd-text-primary: #e2edda;
+  --dmd-text-secondary: #b0c6a6;
+  --dmd-text-muted: #94ad8b;
+  --dmd-accent: #99ce8a;
+  --dmd-accent-hover: #b6e4a7;
+  --dmd-code-bg: #0a140e;
+  --dmd-code-header-bg: #060e09;
+  --dmd-code-text: #dcebd8;
+  --dmd-inline-code-bg: #223b28;
+  --dmd-inline-code-text: #d4e9c8;
+  --dmd-bg-elevated: var(--dmd-bg-card);
+  --dmd-accent-subtle: color-mix(in srgb, var(--dmd-accent) 11%, transparent);
+  --dmd-accent-glow: color-mix(in srgb, var(--dmd-accent) 35%, transparent);
+}
+
+/* STUDIO — lilac stock, violet ink and offset print frames. */
+:root[data-dmd-theme='studio'] {
+  --dmd-bg-primary: #f4f0ff;
+  --dmd-bg-secondary: #eae2fc;
+  --dmd-bg-tertiary: #ddd0f5;
+  --dmd-bg-card: #fffcff;
+  --dmd-border-color: #b8a5d8;
+  --dmd-border-subtle: #ded2ef;
+  --dmd-text-primary: #2b1944;
+  --dmd-text-secondary: #635074;
+  --dmd-text-muted: #705b80;
+  --dmd-accent: #713ac3;
+  --dmd-accent-hover: #59269f;
+  --dmd-code-bg: #251638;
+  --dmd-code-header-bg: #190f28;
+  --dmd-code-text: #eee0ff;
+  --dmd-inline-code-bg: #e9def8;
+  --dmd-inline-code-text: #52278b;
+  --dmd-bg-elevated: var(--dmd-bg-card);
+  --dmd-accent-subtle: color-mix(in srgb, var(--dmd-accent) 11%, transparent);
+  --dmd-accent-glow: color-mix(in srgb, var(--dmd-accent) 35%, transparent);
+  --dmd-font-display: "Arial Black", "Segoe UI", sans-serif;
+  --dmd-radius-sm: 3px;
+  --dmd-radius-md: 6px;
+  --dmd-radius-lg: 8px;
+  --dmd-radius-full: 6px;
+  --dmd-sidebar-width: 256px;
+  --dmd-space-section: 3rem;
+  --dmd-shadow-sm: 2px 2px 0 var(--dmd-border-color);
+  --dmd-shadow-md: 4px 4px 0 var(--dmd-border-color);
+  --dmd-shadow-lg: 7px 7px 0 var(--dmd-border-color);
+}
+:root[data-dmd-theme='studio'][data-theme='dark'] {
+  --dmd-bg-primary: #1b1428;
+  --dmd-bg-secondary: #251c35;
+  --dmd-bg-tertiary: #332547;
+  --dmd-bg-card: #281e39;
+  --dmd-border-color: #59416e;
+  --dmd-border-subtle: #3d2d50;
+  --dmd-text-primary: #f2e9ff;
+  --dmd-text-secondary: #c3afd9;
+  --dmd-text-muted: #ad98c4;
+  --dmd-accent: #c5a0ff;
+  --dmd-accent-hover: #ddc4ff;
+  --dmd-code-bg: #120c1c;
+  --dmd-code-header-bg: #0b0712;
+  --dmd-code-text: #eee0ff;
+  --dmd-inline-code-bg: #39264f;
+  --dmd-inline-code-text: #e6d3ff;
+  --dmd-bg-elevated: var(--dmd-bg-card);
+  --dmd-accent-subtle: color-mix(in srgb, var(--dmd-accent) 11%, transparent);
+  --dmd-accent-glow: color-mix(in srgb, var(--dmd-accent) 35%, transparent);
 }
 
 /* ==========================================================================

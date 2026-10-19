@@ -270,7 +270,7 @@ test("Diagram engine builds deterministic Pele themes per family and mode", () =
   const atlasLight = buildDiagramTheme("atlas", "light");
   assert.equal(atlasLight.variables["--pele-bg"], "#f7f7f5");
   assert.equal(atlasLight.variables["--pele-line"], "#315cf5");
-  assert.equal(atlasLight.variables["--pele-border"], "#e0e1db");
+  assert.equal(atlasLight.variables["--pele-border"], "#ddded8");
 
   // Explicit tokens win over family defaults (config accent overrides).
   const custom = buildDiagramTheme("atlas", "dark", {
@@ -319,7 +319,7 @@ test("describeDiagramError keeps Pele's line and snippet when present", () => {
 test("renderDiagramSvg renders themed SVG through the real Pele engine", async () => {
   const svg = await renderDiagramSvg('flowchart LR\n subgraph S["Inner"]\n A[Start] --> B{Ok?}\n end', "atlas", "dark");
   assert.match(svg, /^<svg\b/);
-  assert.ok(svg.includes("--pele-bg:#0f1620"), "dark atlas canvas must be written onto the root");
+  assert.ok(svg.includes("--pele-bg:#121417"), "dark atlas canvas must be written onto the root");
   assert.ok(svg.includes("pele-cluster"), "subgraphs must render as clusters the viewer can target");
   assert.ok(!svg.includes("foreignObject"), "labels must stay SVG text");
   assert.deepEqual(Object.keys(readDiagramSize(svg) ?? {}), ["width", "height"]);
@@ -473,18 +473,19 @@ test("heading plain text keeps snake_case and decodes badge-link labels", () => 
   assert.match(parsed.headings[0].html!, /<img src="https:\/\/ci\.example\/badge\.svg"/);
 });
 
-test("carouselWindow is linear: it clamps at both ends and never wraps", () => {
-  // 5 cards, 2 per view: 4 positions, the last window ends on the final card
+test("carouselWindow connects the last card to the first in both directions", () => {
+  // Every card leads its own window, including the last-to-first window.
   assert.deepEqual(carouselWindow(5, 2, 0).indices, [0, 1]);
   assert.deepEqual(carouselWindow(5, 2, 3).indices, [3, 4]);
-  assert.equal(carouselWindow(5, 2, 0).positions, 4);
-  // Out-of-range starts clamp instead of looping
-  assert.deepEqual(carouselWindow(5, 2, 4).indices, [3, 4]);
-  assert.deepEqual(carouselWindow(5, 2, -1).indices, [0, 1]);
+  assert.equal(carouselWindow(5, 2, 0).positions, 5);
+  assert.deepEqual(carouselWindow(5, 2, 4).indices, [4, 0]);
+  assert.deepEqual(carouselWindow(5, 2, -1).indices, [4, 0]);
+  assert.deepEqual(carouselWindow(5, 2, 5).indices, [0, 1]);
   assert.deepEqual(carouselWindow(5, 2, 8).indices, [3, 4]);
   // Three per view
   assert.deepEqual(carouselWindow(5, 3, 1).indices, [1, 2, 3]);
-  assert.equal(carouselWindow(5, 3, 4).positions, 3);
+  assert.equal(carouselWindow(5, 3, 4).positions, 5);
+  assert.deepEqual(carouselWindow(5, 3, 4).indices, [4, 0, 1]);
   // Single column: one position per card
   assert.deepEqual(carouselWindow(3, 1, 2).indices, [2]);
   assert.equal(carouselWindow(3, 1, 2).positions, 3);
@@ -496,6 +497,19 @@ test("carouselWindow is linear: it clamps at both ends and never wraps", () => {
   assert.deepEqual(carouselWindow(0, 2, 0).indices, []);
   assert.equal(carouselWindow(0, 2, 0).positions, 1);
   assert.deepEqual(carouselWindow(5, 2, Number.NaN).indices, [0, 1]);
+  assert.deepEqual(carouselWindow(Number.NaN, 2, 0).indices, []);
+  for (let total = 2; total <= 9; total++) {
+    for (let perView = 1; perView < Math.min(total, 5); perView++) {
+      for (let start = -2 * total; start <= 2 * total; start++) {
+        const window = carouselWindow(total, perView, start);
+        assert.equal(window.positions, total);
+        assert.equal(window.indices.length, perView);
+        assert.equal(new Set(window.indices).size, perView);
+        assert.deepEqual(window.indices, carouselWindow(total, perView, start + total).indices);
+        assert.ok(window.indices.every((index) => index >= 0 && index < total));
+      }
+    }
+  }
 });
 
 test("card grid carousel renders real slide wrappers (broken-carousel guard)", () => {
@@ -515,16 +529,14 @@ test("card grid carousel renders real slide wrappers (broken-carousel guard)", (
   assert.match(cardGridSrc, /smoothScroll\(viewport, offset, \{ duration: 320 \}\)/);
   assert.match(cardGridSrc, /navigation\?\.stop\(\)/);
   // Named-slot re-fires after render are ignored so cardCount never resets.
-  assert.match(cardGridSrc, /if \(slot\.name\) return;/);
+  assert.match(cardGridSrc, /if \(slot\?\.name\) return;/);
   // The viewport must be bound in Svelte.
   assert.match(cardGridSrc, /bind:this=\{viewport\}/);
-  // The carousel is linear: no cloned wrap-around slides, and the prev/next
-  // buttons disable at the ends instead of rewinding across every card.
-  assert.doesNotMatch(cardGridSrc, /buildWrapClones|dmd-carousel-clone/);
-  assert.match(cardGridSrc, /disabled=\{active <= 0\}/);
-  assert.match(cardGridSrc, /disabled=\{active >= positions - 1\}/);
-  // Offsets are measured from the real slides only.
-  assert.match(cardGridSrc, /slice\(0, cardCount\)\.map\(\(slide\) => slide\.offsetLeft\)/);
+  // Each boundary has enough buffered slides to fill a complete window.
+  assert.match(cardGridSrc, /cardCount \+ 2 \* perView/);
+  assert.match(cardGridSrc, /disabled=\{positions <= 1\}/);
+  // Include buffered slides in the measured scroll positions.
+  assert.match(cardGridSrc, /\[\.\.\.slides\]\.map\(\(slide\) => slide\.offsetLeft\)/);
 });
 
 test("block-level custom components are not wrapped in <p> tags", () => {

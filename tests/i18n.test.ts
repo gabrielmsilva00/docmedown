@@ -149,3 +149,12 @@ test("validator warns on implicit/explicit originals and rejects duplicate local
   const conflict = await validateCommand(dir, { json: true });
   assert.ok(conflict.errors.some((item) => item.message.includes("Conflicting")));
 });
+
+test("i18n configuration defaults showUntranslated to false and accepts explicit override", () => {
+  const defaults = normalizeConfig({ i18n: { defaultLocale: "en", locales: [{ code: "en" }, { code: "es" }] } });
+  assert.equal(defaults.i18n?.showUntranslated, false);
+  const explicit = normalizeConfig({
+    i18n: { defaultLocale: "en", locales: [{ code: "en" }, { code: "es" }], showUntranslated: true },
+  });
+  assert.equal(explicit.i18n?.showUntranslated, true);
+});

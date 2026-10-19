@@ -2,8 +2,7 @@
  * Card carousel math — framework-free and unit-tested.
  *
  * The sliding window shows `perView` consecutive cards and moves one card at a
- * time. It is linear: the first window starts at card 0, the last one ends at
- * the final card, and navigation stops at either end (no wrap-around).
+ * time. Every card can lead a window; the final card connects to the first.
  */
 export const CAROUSEL_MIN_CARD_PX = 260;
 export const CAROUSEL_GAP_PX = 16;
@@ -32,7 +31,7 @@ export function resolveCarouselPerView(maxPerView: number, containerWidth: numbe
 /**
  * Sliding-window math for the CardGrid carousel: which cards a position shows
  * and how many positions the controls reach. A five-card, two-per-view grid
- * walks [0,1] [1,2] [2,3] [3,4] and stops. Once all the cards fit side by side
+ * walks [0,1] [1,2] [2,3] [3,4] [4,0]. Once all the cards fit side by side
  * there is a single position.
  */
 export function carouselWindow(
@@ -40,12 +39,12 @@ export function carouselWindow(
   perView: number,
   start: number,
 ): { positions: number; index: number; indices: number[] } {
-  const safeTotal = Math.max(0, Math.floor(total));
-  const safePerView = Math.max(1, Math.floor(perView));
-  const positions = Math.max(1, safeTotal - safePerView + 1);
+  const safeTotal = Number.isFinite(total) ? Math.max(0, Math.floor(total)) : 0;
+  const safePerView = Number.isFinite(perView) ? Math.max(1, Math.floor(perView)) : 1;
+  const positions = safeTotal > safePerView ? safeTotal : 1;
   const requested = Number.isFinite(start) ? Math.floor(start) : 0;
-  const index = Math.min(positions - 1, Math.max(0, requested));
+  const index = ((requested % positions) + positions) % positions;
   const indices: number[] = [];
-  for (let i = 0; i < Math.min(safePerView, safeTotal); i++) indices.push(index + i);
+  for (let i = 0; i < Math.min(safePerView, safeTotal); i++) indices.push((index + i) % safeTotal);
   return { positions, index, indices };
 }

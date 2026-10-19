@@ -5,6 +5,7 @@
   // font sources KaTeX ships alongside woff2 — see pruneLegacyKatexFonts.
   import "katex/dist/katex.min.css";
   import "../runtime/styles/main.css";
+  import "../runtime/styles/identities.css";
   import Content from "./components/Content.svelte";
   import EditorModal from "./components/EditorModal.svelte";
   import Navbar from "./components/Navbar.svelte";

@@ -6,6 +6,26 @@ All notable changes to DocMeDown are documented here.
 
 ---
 
+## 0.9.9-a - 2026-10-19
+
+- **Documentation Internationalization (pt-BR & es)**:
+  - Added full side-by-side translations for DocMeDown's entire documentation suite in Portuguese (`pt-BR`) and Spanish (`es`) across 38 files.
+  - Configured complete UI shell overrides in `docs/docs.json` for `tagline`, `description`, search placeholders, footer text, nav links, and hierarchical sidebar categories.
+  - Preserved code blocks, CLI flags, configuration keys, and Svelte 5 component syntax across all languages.
+- **Redesigned Language Menu & Unsupported Language Filtering**:
+  - Replaced the browser native `<select>` with a custom, accessible, theme-integrated dropdown menu with a vector Globe icon, active language label, and animated chevron.
+  - Automatically filters out unsupported languages for the current document by default, hiding the control entirely on pages with only one available language.
+  - Added `showUntranslated` configuration option in `docs.json` and schema for projects wishing to display untranslated language fallback indicators.
+  - Floating popover panel with backdrop blur, uppercase language badge pills (`EN`, `PT`, `ES`), active checkmark indicators, and full keyboard navigation (arrows, Home, End, Escape).
+- **Six Distinctive Documentation Themes**:
+  - Reinforced Atlas, Blueprint, Terminal, and Editorial with family-specific typography, navigation, headings, cards, and code frames.
+  - Added Botanical (sage field guide) and Studio (violet graphic workbook), each with light and dark palettes and both reading densities.
+  - Updated appearance previews, CLI choices, configuration schemas, saved-theme startup, diagram palettes, and documentation for all six families.
+- **CardGrid Carousel Looping**:
+  - Fixed carousels to loop smoothly in both directions, including last-to-first card windows, with continuous boundary navigation and responsive scroll alignment.
+- **GitHub Releases Integration**:
+  - Integrated automated GitHub Releases with packaged release assets including standalone offline HTML bundles (`docmedown-docs-offline.html`) and package tarballs.
+
 ## 0.9.8 - 2026-10-18
 
 - **Dependencies**: added `pele`, removed `mermaid` (110 fewer installed packages).

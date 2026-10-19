@@ -18,7 +18,7 @@ tags: [getting-started, overview, docs]
 ## Key Features
 
 - **🚀 Zero Build Friction**: Host statically, build a self-contained `.dist/index.html` for `file:///`, or document remote GitHub/GitLab repositories dynamically.
-- **🎨 Complete Theme Families**: Atlas, Blueprint, Terminal, and Editorial each provide distinct surfaces, geometry, typography, spacing, and diagram palettes across light and dark modes.
+- **🎨 Complete Theme Families**: Atlas, Blueprint, Terminal, Editorial, Botanical, and Studio each provide distinct surfaces, geometry, typography, spacing, and diagram palettes across light and dark modes.
 - **⚡ Fast Search**: In-browser fuzzy search with `⌘K` command palette.
 - **🧩 Custom Components**: Support for custom `.dmd/` widgets written in native Svelte 5, React TSX, or Web Elements, plus ready-to-use builtins.
 - **📊 Diagrams & Math**: A theme-aware Mermaid viewer with Fit, zoom, SVG export, and offline parity, plus KaTeX formulas.

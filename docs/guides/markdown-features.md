@@ -38,7 +38,7 @@ Use standard GitHub alert blockquotes to draw attention to important notes, tips
 > Helpful background context and informative details.
 
 > [!TIP]
-> Press <Kbd>Alt+D</Kbd> or open **Appearance** in the navbar to preview the site across Atlas, Blueprint, Terminal, and Editorial theme families.
+> Press <Kbd>Alt+D</Kbd> or open **Appearance** in the navbar to preview the site across Atlas, Blueprint, Terminal, Editorial, Botanical, and Studio theme families.
 
 > [!IMPORTANT]
 > Both `.md` and `.mdx` files are automatically discovered and indexed. For interactive components, drop `.svelte`, `.tsx`, or `.ts` files into `.dmd/`.
@@ -169,7 +169,7 @@ graph TD
 ```
 
 ### Diagram Features:
-- **Theme-Aware Styling**: Diagrams automatically adapt their color palette to the active theme family (`atlas`, `blueprint`, `terminal`, `editorial`) and light/dark modes.
+- **Theme-Aware Styling**: Diagrams automatically adapt their color palette to the active theme family (`atlas`, `blueprint`, `terminal`, `editorial`, `botanical`, `studio`) and light/dark modes.
 - **Interactive Camera Controls**: Drag empty space to pan, zoom with mousewheel or pinch, click 1:1 to reset, or click the fullscreen icon to expand.
 - **Subgraph Copying**: Hover over subgraphs to copy isolated graph sections directly to your clipboard.
 - **Offline Self-Containment**: Works identically from live dev servers and air-gapped `file:///` single-file HTML manuals.

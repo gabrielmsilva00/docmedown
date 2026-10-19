@@ -294,7 +294,7 @@ stagger(badgeElements, { opacity: [0, 1], transform: ["scale(0.8)", "scale(1)"] 
 
 ## 🎯 6. Shared Theme Design Tokens (CSS Variables)
 
-To ensure custom components match the active theme family (`atlas`, `blueprint`, `terminal`, `editorial`) and light/dark modes, use DocMeDown's standard CSS tokens:
+To ensure custom components match the active theme family (`atlas`, `blueprint`, `terminal`, `editorial`, `botanical`, `studio`) and light/dark modes, use DocMeDown's standard CSS tokens:
 
 | Token | Description | Example Value |
 | :--- | :--- | :--- |

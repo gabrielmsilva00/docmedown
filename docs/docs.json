@@ -3,17 +3,433 @@
   "name": "DocMeDown",
   "tagline": "The simplest MarkDown documenter yet",
   "description": "Next-generation zero-friction documentation engine for modern developers",
-  "version": "0.9.8",
+  "version": "0.9.9-a",
   "rootDoc": "README.md",
   "i18n": {
     "defaultLocale": "en",
     "locales": [
-      { "code": "en", "label": "English" },
-      { "code": "pt-BR", "label": "Português (Brasil)" },
-      { "code": "es", "label": "Español" },
-      { "code": "fr", "label": "Français" },
-      { "code": "de", "label": "Deutsch" },
-      { "code": "zh-CN", "label": "简体中文" }
+      {
+        "code": "en",
+        "label": "English"
+      },
+      {
+        "code": "pt-BR",
+        "label": "Português (Brasil)",
+        "overrides": {
+          "tagline": "O documentador MarkDown mais simples de todos",
+          "description": "Mecanismo de documentação de última geração e atrito zero para desenvolvedores modernos",
+          "search": {
+            "placeholder": "Buscar na documentação do DocMeDown (⌘K)..."
+          },
+          "footer": {
+            "copyright": "© 2026 Equipe DocMeDown. Lançado sob a Licença MIT.",
+            "showBuiltWith": true
+          },
+          "nav": [
+            {
+              "label": "Visão Geral",
+              "href": "#/README"
+            },
+            {
+              "label": "Início Rápido",
+              "href": "#/getting-started"
+            },
+            {
+              "label": "Arquitetura",
+              "href": "#/guides/architecture"
+            },
+            {
+              "label": "Componentes",
+              "href": "#/guides/custom-components"
+            },
+            {
+              "label": "DX e Editor",
+              "href": "#/guides/developer-experience"
+            },
+            {
+              "label": "Configuração",
+              "href": "#/configuration"
+            },
+            {
+              "label": "CLI",
+              "href": "#/guides/cli-reference"
+            },
+            {
+              "label": "Showcase",
+              "href": "#/showcase"
+            },
+            {
+              "label": "GitHub",
+              "href": "https://github.com/gabrielmsilva00/docmedown",
+              "external": true
+            }
+          ],
+          "sidebar": [
+            {
+              "title": "Primeiros Passos",
+              "icon": "🚀",
+              "children": [
+                {
+                  "title": "Bem-vindo e Visão Geral",
+                  "path": "README.md",
+                  "icon": "⚡"
+                },
+                {
+                  "title": "Tutorial de Início Rápido",
+                  "path": "getting-started.md",
+                  "icon": "🚀",
+                  "badge": "Comece Aqui",
+                  "badgeType": "success"
+                },
+                {
+                  "title": "Estrutura do Projeto",
+                  "path": "guides/project-structure.md",
+                  "icon": "📁"
+                },
+                {
+                  "title": "Arquitetura do Motor",
+                  "path": "guides/architecture.md",
+                  "icon": "🏛️",
+                  "badge": "Imersão",
+                  "badgeType": "info"
+                }
+              ]
+            },
+            {
+              "title": "Autoria de Conteúdo",
+              "icon": "✍️",
+              "children": [
+                {
+                  "title": "Markdown, Sintaxe e Matemática",
+                  "path": "guides/markdown-features.md",
+                  "icon": "📝"
+                },
+                {
+                  "title": "Diagramas Mermaid",
+                  "path": "guides/mermaid-diagrams.md",
+                  "icon": "📊"
+                },
+                {
+                  "title": "Primitivas de UI Nativas",
+                  "path": "guides/built-in-components.md",
+                  "icon": "🧩",
+                  "badge": "20 Primitivas",
+                  "badgeType": "info"
+                },
+                {
+                  "title": "Showcase de Componentes",
+                  "path": "showcase.md",
+                  "icon": "🎛️"
+                }
+              ]
+            },
+            {
+              "title": "Componentes Interativos (.dmd)",
+              "icon": "🧩",
+              "children": [
+                {
+                  "title": "Guia de Componentes Customizados",
+                  "path": "guides/custom-components.md",
+                  "icon": "⚡",
+                  "badge": "Svelte 5 / React",
+                  "badgeType": "new"
+                }
+              ]
+            },
+            {
+              "title": "Experiência do Desenvolvedor (DX)",
+              "icon": "⚡",
+              "children": [
+                {
+                  "title": "HMR ao Vivo, Editor e Previews",
+                  "path": "guides/developer-experience.md",
+                  "icon": "🔥",
+                  "badge": "v0.9.0",
+                  "badgeType": "new"
+                }
+              ]
+            },
+            {
+              "title": "Implantação e Distribuição",
+              "icon": "🚢",
+              "children": [
+                {
+                  "title": "Site Estático (SSG) e SEO",
+                  "path": "guides/static-site.md",
+                  "icon": "🌐"
+                },
+                {
+                  "title": "100% Offline em Arquivo Único",
+                  "path": "guides/offline-mode.md",
+                  "icon": "📦",
+                  "badge": "Air-Gapped",
+                  "badgeType": "warning"
+                },
+                {
+                  "title": "Git Remoto Dinâmico",
+                  "path": "guides/remote-github.md",
+                  "icon": "☁️"
+                }
+              ]
+            },
+            {
+              "title": "Documentação Nativa com IA",
+              "icon": "🤖",
+              "children": [
+                {
+                  "title": "Model Context Protocol (MCP)",
+                  "path": "guides/mcp-server.md",
+                  "icon": "🤖",
+                  "badge": "Pronto para IA",
+                  "badgeType": "success"
+                }
+              ]
+            },
+            {
+              "title": "Referência e Ferramentas",
+              "icon": "🛠️",
+              "children": [
+                {
+                  "title": "Configuração (docs.json)",
+                  "path": "configuration.md",
+                  "icon": "⚙️"
+                },
+                {
+                  "title": "Internacionalização (i18n)",
+                  "path": "guides/internationalization.md",
+                  "icon": "🌐",
+                  "badge": "i18n",
+                  "badgeType": "info"
+                },
+                {
+                  "title": "Matriz de Comandos da CLI",
+                  "path": "guides/cli-reference.md",
+                  "icon": "💻"
+                },
+                {
+                  "title": "Guias de Migração",
+                  "path": "guides/migrations.md",
+                  "icon": "🔄"
+                },
+                {
+                  "title": "Sites de Referência Executáveis",
+                  "path": "examples.md",
+                  "icon": "🧪"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "code": "es",
+        "label": "Español",
+        "overrides": {
+          "tagline": "El documentador MarkDown más simple hasta ahora",
+          "description": "Motor de documentación de última generación y sin fricción para desarrolladores modernos",
+          "search": {
+            "placeholder": "Buscar en la documentación de DocMeDown (⌘K)..."
+          },
+          "footer": {
+            "copyright": "© 2026 Equipo DocMeDown. Publicado bajo la Licencia MIT.",
+            "showBuiltWith": true
+          },
+          "nav": [
+            {
+              "label": "Visión General",
+              "href": "#/README"
+            },
+            {
+              "label": "Inicio Rápido",
+              "href": "#/getting-started"
+            },
+            {
+              "label": "Arquitectura",
+              "href": "#/guides/architecture"
+            },
+            {
+              "label": "Componentes",
+              "href": "#/guides/custom-components"
+            },
+            {
+              "label": "DX y Editor",
+              "href": "#/guides/developer-experience"
+            },
+            {
+              "label": "Configuración",
+              "href": "#/configuration"
+            },
+            {
+              "label": "CLI",
+              "href": "#/guides/cli-reference"
+            },
+            {
+              "label": "Showcase",
+              "href": "#/showcase"
+            },
+            {
+              "label": "GitHub",
+              "href": "https://github.com/gabrielmsilva00/docmedown",
+              "external": true
+            }
+          ],
+          "sidebar": [
+            {
+              "title": "Primeros Pasos",
+              "icon": "🚀",
+              "children": [
+                {
+                  "title": "Bienvenida y Visión General",
+                  "path": "README.md",
+                  "icon": "⚡"
+                },
+                {
+                  "title": "Tutorial de Inicio Rápido",
+                  "path": "getting-started.md",
+                  "icon": "🚀",
+                  "badge": "Comienza Aquí",
+                  "badgeType": "success"
+                },
+                {
+                  "title": "Estructura del Proyecto",
+                  "path": "guides/project-structure.md",
+                  "icon": "📁"
+                },
+                {
+                  "title": "Arquitectura del Motor",
+                  "path": "guides/architecture.md",
+                  "icon": "🏛️",
+                  "badge": "Inmersión",
+                  "badgeType": "info"
+                }
+              ]
+            },
+            {
+              "title": "Creación de Contenido",
+              "icon": "✍️",
+              "children": [
+                {
+                  "title": "Markdown, Sintaxis y Matemáticas",
+                  "path": "guides/markdown-features.md",
+                  "icon": "📝"
+                },
+                {
+                  "title": "Diagramas Mermaid",
+                  "path": "guides/mermaid-diagrams.md",
+                  "icon": "📊"
+                },
+                {
+                  "title": "Primitivas de UI Nativas",
+                  "path": "guides/built-in-components.md",
+                  "icon": "🧩",
+                  "badge": "20 Primitivas",
+                  "badgeType": "info"
+                },
+                {
+                  "title": "Showcase de Componentes",
+                  "path": "showcase.md",
+                  "icon": "🎛️"
+                }
+              ]
+            },
+            {
+              "title": "Componentes Interactivos (.dmd)",
+              "icon": "🧩",
+              "children": [
+                {
+                  "title": "Guía de Componentes Personalizados",
+                  "path": "guides/custom-components.md",
+                  "icon": "⚡",
+                  "badge": "Svelte 5 / React",
+                  "badgeType": "new"
+                }
+              ]
+            },
+            {
+              "title": "Experiencia del Desarrollador (DX)",
+              "icon": "⚡",
+              "children": [
+                {
+                  "title": "HMR en Vivo, Editor y Previews",
+                  "path": "guides/developer-experience.md",
+                  "icon": "🔥",
+                  "badge": "v0.9.0",
+                  "badgeType": "new"
+                }
+              ]
+            },
+            {
+              "title": "Despliegue y Distribución",
+              "icon": "🚢",
+              "children": [
+                {
+                  "title": "Sitio Estático (SSG) y SEO",
+                  "path": "guides/static-site.md",
+                  "icon": "🌐"
+                },
+                {
+                  "title": "100% Offline en Archivo Único",
+                  "path": "guides/offline-mode.md",
+                  "icon": "📦",
+                  "badge": "Air-Gapped",
+                  "badgeType": "warning"
+                },
+                {
+                  "title": "Git Remoto Dinámico",
+                  "path": "guides/remote-github.md",
+                  "icon": "☁️"
+                }
+              ]
+            },
+            {
+              "title": "Documentación Nativa con IA",
+              "icon": "🤖",
+              "children": [
+                {
+                  "title": "Model Context Protocol (MCP)",
+                  "path": "guides/mcp-server.md",
+                  "icon": "🤖",
+                  "badge": "Listo para IA",
+                  "badgeType": "success"
+                }
+              ]
+            },
+            {
+              "title": "Referencia y Herramientas",
+              "icon": "🛠️",
+              "children": [
+                {
+                  "title": "Configuración (docs.json)",
+                  "path": "configuration.md",
+                  "icon": "⚙️"
+                },
+                {
+                  "title": "Internacionalización (i18n)",
+                  "path": "guides/internationalization.md",
+                  "icon": "🌐",
+                  "badge": "i18n",
+                  "badgeType": "info"
+                },
+                {
+                  "title": "Matriz de Comandos de CLI",
+                  "path": "guides/cli-reference.md",
+                  "icon": "💻"
+                },
+                {
+                  "title": "Guías de Migración",
+                  "path": "guides/migrations.md",
+                  "icon": "🔄"
+                },
+                {
+                  "title": "Sitios de Referencia Ejecutables",
+                  "path": "examples.md",
+                  "icon": "🧪"
+                }
+              ]
+            }
+          ]
+        }
+      }
     ],
     "fallbackToDefault": true
   },
@@ -193,6 +609,13 @@
           "title": "Configuration (docs.json)",
           "path": "configuration.md",
           "icon": "⚙️"
+        },
+        {
+          "title": "Internationalization (i18n)",
+          "path": "guides/internationalization.md",
+          "icon": "🌐",
+          "badge": "i18n",
+          "badgeType": "info"
         },
         {
           "title": "CLI Command Matrix",

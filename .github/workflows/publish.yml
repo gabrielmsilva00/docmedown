@@ -1,21 +1,54 @@
-name: Verify release tag
+name: Release
 
 on:
   push:
     tags: ['v*']
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  verify:
+  release:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: 22
           registry-url: https://registry.npmjs.org
           cache: npm
-      - run: npm ci
-      - run: npm run test:release
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify release test suite
+        run: npm run test:release
+
+      - name: Build release assets
+        run: |
+          npm run build
+          npm run build:docs
+          npm pack
+          cp docs/.dmd/.singlefile/index.html docmedown-docs-offline.html
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ github.ref_name }}
+          generate_release_notes: true
+          files: |
+            docmedown-*.tgz
+            docmedown-docs-offline.html
+            docs/.dmd/llms.txt
+            docs/.dmd/llms-full.txt
+            docs/.dmd/SKILL.md
+          prerelease: ${{ contains(github.ref_name, '-') }}
+
+      - name: Publish to npm
+        if: env.NODE_AUTH_TOKEN != ''
+        run: npm publish --access public --tag $(node -e "console.log(require('./package.json').version.includes('-') ? 'alpha' : 'latest')")
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

@@ -187,7 +187,7 @@ export async function validateCommand(
         errors.push({
           file: relConfig,
           message:
-            'Deprecated "theme.preset" detected. Use "theme.family" instead (atlas, blueprint, terminal, editorial).',
+            'Deprecated "theme.preset" detected. Use "theme.family" instead (atlas, blueprint, terminal, editorial, botanical, studio).',
           type: "config",
         });
       }

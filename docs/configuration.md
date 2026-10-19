@@ -145,14 +145,18 @@ Choose the preset archetype closest to your project:
 
 ## 🎨 Theme Families & Aesthetics
 
-DocMeDown ships **four complete visual systems**. A theme family is not a simple color toggle: it redefines canvas texture, borders, geometry, typography hierarchy, and diagram palettes:
+DocMeDown ships **six complete visual systems**. A theme family is not a simple color toggle: it redefines canvas texture, borders, geometry, typography hierarchy, and diagram palettes:
 
 | Family | Vibe & Aesthetics | Geometry | Typography | Best For |
 | :--- | :--- | :--- | :--- | :--- |
-| **`atlas`** *(default)* | Clean mineral canvas, cobalt accents, subtle elevation shadows | Smooth 8px radius | Sans-serif (Inter) | Developer libraries, SaaS products, APIs |
+| **`atlas`** *(default)* | Mineral canvas, cobalt index rails, precise hierarchy | Measured 6–16px corners | Local system sans-serif | Developer libraries, SaaS products, APIs |
 | **`blueprint`** | Technical drafting canvas, grid lines, vibrant coral signals | Squared corners | Sans-serif (System) | Architecture specs, protocol RFCs, frameworks |
-| **`terminal`** | High-contrast dark-first console, obsidian surfaces, emerald prompt | Sharp 0px corners | Monospace (Mono) | CLI tools, DevOps runbooks, system manuals |
-| **`editorial`** | Warm tactile paper surface, brick accents, generous rhythm | Soft 12px radius | Serif (Georgia/Merriweather) | Handbooks, essays, long-form guides, books |
+| **`terminal`** | High-contrast console, phosphor prompts, compact chrome | Sharp 0–2px corners | Local monospace headings and utilities, sans body | CLI tools, DevOps runbooks, system manuals |
+| **`editorial`** | Warm paper, brick accents, ink rules, generous reading rhythm | Restrained 2–4px corners | Local Palatino / Georgia serif | Handbooks, essays, long-form guides, books |
+| **`botanical`** | Sage book cloth, fern accents, field-guide headings | Asymmetric leaf-shaped notes | Local Palatino headings, system sans body | Research notes, learning resources, field guides |
+| **`studio`** | Lilac stock, violet ink, offset-print frames | Framed panels, hard offset shadows | Local Arial Black / system display, sans body | Design systems, creative product documentation |
+
+All six families support light, dark, and automatic color modes, plus comfortable and compact density. Fonts use local stacks: no external font requests are needed, including in offline exports. Use the **Appearance** menu to preview and select a family; your choice is saved on the current browser origin.
 
 ### Custom Brand Colors
 While each family selects harmonious colors automatically, you can override the action accent color:
@@ -213,7 +217,7 @@ When `"home"` is not explicitly configured, DocMeDown resolves it automatically 
 
 | Field | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `family` | `"atlas" \| "blueprint" \| "terminal" \| "editorial"` | `"atlas"` | Visual design system. |
+| `family` | `"atlas" \| "blueprint" \| "terminal" \| "editorial" \| "botanical" \| "studio"` | `"atlas"` | Visual design system. |
 | `density` | `"comfortable" \| "compact"` | `"comfortable"` | Controls navbar height, sidebar padding, and content spacing. |
 | `defaultMode` | `"auto" \| "light" \| "dark"` | `"auto"` | Initial color mode for new visitors. |
 | `codeTheme` | `"github" \| "one-dark" \| "dracula" \| "synthwave"` | `"github"` | Syntax highlighting color theme. |

@@ -1,6 +1,6 @@
 import type { ColorMode, ThemeDensity, ThemeFamily } from "../runtime/types";
 
-const FAMILY_VALUES: ThemeFamily[] = ["atlas", "blueprint", "terminal", "editorial"];
+const FAMILY_VALUES: ThemeFamily[] = ["atlas", "blueprint", "terminal", "editorial", "botanical", "studio"];
 const DENSITY_VALUES: ThemeDensity[] = ["comfortable", "compact"];
 
 // localStorage is unavailable under opaque origins (blob: URLs produced by

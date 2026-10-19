@@ -1,31 +1,57 @@
 <script lang="ts">
-  import type { ThemeDensity, ThemeFamily } from "../../runtime/types";
+  import { tick } from "svelte";
+  import type { ColorMode, ThemeDensity, ThemeFamily } from "../../runtime/types";
   import { theme } from "../theme.svelte";
 
   const families: Array<{ family: ThemeFamily; label: string; description: string }> = [
-    { family: "atlas", label: "Atlas", description: "Editorial technical reference" },
-    { family: "blueprint", label: "Blueprint", description: "Structured and schematic" },
+    { family: "atlas", label: "Atlas", description: "Precision reference manual" },
+    { family: "blueprint", label: "Blueprint", description: "Architectural drafting grid" },
     { family: "terminal", label: "Terminal", description: "Compact operational console" },
-    { family: "editorial", label: "Editorial", description: "Spacious publication reading" },
+    { family: "editorial", label: "Editorial", description: "Serif, ink and reading room" },
+    { family: "botanical", label: "Botanical", description: "Sage and fern field guide" },
+    { family: "studio", label: "Studio", description: "Bold graphic workbook" },
   ];
 
   let isOpen = $state(false);
   let menuElement: HTMLDivElement | null = null;
+  let triggerElement: HTMLButtonElement | null = null;
+  let panelElement = $state<HTMLDivElement | null>(null);
+
+  function closeMenu() {
+    isOpen = false;
+    triggerElement?.focus();
+  }
+
+  async function toggleMenu() {
+    if (isOpen) return closeMenu();
+    isOpen = true;
+    await tick();
+    panelElement?.querySelector<HTMLButtonElement>(".dmd-theme-family-card.active")?.focus();
+  }
 
   $effect(() => {
     if (!isOpen) return;
 
-    const closeOnOutsidePointer = (event: MouseEvent) => {
+    const closeOnOutsidePointer = (event: PointerEvent) => {
       if (!menuElement?.contains(event.target as Node)) isOpen = false;
     };
     const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") isOpen = false;
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeMenu();
+      }
     };
 
-    document.addEventListener("mousedown", closeOnOutsidePointer);
+    const closeOnFocusLeave = (event: FocusEvent) => {
+      if (!menuElement?.contains(event.target as Node)) isOpen = false;
+    };
+
+    document.addEventListener("pointerdown", closeOnOutsidePointer);
+    document.addEventListener("focusin", closeOnFocusLeave);
     document.addEventListener("keydown", closeOnEscape);
     return () => {
-      document.removeEventListener("mousedown", closeOnOutsidePointer);
+      document.removeEventListener("pointerdown", closeOnOutsidePointer);
+      document.removeEventListener("focusin", closeOnFocusLeave);
       document.removeEventListener("keydown", closeOnEscape);
     };
   });
@@ -35,19 +61,20 @@
   <button
     type="button"
     class="dmd-appearance-trigger"
+    bind:this={triggerElement}
     aria-expanded={isOpen}
     aria-haspopup="dialog"
-    onclick={() => (isOpen = !isOpen)}
+    onclick={toggleMenu}
   >
     <span class="dmd-theme-mark dmd-theme-mark-{theme.family}" aria-hidden="true"></span>
     <span class="dmd-appearance-trigger-label">Appearance</span>
   </button>
 
   {#if isOpen}
-    <div class="dmd-appearance-panel" role="dialog" aria-label="Documentation appearance">
+    <div class="dmd-appearance-panel" bind:this={panelElement} role="dialog" aria-label="Documentation appearance">
       <div class="dmd-appearance-heading">
         <span>Appearance</span>
-        <button type="button" class="dmd-appearance-close" aria-label="Close appearance menu" onclick={() => (isOpen = false)}>
+        <button type="button" class="dmd-appearance-close" aria-label="Close appearance menu" onclick={closeMenu}>
           ×
         </button>
       </div>
@@ -78,7 +105,12 @@
         <legend class="dmd-appearance-label">Mode</legend>
         <div class="dmd-segmented-control">
           {#each ["auto", "light", "dark"] as item (item)}
-            <button type="button" class={theme.mode === item ? "active" : ""} onclick={() => theme.setMode(item as any)}>
+            <button
+              type="button"
+              aria-pressed={theme.mode === item}
+              class={theme.mode === item ? "active" : ""}
+              onclick={() => theme.setMode(item as ColorMode)}
+            >
               {item}
             </button>
           {/each}
@@ -94,6 +126,7 @@
           {#each ["comfortable", "compact"] as item (item)}
             <button
               type="button"
+              aria-pressed={theme.density === item}
               class={theme.density === (item as ThemeDensity) ? "active" : ""}
               onclick={() => theme.setDensity(item as ThemeDensity)}
             >
@@ -108,6 +141,7 @@
         <div class="dmd-segmented-control">
           <button
             type="button"
+            aria-pressed={theme.motion === "full"}
             class={theme.motion === "full" ? "active" : ""}
             onclick={() => theme.setMotion("full")}
           >
@@ -115,6 +149,7 @@
           </button>
           <button
             type="button"
+            aria-pressed={theme.motion === "reduced"}
             class={theme.motion === "reduced" ? "active" : ""}
             onclick={() => theme.setMotion("reduced")}
           >

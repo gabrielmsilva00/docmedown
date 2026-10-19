@@ -25,7 +25,7 @@ import { loadMermaidEngine } from "./mermaid-loader";
  * and no foreignObject HTML labels.
  */
 
-export type DiagramFamily = "atlas" | "blueprint" | "terminal" | "editorial";
+export type DiagramFamily = "atlas" | "blueprint" | "terminal" | "editorial" | "botanical" | "studio";
 export type DiagramMode = "light" | "dark";
 
 /** Subset of DocMeDown tokens diagrams consume; overridable for pure tests. */
@@ -229,25 +229,25 @@ const FAMILY_TOKENS: Record<DiagramFamily, Record<DiagramMode, DiagramTokens>> =
     light: {
       canvas: "#f7f7f5",
       surface: "#ffffff",
-      surfaceRaised: "#f0f0ec",
-      ink: "#1a2332",
-      inkSecondary: "#4d5a6e",
-      rule: "#e0e1db",
+      surfaceRaised: "#e4e6e3",
+      ink: "#1a1d21",
+      inkSecondary: "#575f66",
+      rule: "#ddded8",
       accent: "#315cf5",
-      codeSurface: "#0f172a",
-      codeInk: "#e2e8f0",
+      codeSurface: "#16181d",
+      codeInk: "#dfe3ea",
       fontFamily: SANS_STACK,
     },
     dark: {
-      canvas: "#0f1620",
-      surface: "#16202e",
-      surfaceRaised: "#1c2836",
-      ink: "#edf1f6",
-      inkSecondary: "#a7b4c5",
-      rule: "#2a3949",
-      accent: "#6b93ff",
-      codeSurface: "#0a101a",
-      codeInk: "#dbe4ee",
+      canvas: "#121417",
+      surface: "#191d21",
+      surfaceRaised: "#212529",
+      ink: "#ededef",
+      inkSecondary: "#a8afb6",
+      rule: "#2b3036",
+      accent: "#5b8cff",
+      codeSurface: "#0d0f12",
+      codeInk: "#dde3ec",
       fontFamily: SANS_STACK,
     },
   },
@@ -255,11 +255,11 @@ const FAMILY_TOKENS: Record<DiagramFamily, Record<DiagramMode, DiagramTokens>> =
     light: {
       canvas: "#f2f5f7",
       surface: "#fafcfd",
-      surfaceRaised: "#e8edf0",
+      surfaceRaised: "#dde5ea",
       ink: "#14212b",
       inkSecondary: "#45606f",
       rule: "#c6d3da",
-      accent: "#ef5340",
+      accent: "#be3827",
       codeSurface: "#101b23",
       codeInk: "#ccdae2",
       fontFamily: SANS_STACK,
@@ -282,11 +282,11 @@ const FAMILY_TOKENS: Record<DiagramFamily, Record<DiagramMode, DiagramTokens>> =
     light: {
       canvas: "#f3f4f1",
       surface: "#fbfcfa",
-      surfaceRaised: "#e9ebe6",
+      surfaceRaised: "#dfe2db",
       ink: "#161c17",
       inkSecondary: "#4a564d",
       rule: "#c9cdc3",
-      accent: "#0c7c40",
+      accent: "#0b773d",
       codeSurface: "#0a0e0b",
       codeInk: "#cfe8d4",
       fontFamily: MONO_STACK,
@@ -308,7 +308,7 @@ const FAMILY_TOKENS: Record<DiagramFamily, Record<DiagramMode, DiagramTokens>> =
     light: {
       canvas: "#faf6ee",
       surface: "#fffdf7",
-      surfaceRaised: "#f2ecdf",
+      surfaceRaised: "#eae1cf",
       ink: "#22201a",
       inkSecondary: "#665e4c",
       rule: "#ded2ba",
@@ -330,10 +330,69 @@ const FAMILY_TOKENS: Record<DiagramFamily, Record<DiagramMode, DiagramTokens>> =
       fontFamily: "Iowan Old Style, Palatino Linotype, Palatino, Georgia, serif",
     },
   },
+  botanical: {
+    light: {
+      canvas: "#f2f6ef",
+      surface: "#fbfdf8",
+      surfaceRaised: "#d6e2ce",
+      ink: "#20392b",
+      inkSecondary: "#4d6653",
+      rule: "#b9ccb1",
+      accent: "#276642",
+      codeSurface: "#11251b",
+      codeInk: "#dcebd8",
+      fontFamily: "Palatino Linotype, Palatino, Georgia, serif",
+    },
+    dark: {
+      canvas: "#101c16",
+      surface: "#17271d",
+      surfaceRaised: "#203827",
+      ink: "#e2edda",
+      inkSecondary: "#b0c6a6",
+      rule: "#35543c",
+      accent: "#99ce8a",
+      codeSurface: "#0a140e",
+      codeInk: "#dcebd8",
+      fontFamily: "Palatino Linotype, Palatino, Georgia, serif",
+    },
+  },
+  studio: {
+    light: {
+      canvas: "#f4f0ff",
+      surface: "#fffcff",
+      surfaceRaised: "#ddd0f5",
+      ink: "#2b1944",
+      inkSecondary: "#635074",
+      rule: "#b8a5d8",
+      accent: "#713ac3",
+      codeSurface: "#251638",
+      codeInk: "#eee0ff",
+      fontFamily: "Arial Black, Segoe UI, sans-serif",
+    },
+    dark: {
+      canvas: "#1b1428",
+      surface: "#281e39",
+      surfaceRaised: "#332547",
+      ink: "#f2e9ff",
+      inkSecondary: "#c3afd9",
+      rule: "#59416e",
+      accent: "#c5a0ff",
+      codeSurface: "#120c1c",
+      codeInk: "#eee0ff",
+      fontFamily: "Arial Black, Segoe UI, sans-serif",
+    },
+  },
 };
 
 export function isDiagramFamily(value: string | null | undefined): value is DiagramFamily {
-  return value === "atlas" || value === "blueprint" || value === "terminal" || value === "editorial";
+  return (
+    value === "atlas" ||
+    value === "blueprint" ||
+    value === "terminal" ||
+    value === "editorial" ||
+    value === "botanical" ||
+    value === "studio"
+  );
 }
 
 /** Resolved Pele theme: the CSS variables plus the measuring options that must match them. */
@@ -430,7 +489,7 @@ export function decodeDiagramSource(encoded: string): string {
   return new TextDecoder().decode(bytes);
 }
 
-const DIAGRAM_FAMILIES: DiagramFamily[] = ["atlas", "blueprint", "terminal", "editorial"];
+const DIAGRAM_FAMILIES: DiagramFamily[] = ["atlas", "blueprint", "terminal", "editorial", "botanical", "studio"];
 
 /**
  * Resolves the active family, color mode, and live CSS tokens from the
@@ -454,6 +513,13 @@ export function resolveDiagramContext(): { family: DiagramFamily; mode: DiagramM
     const read = (name: string): string => styles.getPropertyValue(name).trim();
     tokens = {
       ...fallback,
+      ...(read("--dmd-bg-primary") ? { canvas: read("--dmd-bg-primary") } : {}),
+      ...(read("--dmd-bg-card") ? { surface: read("--dmd-bg-card") } : {}),
+      ...(read("--dmd-bg-tertiary") ? { surfaceRaised: read("--dmd-bg-tertiary") } : {}),
+      ...(read("--dmd-text-primary") ? { ink: read("--dmd-text-primary") } : {}),
+      ...(read("--dmd-text-secondary") ? { inkSecondary: read("--dmd-text-secondary") } : {}),
+      ...(read("--dmd-border-color") ? { rule: read("--dmd-border-color") } : {}),
+      ...(read("--dmd-font-display") ? { fontFamily: read("--dmd-font-display") } : {}),
       ...(read("--dmd-accent") ? { accent: read("--dmd-accent") } : {}),
       ...(read("--dmd-code-bg") ? { codeSurface: read("--dmd-code-bg") } : {}),
       ...(read("--dmd-code-text") ? { codeInk: read("--dmd-code-text") } : {}),

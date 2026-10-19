@@ -39,7 +39,8 @@
             }
           }
         },
-        "fallbackToDefault": { "type": "boolean", "default": true }
+        "fallbackToDefault": { "type": "boolean", "default": true },
+        "showUntranslated": { "type": "boolean", "default": false, "description": "Whether to include untranslated language options with a fallback indicator in the language dropdown." }
       }
     },
     "home": {
@@ -130,7 +131,7 @@
       "additionalProperties": false,
       "properties": {
         "family": {
-          "enum": ["atlas", "blueprint", "terminal", "editorial"],
+          "enum": ["atlas", "blueprint", "terminal", "editorial", "botanical", "studio"],
           "description": "Complete visual system controlling canvas, geometry, typography rhythm and motion."
         },
         "density": { "enum": ["comfortable", "compact"], "description": "Reading density across shell panels." },

@@ -71,9 +71,9 @@ function ensureAuthenticated() {
   if (!interactive) {
     throw new Error(
       `npm is not authenticated and this is not an interactive terminal, so an automatic ` +
-        `login is not possible.\n\n` +
-        `Run "npm login" first (it will open your browser), or set the NPM_TOKEN / node:auth-token ` +
-        `environment variable and rerun the deploy.`,
+      `login is not possible.\n\n` +
+      `Run "npm login" first (it will open your browser), or set the NPM_TOKEN / node:auth-token ` +
+      `environment variable and rerun the deploy.`,
     );
   }
 
@@ -99,7 +99,7 @@ function ensurePagesAccess() {
   if (result.status !== 0) {
     throw new Error(
       'GitHub Pages deployment requires GitHub CLI (gh) authenticated with Actions write access. Run "gh auth login" and retry.\n' +
-        (result.stderr || result.stdout),
+      (result.stderr || result.stdout),
     );
   }
 }
@@ -199,8 +199,8 @@ function verifyPublishedVersion(packageName, version) {
     const result = runNpm(["view", `${packageName}@${version}`, "version"], { capture: true });
     if (result.status === 0 && result.stdout.trim() === version) return;
     if (attempt < attempts) {
-      console.log(`\nRegistry metadata has not propagated yet; retrying in 30 seconds (${attempt}/${attempts})...`);
-      run(process.execPath, ["-e", "setTimeout(() => {}, 30000)"]);
+      console.log(`\nRegistry metadata has not propagated yet; retrying in 60 seconds (${attempt}/${attempts})...`);
+      run(process.execPath, ["-e", "setTimeout(() => {}, 60000)"]);
     }
   }
   throw new Error(`npm registry verification did not return ${packageName}@${version} after ${attempts} attempts.`);
@@ -311,7 +311,7 @@ function createGitHubRelease(tagName, version) {
   if (tempAsset && fs.existsSync(tempAsset)) {
     try {
       fs.unlinkSync(tempAsset);
-    } catch {}
+    } catch { }
   }
 
   if (result.status === 0) {

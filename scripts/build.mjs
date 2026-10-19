@@ -146,6 +146,7 @@ async function runUnitTests() {
     "offline-artifact.test.ts",
     "package-smoke.test.ts",
     "mcp.test.ts",
+    "hosting.test.ts",
   ]);
   const files = fs
     .readdirSync(testsDir)

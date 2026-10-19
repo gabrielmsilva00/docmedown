@@ -14,7 +14,9 @@
       "*.config.ts",
       "*.config.mts",
       "package.json",
-      "biome.jsonc"
+      "biome.jsonc",
+      "!docs",
+      "!dist"
     ]
   },
   "formatter": {

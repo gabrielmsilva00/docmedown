@@ -2376,8 +2376,7 @@ html {
   stroke-linejoin: round;
 }
 
-.dmd-diagram-btn.copied,
-.dmd-diagram-subgraph-copy.copied {
+.dmd-diagram-btn.copied {
   color: var(--dmd-accent);
   border-color: var(--dmd-accent);
   background: var(--dmd-accent-subtle);
@@ -2629,6 +2628,7 @@ html {
   }
 }
 
+.dmd-diagram-subgraph-copy,
 .dmd-subgraph-pill-btn {
   display: inline-flex;
   align-items: center;
@@ -2638,7 +2638,7 @@ html {
   background: var(--dmd-bg-card, #181825);
   border: 1px solid var(--dmd-border-color);
   border-radius: 9999px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
   font-size: 0.72rem;
   font-weight: 500;
   cursor: pointer;
@@ -2648,12 +2648,24 @@ html {
   transition: all var(--dmd-transition);
 }
 
+.dmd-diagram-subgraph-copy span,
+.dmd-subgraph-pill-btn span {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dmd-diagram-subgraph-copy:hover,
+.dmd-diagram-subgraph-copy:focus-visible,
 .dmd-subgraph-pill-btn:hover {
   border-color: var(--dmd-accent);
   color: var(--dmd-accent);
   background: var(--dmd-bg-elevated);
+  outline: none;
 }
 
+.dmd-diagram-subgraph-copy.copied,
 .dmd-subgraph-pill-btn.copied {
   border-color: #a6e3a1;
   color: #a6e3a1;
@@ -2815,31 +2827,7 @@ html {
   transition: border-color var(--dmd-transition);
 }
 
-.dmd-diagram-subgraph-copy {
-  position: absolute;
-  z-index: 3;
-  translate: -100% 0;
-  display: grid;
-  place-items: center;
-  width: 1.65rem;
-  height: 1.65rem;
-  padding: 0;
-  color: var(--dmd-text-secondary);
-  background: var(--dmd-bg-elevated);
-  border: 1px solid var(--dmd-border-color);
-  border-radius: var(--dmd-radius-sm);
-  box-shadow: var(--dmd-shadow-sm);
-  cursor: pointer;
-  transition: color var(--dmd-transition), border-color var(--dmd-transition), background var(--dmd-transition);
-}
 
-.dmd-diagram-subgraph-copy:hover,
-.dmd-diagram-subgraph-copy:focus-visible {
-  color: var(--dmd-accent);
-  border-color: var(--dmd-accent);
-  background: var(--dmd-accent-subtle);
-  outline: none;
-}
 
 .dmd-diagram-status {
   position: absolute;

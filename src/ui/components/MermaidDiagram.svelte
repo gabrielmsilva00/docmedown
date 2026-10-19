@@ -857,7 +857,7 @@
             >
               <button
                 type="button"
-                class="dmd-subgraph-pill-btn dmd-diagram-subgraph-copy{copiedTarget === activeClusterPill.id ? ' copied' : ''}"
+                class="dmd-diagram-subgraph-copy{copiedTarget === activeClusterPill.id ? ' copied' : ''}"
                 aria-label={activeClusterPill.label ? `Copy ${activeClusterPill.label} subgraph Markdown` : "Copy graph Markdown"}
                 onclick={() => triggerCopy(activeClusterPill!.markdown, activeClusterPill!.id)}
                 title={activeClusterPill.label ? `Copy ${activeClusterPill.label} subgraph Markdown` : "Copy graph Markdown"}

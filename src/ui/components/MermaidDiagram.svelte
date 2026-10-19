@@ -33,17 +33,10 @@
     moved: boolean;
   }
 
-  interface HoveredCluster {
-    id: string;
-    label: string;
-    markdown: string;
-    left: number;
-    top: number;
-  }
-
   let { source }: { source: string } = $props();
   const diagramSource = $derived(decodeDiagramSource(source));
   const diagramType = $derived(detectDiagramType(diagramSource));
+  const extractedSubgraphs = $derived(extractDiagramSubgraphs(diagramSource));
 
   let svg = $state<string | null>(null);
   let diagramSize = $state<DiagramSize | null>(null);
@@ -60,7 +53,6 @@
   let copiedTarget = $state<string | null>(null);
   let isPanning = $state(false);
   let stageHeight = $state<number | null>(null);
-  let activeClusterPill = $state<HoveredCluster | null>(null);
 
   let stageElement = $state<HTMLDivElement | null>(null);
   let canvasElement = $state<HTMLDivElement | null>(null);
@@ -69,7 +61,6 @@
   let minimapPanGesture: { pointerId: number } | null = null;
   let cameraRef: DiagramCamera = { x: 0, y: 0 };
   let copyResetTimer: number | null = null;
-  let clusterLeaveTimer: number | null = null;
 
   const renderedSize = $derived(
     diagramSize
@@ -243,7 +234,6 @@
   $effect(() => {
     return () => {
       if (copyResetTimer !== null) window.clearTimeout(copyResetTimer);
-      if (clusterLeaveTimer !== null) window.clearTimeout(clusterLeaveTimer);
     };
   });
 
@@ -411,7 +401,7 @@
   // Pointer panning & focus interactions
   function canStartPan(target: EventTarget | null): boolean {
     if (!(target instanceof Element)) return true;
-    return !target.closest(".dmd-diagram-subgraph-pill, .dmd-diagram-floating-controls, .dmd-diagram-minimap, button, a");
+    return !target.closest("button, a");
   }
 
   function handlePanStart(event: PointerEvent) {
@@ -472,7 +462,7 @@
     if (!gesture.moved) {
       const target = event.target as Element | null;
       const nodeOrCluster = target?.closest(".pele-node, .pele-cluster") as SVGGraphicsElement | null;
-      if (nodeOrCluster && !target?.closest("button, .dmd-diagram-subgraph-pill")) {
+      if (nodeOrCluster && !target?.closest("button")) {
         focusElement(nodeOrCluster);
       }
     }
@@ -486,7 +476,7 @@
   function handleDoubleClick(event: MouseEvent) {
     const stage = stageElement;
     if (!stage || !diagramSize) return;
-    if ((event.target as Element | null)?.closest("button, .dmd-diagram-subgraph-pill, .dmd-diagram-minimap")) return;
+    if ((event.target as Element | null)?.closest("button")) return;
 
     const rect = stage.getBoundingClientRect();
     const mx = event.clientX - (rect.left + rect.width / 2);
@@ -505,56 +495,6 @@
     } else {
       fitDiagram();
     }
-  }
-
-  // Stage pointer tracking for contextual subgraph pill
-  function handleStagePointerMove(event: PointerEvent) {
-    if (isPanning) return;
-    const target = event.target as Element | null;
-    const cluster = target?.closest(".pele-cluster") as SVGGraphicsElement | null;
-
-    if (!cluster) {
-      if (activeClusterPill && !target?.closest(".dmd-diagram-subgraph-pill")) {
-        if (!clusterLeaveTimer) {
-          clusterLeaveTimer = window.setTimeout(() => {
-            activeClusterPill = null;
-            clusterLeaveTimer = null;
-          }, 200);
-        }
-      }
-      return;
-    }
-
-    if (clusterLeaveTimer) {
-      window.clearTimeout(clusterLeaveTimer);
-      clusterLeaveTimer = null;
-    }
-
-    const currentCanvas = canvasElement;
-    if (!currentCanvas) return;
-    const canvasRect = currentCanvas.getBoundingClientRect();
-    const rect = cluster.getBoundingClientRect();
-    if (rect.width <= 0 || rect.height <= 0) return;
-
-    const definitions = extractDiagramSubgraphs(diagramSource);
-    const normalize = (v: string) => v.toLowerCase().replace(/[^a-z0-9]+/g, "");
-    const clusterLabel = cluster.querySelector(".pele-cluster-label")?.textContent?.trim() || cluster.id || "Subgraph";
-    const norm = normalize(cluster.dataset.id || cluster.id || clusterLabel);
-
-    const definition =
-      definitions.find((d) => normalize(d.id) === norm || normalize(d.label) === norm) ||
-      definitions.find((d) => norm.includes(normalize(d.id))) ||
-      definitions[0];
-
-    if (!definition) return;
-
-    activeClusterPill = {
-      id: definition.id,
-      label: definition.label || clusterLabel,
-      markdown: formatDiagramSubgraphMarkdown(diagramSource, definition.source),
-      left: rect.right - canvasRect.left - 6,
-      top: rect.top - canvasRect.top + 6,
-    };
   }
 
   // Keyboard navigation when stage is focused
@@ -697,6 +637,68 @@
         <span class="dmd-diagram-badge-text">{diagramType}</span>
       </div>
 
+      <!-- Navigation & Scale Toolbar Group (Zero canvas overlap) -->
+      <div class="dmd-diagram-toolbar-group" role="toolbar" aria-label="Diagram navigation and zoom">
+        <button
+          type="button"
+          class="dmd-diagram-toolbar-btn"
+          aria-label="Zoom out (-)"
+          disabled={!svg || zoom <= MIN_ZOOM}
+          onclick={() => setManualZoom(zoom - ZOOM_STEP)}
+          title="Zoom out (-)"
+        >
+          −
+        </button>
+
+        <button
+          type="button"
+          class="dmd-diagram-toolbar-btn dmd-diagram-zoom-badge"
+          aria-label="Reset zoom to 100%"
+          title="Click to reset 1:1"
+          disabled={!svg}
+          onclick={() => setFitMode("1:1")}
+        >
+          {Math.round(zoom * 100)}%
+        </button>
+
+        <button
+          type="button"
+          class="dmd-diagram-toolbar-btn"
+          aria-label="Zoom in (+)"
+          disabled={!svg || zoom >= MAX_ZOOM}
+          onclick={() => setManualZoom(zoom + ZOOM_STEP)}
+          title="Zoom in (+)"
+        >
+          +
+        </button>
+
+        <span class="dmd-diagram-group-divider" aria-hidden="true"></span>
+
+        <button
+          type="button"
+          class="dmd-diagram-toolbar-btn{isFitted && fitMode === 'all' ? ' active' : ''}"
+          disabled={!svg}
+          onclick={() => setFitMode(fitMode === "all" ? "width" : fitMode === "width" ? "height" : "all")}
+          title="Cycle Fit Modes (All / Width / Height)"
+        >
+          {fitMode === "width" ? "Fit W" : fitMode === "height" ? "Fit H" : "Fit"}
+        </button>
+
+        <button
+          type="button"
+          class="dmd-diagram-toolbar-btn"
+          disabled={!svg}
+          onclick={resetCamera}
+          title="Reset position and fit (F)"
+          aria-label="Reset position and fit"
+        >
+          <svg viewBox="0 0 24 24" class="dmd-icon-sm" aria-hidden="true">
+            <circle cx="12" cy="12" r="3" />
+            <path d="M3 12h3M18 12h3M12 3v3M12 18v3" />
+          </svg>
+        </button>
+      </div>
+
       <span class="dmd-diagram-toolbar-spacer"></span>
 
       <!-- Copy Dropdown Button -->
@@ -739,6 +741,26 @@
               <span class="dmd-dropdown-icon">🎨</span>
               <span class="dmd-dropdown-label">Copy PNG Image</span>
             </button>
+
+            {#if extractedSubgraphs.length > 0}
+              <div class="dmd-dropdown-divider" role="separator"></div>
+              <div class="dmd-dropdown-section-title">Subgraphs</div>
+              {#each extractedSubgraphs as sg (sg.id)}
+                <button
+                  type="button"
+                  class="dmd-dropdown-item dmd-diagram-subgraph-copy"
+                  role="menuitem"
+                  title={sg.label ? `Copy ${sg.label} subgraph Markdown` : "Copy graph Markdown"}
+                  onclick={() => triggerCopy(formatDiagramSubgraphMarkdown(diagramSource, sg.source), sg.id)}
+                >
+                  <span class="dmd-dropdown-icon">📦</span>
+                  <span class="dmd-dropdown-label">Copy "{sg.label || sg.id}"</span>
+                  {#if copiedTarget === sg.id}
+                    <span class="dmd-dropdown-check">✓</span>
+                  {/if}
+                </button>
+              {/each}
+            {/if}
           </div>
         {/if}
       </div>
@@ -778,13 +800,13 @@
 
       <span class="dmd-diagram-toolbar-divider" aria-hidden="true"></span>
 
-      <!-- Minimap Toggle -->
+      <!-- Minimap / Overview Toggle -->
       <button
         type="button"
         class="dmd-diagram-btn dmd-diagram-icon-btn{showMinimap ? ' active' : ''}"
         disabled={!svg}
-        aria-label="Toggle Minimap"
-        title={showMinimap ? "Hide Minimap" : "Show Minimap"}
+        aria-label="Toggle Overview Minimap"
+        title={showMinimap ? "Hide Overview Minimap" : "Show Overview Minimap"}
         onclick={() => (showMinimap = !showMinimap)}
       >
         <svg viewBox="0 0 24 24" class="dmd-icon" aria-hidden="true">
@@ -821,7 +843,8 @@
       </button>
     </div>
 
-    <!-- Diagram Stage with Grid Canvas -->
+    <!-- Diagram Stage with Grid Canvas (Completely clean and unobstructed) -->
+    <!-- svelte-ignore a11y_no_noninteractive_tabindex a11y_no_noninteractive_element_interactions -->
     <div
       role="application"
       aria-label="Interactive Mermaid diagram canvas"
@@ -835,7 +858,6 @@
       onpointercancel={handlePanEnd}
       ondblclick={handleDoubleClick}
       onkeydown={handleKeyDown}
-      onpointerover={handleStagePointerMove}
     >
       {#if error}
         <pre class="dmd-diagram-error">Diagram syntax error: {error}</pre>
@@ -848,135 +870,55 @@
           <div class="dmd-diagram-svg">
             {@html svg}
           </div>
-
-          <!-- Contextual Subgraph Hover Pill (Clean & Non-Intrusive) -->
-          {#if activeClusterPill}
-            <div
-              class="dmd-diagram-subgraph-pill"
-              style="left: {activeClusterPill.left}px; top: {activeClusterPill.top}px;"
-            >
-              <button
-                type="button"
-                class="dmd-diagram-subgraph-copy{copiedTarget === activeClusterPill.id ? ' copied' : ''}"
-                aria-label={activeClusterPill.label ? `Copy ${activeClusterPill.label} subgraph Markdown` : "Copy graph Markdown"}
-                onclick={() => triggerCopy(activeClusterPill!.markdown, activeClusterPill!.id)}
-                title={activeClusterPill.label ? `Copy ${activeClusterPill.label} subgraph Markdown` : "Copy graph Markdown"}
-              >
-                <svg viewBox="0 0 24 24" class="dmd-icon-sm" aria-hidden="true">
-                  {#if copiedTarget === activeClusterPill.id}
-                    <path d="m5 12 4 4L19 6" />
-                  {:else}
-                    <rect x="8" y="8" width="11" height="11" rx="2" />
-                    <path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" />
-                  {/if}
-                </svg>
-                <span>{copiedTarget === activeClusterPill.id ? "Copied Subgraph!" : `Copy "${activeClusterPill.label}"`}</span>
-              </button>
-            </div>
-          {/if}
         </div>
-
-        <!-- Floating Corner Navigation Controls -->
-        <div class="dmd-diagram-floating-controls" role="toolbar" aria-label="Diagram navigation">
-          <button
-            type="button"
-            class="dmd-diagram-pill-btn"
-            aria-label="Zoom out (-)"
-            disabled={zoom <= MIN_ZOOM}
-            onclick={() => setManualZoom(zoom - ZOOM_STEP)}
-            title="Zoom out (-)"
-          >
-            −
-          </button>
-
-          <button
-            type="button"
-            class="dmd-diagram-pill-btn dmd-diagram-zoom-badge"
-            aria-label="Reset zoom to 100%"
-            title="Click to reset 1:1"
-            onclick={() => setFitMode("1:1")}
-          >
-            {Math.round(zoom * 100)}%
-          </button>
-
-          <button
-            type="button"
-            class="dmd-diagram-pill-btn"
-            aria-label="Zoom in (+)"
-            disabled={zoom >= MAX_ZOOM}
-            onclick={() => setManualZoom(zoom + ZOOM_STEP)}
-            title="Zoom in (+)"
-          >
-            +
-          </button>
-
-          <span class="dmd-floating-divider" aria-hidden="true"></span>
-
-          <button
-            type="button"
-            class="dmd-diagram-pill-btn{isFitted && fitMode === 'all' ? ' active' : ''}"
-            onclick={() => setFitMode(fitMode === "all" ? "width" : fitMode === "width" ? "height" : "all")}
-            title="Cycle Fit Modes (All / Width / Height)"
-          >
-            {fitMode === "width" ? "Fit W" : fitMode === "height" ? "Fit H" : "Fit"}
-          </button>
-
-          <button
-            type="button"
-            class="dmd-diagram-pill-btn"
-            onclick={resetCamera}
-            title="Reset position and fit (F)"
-          >
-            <svg viewBox="0 0 24 24" class="dmd-icon-sm" aria-hidden="true">
-              <circle cx="12" cy="12" r="3" />
-              <path d="M3 12h3M18 12h3M12 3v3M12 18v3" />
-            </svg>
-          </button>
-        </div>
-
-        <!-- Interactive Minimap Card -->
-        {#if showMinimap && diagramSize}
-          <div class="dmd-diagram-minimap">
-            <div class="dmd-minimap-header">
-              <span>Overview</span>
-              <button
-                type="button"
-                class="dmd-minimap-close"
-                onclick={() => (showMinimap = false)}
-                aria-label="Close Minimap"
-              >
-                ✕
-              </button>
-            </div>
-            <!-- svelte-ignore a11y_no_static_element_interactions -->
-            <div
-              bind:this={minimapTrackEl}
-              class="dmd-minimap-track"
-              onpointerdown={handleMinimapPointerDown}
-            >
-              <div class="dmd-minimap-svg-preview">
-                {@html svg}
-              </div>
-              <!-- Viewport Indicator Box -->
-              {#if stageElement}
-                {@const stageW = stageElement.clientWidth || 400}
-                {@const stageH = stageElement.clientHeight || 400}
-                {@const vpW = Math.min(100, Math.max(10, (stageW / renderedSize.width) * 100))}
-                {@const vpH = Math.min(100, Math.max(10, (stageH / renderedSize.height) * 100))}
-                {@const vpLeft = Math.min(100 - vpW, Math.max(0, 50 - ((camera.x) / renderedSize.width) * 100 - vpW / 2))}
-                {@const vpTop = Math.min(100 - vpH, Math.max(0, 50 - ((camera.y) / renderedSize.height) * 100 - vpH / 2))}
-                <div
-                  class="dmd-minimap-viewport"
-                  style="left: {vpLeft}%; top: {vpTop}%; width: {vpW}%; height: {vpH}%;"
-                ></div>
-              {/if}
-            </div>
-          </div>
-        {/if}
       {:else}
         <div class="dmd-diagram-loading">Rendering diagram…</div>
       {/if}
     </div>
+
+    <!-- Docked Overview Minimap Tray (Below stage, zero overlap!) -->
+    {#if showMinimap && diagramSize && svg && renderedSize}
+      <div class="dmd-diagram-overview-tray">
+        <div class="dmd-overview-tray-header">
+          <div class="dmd-overview-tray-title">
+            <span class="dmd-overview-icon" aria-hidden="true">🗺️</span>
+            <span>Overview Minimap</span>
+          </div>
+          <button
+            type="button"
+            class="dmd-overview-tray-close"
+            onclick={() => (showMinimap = false)}
+            aria-label="Close overview"
+            title="Close overview"
+          >
+            ✕
+          </button>
+        </div>
+        <!-- svelte-ignore a11y_no_static_element_interactions -->
+        <div
+          bind:this={minimapTrackEl}
+          class="dmd-minimap-track"
+          onpointerdown={handleMinimapPointerDown}
+        >
+          <div class="dmd-minimap-svg-preview">
+            {@html svg}
+          </div>
+          <!-- Viewport Indicator Box -->
+          {#if stageElement}
+            {@const stageW = stageElement.clientWidth || 400}
+            {@const stageH = stageElement.clientHeight || 400}
+            {@const vpW = Math.min(100, Math.max(8, (stageW / renderedSize.width) * 100))}
+            {@const vpH = Math.min(100, Math.max(8, (stageH / renderedSize.height) * 100))}
+            {@const vpLeft = Math.min(100 - vpW, Math.max(0, 50 - ((camera.x) / renderedSize.width) * 100 - vpW / 2))}
+            {@const vpTop = Math.min(100 - vpH, Math.max(0, 50 - ((camera.y) / renderedSize.height) * 100 - vpH / 2))}
+            <div
+              class="dmd-minimap-viewport"
+              style="left: {vpLeft}%; top: {vpTop}%; width: {vpW}%; height: {vpH}%;"
+            ></div>
+          {/if}
+        </div>
+      </div>
+    {/if}
 
     <!-- Hidden Accessible Status Announcement -->
     <div class="dmd-diagram-status" aria-live="polite">

@@ -23,7 +23,7 @@ const BUNDLE_BUDGETS = [
   { file: "docmedown.mjs", maxRaw: 1.55 * MB, maxGzip: 480 * KB, label: "ESM Module Entry" },
   { file: "docmedown.cjs", maxRaw: 1.35 * MB, maxGzip: 480 * KB, label: "CommonJS Entry" },
   { file: "docmedown.web.js", maxRaw: 1.5 * MB, maxGzip: 480 * KB, label: "Web Served Runtime" },
-  { file: "docmedown-mermaid.js", maxRaw: 3.8 * MB, maxGzip: 1000 * KB, label: "Mermaid Engine" },
+  { file: "docmedown-mermaid.js", maxRaw: 0.75 * MB, maxGzip: 280 * KB, label: "Diagram Engine (Pele)" },
   { file: "docmedown-compiler.js", maxRaw: 1.0 * MB, maxGzip: 300 * KB, label: "Svelte Compiler Engine" },
   { file: "cli.js", maxRaw: 560 * KB, maxGzip: 165 * KB, label: "CLI Node Executable" },
 ];

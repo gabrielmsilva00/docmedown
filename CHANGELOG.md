@@ -6,6 +6,17 @@ All notable changes to DocMeDown are documented here.
 
 ---
 
+## 0.9.8 - 2026-10-18
+
+- **Dependencies**: added `pele`, removed `mermaid` (110 fewer installed packages).
+- **Diagrams now render with [Pele](https://pele.run) instead of Mermaid.js**:
+  - The on-demand engine (`docmedown-mermaid.js`, same filename) shrinks from 3.4 MB to 650 KB raw (242 KB gzip) and renders synchronously. Existing ```` ```mermaid ```` fences are unchanged; all diagrams in the docs render.
+  - Theming moves from Mermaid `themeVariables` to `--pele-*` CSS variables written onto the SVG root, so exported SVGs keep their colors.
+  - Syntax errors now report the line and a source snippet.
+  - Per-diagram frontmatter and `%%{init}%%` directives are still read, but support varies by diagram type and Mermaid theme names/`securityLevel` have no effect; see [Pele's compatibility notes](https://pele.run/compatibility) for syntax differences.
+
+---
+
 ## 0.9.7-c - 2026-10-17
 
 - **Quiet serve output, Network URL + QR, local-only editor gate, SEO-safe root symlink**:

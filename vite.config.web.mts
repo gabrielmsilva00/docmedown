@@ -11,10 +11,10 @@ const rootDirectory = path.dirname(fileURLToPath(import.meta.url));
  *
  * It is intentionally separate from `vite.config.mts`:
  *
- * - Heavier engines (Mermaid, ~800 KB gzipped) are **externalized** via the
+ * - The diagram engine (Pele) is **externalized** via the
  *   `__DMD_EXTERNAL_HEAVY__` flag so the runtime loads `docmedown-mermaid.js`
  *   on demand from a classic <script> tag (works over `file://`, unlike ESM).
- *   A page without a diagram never downloads Mermaid.
+ *   A page without a diagram never downloads it.
  * - The self-contained IIFE built by `vite.config.mts` is left untouched; it
  *   stays the artifact embedded in offline single-file copies and served from
  *   the CDN, where everything must be inlined.

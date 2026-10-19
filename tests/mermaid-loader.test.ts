@@ -62,9 +62,7 @@ function installFakeDocument(): { created: FakeScript[]; appended: FakeScript[] 
 
 function fakeEngine(): MermaidEngine {
   return {
-    initialize() {},
-    parse: async () => ({}),
-    render: async () => ({ svg: "<svg/>" }),
+    render: () => ({ svg: "<svg/>", width: 0, height: 0, type: "flowchart", links: [] }),
   };
 }
 

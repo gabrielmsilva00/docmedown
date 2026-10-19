@@ -7,10 +7,12 @@ import { parseActiveLines, registerLanguage, renderCodeBlock } from "../src/runt
 
 import { renderMath } from "../src/runtime/markdown/katex";
 import {
-  buildMermaidConfig,
+  applyDiagramTheme,
+  buildDiagramTheme,
   calculateDiagramCameraBounds,
   calculateDiagramFit,
   decodeDiagramSource,
+  describeDiagramError,
   encodeDiagramSource,
   extractDiagramSubgraphs,
   formatDiagramMarkdown,
@@ -18,6 +20,7 @@ import {
   isDiagramFamily,
   panDiagramCamera,
   readDiagramSize,
+  renderDiagramSvg,
 } from "../src/runtime/markdown/mermaid";
 import { extractFrontmatter, parseMarkdown, slugifyHeading } from "../src/runtime/markdown/parser";
 import {
@@ -250,26 +253,27 @@ test("language pill is tinted by language when there is no title", () => {
   assert.ok(!unknown.includes("--dmd-lang-color"));
 });
 
-test("Mermaid engine builds deterministic base themes per family and mode", () => {
-  const terminalDark = buildMermaidConfig("terminal", "dark");
-  assert.equal(terminalDark.theme, "base");
-  assert.equal(terminalDark.htmlLabels, false);
-  assert.equal(terminalDark.flowchart?.htmlLabels, false);
-  assert.equal(terminalDark.securityLevel, "strict");
-  assert.equal(terminalDark.suppressErrorRendering, true);
-  assert.equal(terminalDark.themeVariables.darkMode, true);
+test("Diagram engine builds deterministic Pele themes per family and mode", () => {
+  const terminalDark = buildDiagramTheme("terminal", "dark");
   // Terminal dark palette values straight from FAMILY_TOKENS.
-  assert.equal(terminalDark.themeVariables.lineColor, "#39e87f");
-  assert.equal(terminalDark.themeVariables.primaryTextColor, "#d8e6d8");
-  assert.match(String(terminalDark.fontFamily), /mono/i);
+  assert.equal(terminalDark.variables["--pele-line"], "#39e87f");
+  assert.equal(terminalDark.variables["--pele-fg"], "#d8e6d8");
+  // Terminal diagrams outline nodes in the accent; other families use the rule color.
+  assert.equal(terminalDark.variables["--pele-border"], "#39e87f");
+  assert.match(String(terminalDark.options.fontFamily), /mono/i);
+  // Fonts passed for measuring must mirror the CSS variable so labels fit their boxes.
+  assert.equal(terminalDark.options.fontFamily, terminalDark.variables["--pele-font"]);
+  // The viewer owns sizing, so the SVG keeps a fixed intrinsic size.
+  assert.equal(terminalDark.options.responsive, false);
+  assert.equal(terminalDark.options.autoDirection, false);
 
-  const atlasLight = buildMermaidConfig("atlas", "light");
-  assert.equal(atlasLight.themeVariables.darkMode, false);
-  assert.equal(atlasLight.themeVariables.background, "#f7f7f5");
-  assert.equal(atlasLight.themeVariables.lineColor, "#315cf5");
+  const atlasLight = buildDiagramTheme("atlas", "light");
+  assert.equal(atlasLight.variables["--pele-bg"], "#f7f7f5");
+  assert.equal(atlasLight.variables["--pele-line"], "#315cf5");
+  assert.equal(atlasLight.variables["--pele-border"], "#e0e1db");
 
   // Explicit tokens win over family defaults (config accent overrides).
-  const custom = buildMermaidConfig("atlas", "dark", {
+  const custom = buildDiagramTheme("atlas", "dark", {
     canvas: "#000000",
     surface: "#111111",
     surfaceRaised: "#222222",
@@ -281,7 +285,48 @@ test("Mermaid engine builds deterministic base themes per family and mode", () =
     codeInk: "#eeeeee",
     fontFamily: "monospace",
   });
-  assert.equal(custom.themeVariables.lineColor, "#ff0000");
+  assert.equal(custom.variables["--pele-line"], "#ff0000");
+  assert.equal(custom.variables["--pele-accent"], "#ff0000");
+});
+
+test("applyDiagramTheme writes variables onto the SVG root so exports stay self-contained", () => {
+  const variables = { "--pele-bg": "#101010", "--pele-font": 'Inter, "Segoe UI", sans-serif' };
+
+  const withStyle = applyDiagramTheme('<svg class="pele" style="max-width:100%"><g/></svg>', variables);
+  assert.match(withStyle, /^<svg class="pele" style="--pele-bg:#101010;/);
+  assert.ok(withStyle.includes(";max-width:100%"), "existing declarations must be preserved");
+  // Quotes inside values must not break out of the attribute.
+  assert.ok(withStyle.includes("&quot;Segoe UI&quot;"));
+  assert.equal((withStyle.match(/style="/g) ?? []).length, 1);
+
+  const withoutStyle = applyDiagramTheme('<svg class="pele"><g/></svg>', variables);
+  assert.match(withoutStyle, /^<svg class="pele" style="--pele-bg:#101010;/);
+  // Only the root element is touched.
+  assert.equal((applyDiagramTheme('<svg><svg style="x:y"/></svg>', variables).match(/--pele-bg/g) ?? []).length, 1);
+});
+
+test("describeDiagramError keeps Pele's line and snippet when present", () => {
+  const error = Object.assign(new Error("Expecting 'NODE_STRING'"), { line: 3, snippet: "A-->\n   ^" });
+  assert.equal(describeDiagramError(error), "Line 3: Expecting 'NODE_STRING'\n\nA-->\n   ^");
+  // Position-less errors (line 0, empty snippet) stay a bare message.
+  assert.equal(
+    describeDiagramError(Object.assign(new Error("No diagram type detected"), { line: 0, snippet: "" })),
+    "No diagram type detected",
+  );
+  assert.equal(describeDiagramError("boom"), "boom");
+});
+
+test("renderDiagramSvg renders themed SVG through the real Pele engine", async () => {
+  const svg = await renderDiagramSvg('flowchart LR\n subgraph S["Inner"]\n A[Start] --> B{Ok?}\n end', "atlas", "dark");
+  assert.match(svg, /^<svg\b/);
+  assert.ok(svg.includes("--pele-bg:#0f1620"), "dark atlas canvas must be written onto the root");
+  assert.ok(svg.includes("pele-cluster"), "subgraphs must render as clusters the viewer can target");
+  assert.ok(!svg.includes("foreignObject"), "labels must stay SVG text");
+  assert.deepEqual(Object.keys(readDiagramSize(svg) ?? {}), ["width", "height"]);
+
+  // Syntax errors surface as readable messages with a position.
+  await assert.rejects(renderDiagramSvg("flowchart TD\n A-->", "atlas", "light"), /Line 3:/);
+  await assert.rejects(renderDiagramSvg("not a diagram", "atlas", "light"), /No diagram type detected/);
 });
 
 test("diagram placeholders round-trip unicode sources through attributes", () => {

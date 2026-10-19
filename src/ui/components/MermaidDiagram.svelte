@@ -57,7 +57,7 @@
   }
 
   function readClusterLabel(cluster: SVGGraphicsElement): string {
-    const rows = [...cluster.querySelectorAll<SVGTextContentElement>(".text-outer-tspan.row, text, tspan")]
+    const rows = [...cluster.querySelectorAll<SVGTextContentElement>(".pele-cluster-label, text, tspan")]
       .map((row) => row.textContent?.replace(/\s+/g, " ").trim())
       .filter(Boolean);
     return rows[0] || cluster.textContent?.replace(/\s+/g, " ").trim() || "Untitled subgraph";
@@ -163,41 +163,9 @@
     };
   });
 
-  // Mermaid occasionally emits a viewBox that excludes the tail of clustered
-  // flowcharts. Once the SVG is in the document, measure its actual graphics
-  // tree and replace the nominal bounds only if clusters exceed nominal bounds.
-  // In sequence diagrams and other diagrams, Mermaid emits multiple top-level <g>
-  // elements and its nominal viewBox is authoritative. Overwriting viewBox with
-  // an arbitrary child <g> would corrupt diagram bounds and clip elements.
-  $effect(() => {
-    if (!svg) return;
-    const svgElement = canvasElement?.querySelector("svg");
-    if (!svgElement) return;
-
-    const hasClusters = svgElement.querySelector(".cluster") !== null;
-    const directGroups = svgElement.querySelectorAll(":scope > g");
-    const rootGraphics =
-      svgElement.querySelector<SVGGElement>(":scope > g.output, :scope > g[id^='flowchart-']") ??
-      (directGroups.length === 1 ? directGroups[0] : null);
-
-    if (!hasClusters || !rootGraphics || typeof rootGraphics.getBBox !== "function") return;
-
-    try {
-      const bounds = rootGraphics.getBBox();
-      if (bounds.width <= 0 || bounds.height <= 0) return;
-      const padding = 20;
-      const measured = { width: bounds.width + padding * 2, height: bounds.height + padding * 2 };
-      if (!diagramSize || measured.height > diagramSize.height || measured.width > diagramSize.width) {
-        svgElement.setAttribute("viewBox", `${bounds.x - padding} ${bounds.y - padding} ${measured.width} ${measured.height}`);
-        svgElement.removeAttribute("width");
-        svgElement.removeAttribute("height");
-        diagramSize = measured;
-      }
-    } catch {
-      // Some non-browser DOM shims do not implement SVG geometry. The emitted
-      // Mermaid viewBox remains a safe fallback in those environments.
-    }
-  });
+  // Pele emits an exact viewBox (its layout is computed, not measured from the
+  // DOM), so `readDiagramSize` is authoritative and no post-render bounds
+  // repair is needed.
 
   // The default viewer is a responsive inspection window. Fit is width-first in
   // collapsed mode (tall diagrams continue below the fold and are explored by
@@ -253,7 +221,7 @@
       const definitions = extractDiagramSubgraphs(diagramSource);
       const unused = new Set(definitions.map((_, index) => index));
       const normalize = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, "");
-      const actions = [...svgElement!.querySelectorAll<SVGGraphicsElement>(".cluster")]
+      const actions = [...svgElement!.querySelectorAll<SVGGraphicsElement>(".pele-cluster")]
         .map((cluster, index) => {
           const rect = cluster.getBoundingClientRect();
           if (rect.width <= 0 || rect.height <= 0) return null;
@@ -267,7 +235,7 @@
           if (definitionIndex < 0) {
             definitionIndex = definitions.findIndex(
               (definition, candidateIndex) =>
-                unused.has(candidateIndex) && normalize(cluster.id).includes(normalize(definition.id)),
+                unused.has(candidateIndex) && normalize(cluster.dataset.id ?? cluster.id).includes(normalize(definition.id)),
             );
           }
           if (definitionIndex < 0) definitionIndex = [...unused][0] ?? -1;
@@ -378,7 +346,7 @@
 
   function canStartPan(target: EventTarget | null): boolean {
     if (!(target instanceof Element)) return true;
-    return !target.closest(".node, text, .dmd-diagram-subgraph-copy, button, a");
+    return !target.closest(".pele-node, text, .dmd-diagram-subgraph-copy, button, a");
   }
 
   function handlePanStart(event: PointerEvent) {

@@ -2439,42 +2439,42 @@ html {
 
 /* Nodes and labels remain selectable; cluster surfaces and empty graph space
    act as the camera's drag plane. */
-.dmd-diagram-svg .node,
+.dmd-diagram-svg .pele-node,
 .dmd-diagram-svg text,
 .dmd-diagram-svg tspan {
   cursor: text;
   user-select: text;
 }
 
-.dmd-diagram-svg .cluster > rect {
+.dmd-diagram-svg .pele-cluster > rect {
   cursor: grab;
 }
 
-.dmd-diagram-stage.is-panning .dmd-diagram-svg .cluster > rect {
+.dmd-diagram-stage.is-panning .dmd-diagram-svg .pele-cluster > rect {
   cursor: grabbing;
 }
 
 /* Lift informational blocks above the drafting grid. filter works for SVG
    geometry while regular box-shadow does not. */
-.dmd-diagram-svg .node .label-container,
-.dmd-diagram-svg .cluster > rect {
+.dmd-diagram-svg .pele-node > :not(text),
+.dmd-diagram-svg .pele-cluster > rect {
   filter: drop-shadow(0 5px 7px rgba(7, 12, 20, 0.18));
   transition: filter var(--dmd-transition), stroke var(--dmd-transition);
 }
 
-[data-theme="dark"] .dmd-diagram-svg .node .label-container,
-[data-theme="dark"] .dmd-diagram-svg .cluster > rect {
+[data-theme="dark"] .dmd-diagram-svg .pele-node > :not(text),
+[data-theme="dark"] .dmd-diagram-svg .pele-cluster > rect {
   filter: drop-shadow(0 7px 10px rgba(0, 0, 0, 0.34));
 }
 
-.dmd-diagram-svg .node:hover .label-container {
+.dmd-diagram-svg .pele-node:hover > :not(text) {
   filter: drop-shadow(0 7px 11px rgba(7, 12, 20, 0.26));
   stroke: var(--dmd-accent) !important;
 }
 
 /* A quiet moving dash suggests direction without turning diagrams into a
-   loading animation. Mermaid's marker heads remain static and sharp. */
-.dmd-diagram-svg path.flowchart-link {
+   loading animation. Arrow markers remain static and sharp. */
+.dmd-diagram-svg .pele-edge > path:not(.pele-marker) {
   stroke-dasharray: 7 6 !important;
   animation: dmd-diagram-flow 1.8s linear infinite;
 }
@@ -2566,7 +2566,7 @@ html {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  :root:not([data-dmd-motion="full"]):not([data-dmd-motion="on"]) .dmd-diagram-svg path.flowchart-link {
+  :root:not([data-dmd-motion="full"]):not([data-dmd-motion="on"]) .dmd-diagram-svg .pele-edge > path:not(.pele-marker) {
     animation: none;
     stroke-dasharray: none !important;
   }
@@ -2575,8 +2575,8 @@ html {
     transition: none;
   }
 }
-:root[data-dmd-motion="reduced"] .dmd-diagram-svg path.flowchart-link,
-:root[data-dmd-motion="off"] .dmd-diagram-svg path.flowchart-link {
+:root[data-dmd-motion="reduced"] .dmd-diagram-svg .pele-edge > path:not(.pele-marker),
+:root[data-dmd-motion="off"] .dmd-diagram-svg .pele-edge > path:not(.pele-marker) {
   animation: none;
   stroke-dasharray: none !important;
 }

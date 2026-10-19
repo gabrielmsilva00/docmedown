@@ -41,20 +41,21 @@ export default defineConfig({
       output: [
         {
           // IIFE: no code splitting (everything inlined). Dynamic import()
-          // still works in the browser but mermaid/prism stay bundled.
+          // still works in the browser but the diagram engine/prism stay bundled.
           format: "iife",
           name: "DocMeDown",
           extend: true,
           entryFileNames: "docmedown.iife.js",
         },
         {
-          // ESM: code splitting enabled. Mermaid and prism are split into
+          // ESM: code splitting enabled. The diagram engine (Pele, emitted as
+          // the `mermaid` chunk) and prism are split into
           // separate chunks and loaded on demand via dynamic import().
           format: "es",
           entryFileNames: "docmedown.mjs",
           manualChunks: (id: string) => {
             if (id.includes("/runtime/embedded-dmd-locales")) return "dmd-locales";
-            if (id.includes("node_modules/mermaid")) return "mermaid";
+            if (id.includes("node_modules/pele")) return "mermaid";
             if (id.includes("node_modules/prismjs")) return "prism";
             return undefined;
           },
@@ -65,7 +66,7 @@ export default defineConfig({
           entryFileNames: "docmedown.cjs",
           manualChunks: (id: string) => {
             if (id.includes("/runtime/embedded-dmd-locales")) return "dmd-locales";
-            if (id.includes("node_modules/mermaid")) return "mermaid";
+            if (id.includes("node_modules/pele")) return "mermaid";
             if (id.includes("node_modules/prismjs")) return "prism";
             return undefined;
           },

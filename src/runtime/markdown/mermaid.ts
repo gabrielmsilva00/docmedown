@@ -1,27 +1,28 @@
 /**
- * Mermaid is lazy-loaded via dynamic import() to keep the main bundle small.
- * Only pages with mermaid diagrams trigger the import. All pure utility
- * functions (readDiagramSize, calculateDiagramFit, etc.) remain synchronous
- * and available without loading the full mermaid library.
+ * The diagram engine is lazy-loaded to keep the main bundle small. Only pages
+ * with diagrams trigger the load. All pure utility functions
+ * (readDiagramSize, calculateDiagramFit, etc.) remain synchronous and available
+ * without loading the renderer.
  */
 
 // Type-only import — tree-shaken at build time, zero runtime cost.
-import type { MermaidConfig } from "mermaid";
+import type { RenderOptions } from "pele";
 import { loadMermaidEngine } from "./mermaid-loader";
 
 /**
- * DocMeDown Mermaid engine.
+ * DocMeDown diagram engine.
  *
  * Fences with the `mermaid` language emit `<div data-dmd-diagram="…">`
  * placeholders (see highlighter.ts). This module decodes each placeholder,
- * renders it through the locally bundled Mermaid, and wraps the result in an
- * interactive viewer: family-aware theming, zoom/pan, fullscreen, SVG export,
- * readable error reporting, and automatic re-render when the active DocMeDown
- * theme family or color mode changes.
+ * renders it through the locally bundled Pele renderer, and wraps the result in
+ * an interactive viewer: family-aware theming, zoom/pan, fullscreen, SVG
+ * export, readable error reporting, and automatic re-render when the active
+ * DocMeDown theme family or color mode changes.
  *
- * Diagrams use the Mermaid `base` theme with a fully specified variable set so
- * output is deterministic across online and `file:///` contexts — no reliance
- * on Mermaid's CDN theme defaults and no foreignObject HTML labels.
+ * Pele themes through `--pele-*` CSS variables. They are written onto the SVG
+ * root so output is deterministic across online and `file:///` contexts and an
+ * exported SVG keeps its colors outside the page — no reliance on ambient CSS
+ * and no foreignObject HTML labels.
  */
 
 export type DiagramFamily = "atlas" | "blueprint" | "terminal" | "editorial";
@@ -299,100 +300,79 @@ export function isDiagramFamily(value: string | null | undefined): value is Diag
   return value === "atlas" || value === "blueprint" || value === "terminal" || value === "editorial";
 }
 
+/** Resolved Pele theme: the CSS variables plus the measuring options that must match them. */
+export interface DiagramTheme {
+  /** `--pele-*` custom properties, written onto the SVG root. */
+  variables: Record<string, string>;
+  /** Render options whose fonts mirror the variables so labels fit their measured boxes. */
+  options: RenderOptions;
+}
+
 /**
- * Builds the complete Mermaid variable set for a family/mode pair. Pure so it
- * is directly unit-testable; the DOM engine resolves tokens automatically.
+ * Builds the complete Pele variable set for a family/mode pair. Pure so it is
+ * directly unit-testable; the DOM engine resolves tokens automatically.
  */
-export function buildMermaidConfig(family: DiagramFamily, mode: DiagramMode, tokens?: DiagramTokens): MermaidConfig {
+export function buildDiagramTheme(family: DiagramFamily, mode: DiagramMode, tokens?: DiagramTokens): DiagramTheme {
   const t = tokens ?? FAMILY_TOKENS[family][mode];
 
-  const themeVariables: Record<string, string | boolean> = {
-    darkMode: mode === "dark",
-    background: t.canvas,
-    fontFamily: t.fontFamily,
-    fontSize: "15px",
-
-    // Primary nodes (flowchart/state/class boxes).
-    primaryColor: t.surface,
-    primaryTextColor: t.ink,
-    primaryBorderColor: family === "terminal" ? t.accent : t.rule,
-
-    // Secondary tones (notes, alt steps, loop backgrounds).
-    secondaryColor: t.surfaceRaised,
-    secondaryTextColor: t.ink,
-    secondaryBorderColor: t.rule,
-    tertiaryColor: t.surfaceRaised,
-    tertiaryTextColor: t.inkSecondary,
-    tertiaryBorderColor: t.rule,
-
-    // Edges, arrows, and edge labels.
-    lineColor: t.accent,
-    textColor: t.ink,
-    edgeLabelBackground: t.canvas,
-
-    // Clusters (subgraphs).
-    clusterBkg: t.surfaceRaised,
-    clusterBorder: t.rule,
-    titleColor: t.ink,
-
-    // Sequence diagrams.
-    actorBkg: t.surface,
-    actorTextColor: t.ink,
-    actorBorder: t.rule,
-    actorLineColor: t.rule,
-    signalColor: t.inkSecondary,
-    signalTextColor: t.ink,
-    labelBoxBkgColor: t.surfaceRaised,
-    labelBoxBorderColor: t.rule,
-    labelTextColor: t.ink,
-    loopTextColor: t.inkSecondary,
-    noteBkgColor: t.surfaceRaised,
-    noteTextColor: t.ink,
-    noteBorderColor: t.rule,
-    activationBkgColor: t.surfaceRaised,
-    activationBorderColor: t.accent,
-    sequenceNumberColor: t.codeInk,
-
-    // Misc chrome (git graphs, pie charts).
-    mainBkg: t.surface,
-    nodeBorder: t.rule,
-    git0: t.accent,
-    git1: t.inkSecondary,
-    git2: t.accent,
-    pie1: t.accent,
-    pie2: t.inkSecondary,
-    pie3: t.rule,
-    pieSectionTextColor: t.ink,
-    pieStrokeColor: t.rule,
+  const variables: Record<string, string> = {
+    "--pele-bg": t.canvas,
+    "--pele-fg": t.ink,
+    "--pele-muted": t.inkSecondary,
+    // Edges and arrowheads carry the family accent.
+    "--pele-line": t.accent,
+    "--pele-surface": t.surface,
+    "--pele-surface-alt": t.surfaceRaised,
+    "--pele-border": family === "terminal" ? t.accent : t.rule,
+    "--pele-accent": t.accent,
+    "--pele-font": t.fontFamily,
+    "--pele-font-mono": MONO_STACK,
+    // Categorical series (pie slices, git branches): lead with the family
+    // accent and secondary ink, then fall back to Pele's built-in palette.
+    "--pele-series-1": t.accent,
+    "--pele-series-2": t.inkSecondary,
   };
 
   return {
-    startOnLoad: false,
-    securityLevel: "strict",
-    // Keep parse failures in our own error panel instead of Mermaid's injected bomb.
-    suppressErrorRendering: true,
-    // SVG text labels stay deterministic in standalone/file:/// output.
-    htmlLabels: false,
-    theme: "base",
-    fontFamily: t.fontFamily,
-    themeVariables,
-    flowchart: {
-      useMaxWidth: true,
-      htmlLabels: false,
-      curve: "basis",
-      nodeSpacing: 55,
-      rankSpacing: 65,
-      padding: 14,
-      diagramPadding: 10,
-    },
-    sequence: {
-      useMaxWidth: true,
-      diagramMarginX: 24,
-      diagramMarginY: 16,
-      boxMargin: 10,
-      mirrorActors: false,
+    variables,
+    options: {
+      fontFamily: t.fontFamily,
+      fontFamilyMono: MONO_STACK,
+      fontSize: 15,
+      // The viewer sizes the canvas itself (zoom/pan/fit), so the SVG keeps a
+      // fixed intrinsic size and never reflows to the container width.
+      responsive: false,
+      autoDirection: false,
+      linkRel: "noopener noreferrer",
     },
   };
+}
+
+/**
+ * Writes CSS variables onto the root `<svg>` element's inline style. Declaring
+ * them on the root itself lets Pele's internal `var(--pele-*, fallback)`
+ * indirections resolve without any surrounding stylesheet.
+ */
+export function applyDiagramTheme(svg: string, variables: Record<string, string>): string {
+  const declarations = Object.entries(variables)
+    .map(([name, value]) => `${name}:${value.replace(/;/g, "").replace(/"/g, "&quot;")}`)
+    .join(";");
+
+  return svg.replace(/<svg\b([^>]*)>/, (_match, attributes: string) => {
+    if (/\sstyle="/.test(attributes)) {
+      return `<svg${attributes.replace(/\sstyle="/, ` style="${declarations};`)}>`;
+    }
+    return `<svg${attributes} style="${declarations}">`;
+  });
+}
+
+/** Formats a renderer failure as a readable message, keeping Pele's position info when present. */
+export function describeDiagramError(error: unknown): string {
+  if (!(error instanceof Error)) return String(error);
+  const { line, snippet } = error as Error & { line?: number; snippet?: string };
+  const location = typeof line === "number" && line > 0 ? `Line ${line}: ` : "";
+  const context = typeof snippet === "string" && snippet.trim() ? `\n\n${snippet}` : "";
+  return `${location}${error.message}${context}`;
 }
 
 /**
@@ -447,13 +427,10 @@ export function resolveDiagramContext(): { family: DiagramFamily; mode: DiagramM
   return { family, mode, tokens };
 }
 
-let renderCounter = 0;
-let renderQueue: Promise<void> = Promise.resolve();
-
 /**
  * Validates and renders one diagram source to an SVG string using the locally
- * bundled Mermaid. Throws readable syntax errors so the viewer panel can show
- * them; Mermaid's own injected error markup is suppressed via config.
+ * bundled Pele renderer. Throws readable syntax errors (with line and snippet
+ * when Pele reports them) so the viewer panel can show them.
  */
 export async function renderDiagramSvg(
   source: string,
@@ -461,23 +438,18 @@ export async function renderDiagramSvg(
   mode: DiagramMode,
   tokens?: DiagramTokens,
 ): Promise<string> {
-  // Mermaid is resolved through the loader so the served build can externalize
-  // it (see mermaid-loader.ts); bundled builds fall back to a dynamic import.
-  const mermaid = await loadMermaidEngine();
+  // The engine is resolved through the loader so the served build can
+  // externalize it (see mermaid-loader.ts); bundled builds fall back to a
+  // dynamic import.
+  const engine = await loadMermaidEngine();
 
-  // Mermaid configuration is process-global. Serialize renders so viewers
-  // mounting together cannot initialize different themes over one another.
-  const render = renderQueue.then(async () => {
-    mermaid.initialize(buildMermaidConfig(family, mode, tokens));
-    await mermaid.parse(source);
-    const id = `dmd-diagram-svg-${Date.now().toString(36)}-${renderCounter++}`;
-    const { svg } = await mermaid.render(id, source);
-    return svg;
-  });
-
-  renderQueue = render.then(
-    () => undefined,
-    () => undefined,
-  );
-  return render;
+  // Pele holds no global configuration, so concurrent viewers need no
+  // serialization: each render carries its own theme.
+  const theme = buildDiagramTheme(family, mode, tokens);
+  try {
+    const { svg } = engine.render(source, theme.options);
+    return applyDiagramTheme(svg, theme.variables);
+  } catch (error) {
+    throw new Error(describeDiagramError(error));
+  }
 }

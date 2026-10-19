@@ -1,26 +1,28 @@
-import type { MermaidConfig } from "mermaid";
+import type { RenderOptions, RenderResult } from "pele";
 
 /**
- * Mermaid is by far the heaviest optional dependency (~800 KB gzipped). How it
- * is obtained depends on the build:
+ * Diagrams are rendered by Pele, a small synchronous Mermaid-syntax renderer.
+ * It is still the heaviest optional dependency, so how it is obtained depends
+ * on the build:
  *
- * - **ESM/CJS** (npm consumers): `import("mermaid")` resolves to the code-split
- *   Mermaid chunk Vite emits next to the entry.
+ * - **ESM/CJS** (npm consumers): `import("pele")` resolves to the code-split
+ *   chunk Vite emits next to the entry.
  * - **Served runtime** (`docmedown.web.js`): `__DMD_EXTERNAL_HEAVY__` is true,
  *   so the module injects the sibling `docmedown-mermaid.js` as a classic
  *   <script> on the first diagram render. Pages without a diagram never fetch
  *   it. A classic script (not `import()`) is required for `file://` support.
  * - **Self-contained IIFE** (offline copies, CDN): the flag is false and Vite
- *   inlines Mermaid, so the file stands alone.
+ *   inlines the renderer, so the file stands alone.
  */
 
 declare const __DMD_EXTERNAL_HEAVY__: boolean;
 
-/** Minimal surface of the Mermaid API DocMeDown calls. */
+/**
+ * Minimal surface of the Pele API DocMeDown calls. `render` is synchronous and
+ * throws a `PeleError` (with line/column/snippet) when the source is invalid.
+ */
 export interface MermaidEngine {
-  initialize(config: MermaidConfig): void;
-  parse(source: string): Promise<unknown>;
-  render(id: string, source: string): Promise<{ svg: string }>;
+  render(source: string, options?: RenderOptions): RenderResult;
 }
 
 const MERMAID_GLOBAL = "__DOCMEDOWN_MERMAID__";
@@ -85,7 +87,7 @@ export function loadExternalMermaidEngine(): Promise<MermaidEngine> {
   });
 }
 
-/** Resolves the Mermaid engine once, from the external bundle or a dynamic chunk. */
+/** Resolves the diagram engine once, from the external bundle or a dynamic chunk. */
 export function loadMermaidEngine(): Promise<MermaidEngine> {
   if (enginePromise) return enginePromise;
 
@@ -97,8 +99,8 @@ export function loadMermaidEngine(): Promise<MermaidEngine> {
       return loadExternalMermaidEngine();
     }
 
-    const module = (await import("mermaid")) as unknown as { default?: MermaidEngine } & MermaidEngine;
-    return module.default ?? module;
+    const module = await import("pele");
+    return { render: module.render };
   })();
 
   // A failed load must not poison the cache — allow a later retry.

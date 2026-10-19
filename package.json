@@ -90,7 +90,8 @@
     "deploy": "node ./scripts/deploy.mjs",
     "deploy:dry-run": "npm run deploy -- --dry-run",
     "prepublishOnly": "npm run test:release",
-    "commit": "node ./scripts/commit.mjs"
+    "commit": "node ./scripts/commit.mjs",
+    "commit:fast": "node ./scripts/commit.mjs --fast"
   },
   "overrides": {
     "tsup": {

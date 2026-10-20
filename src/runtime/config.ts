@@ -27,7 +27,7 @@ export const DEFAULT_CONFIG: DocConfig = {
     enabled: true,
     sort: "natural",
     defaultCollapsed: false,
-    exclude: ["node_modules", ".git", ".dmd", "dist", "bin", "package.json", "tsconfig.json"],
+    exclude: ["node_modules", ".git", ".dmd", "dist", "bin", "package.json", "tsconfig.json", "SKILL.md", "AGENTS.md"],
   },
   search: {
     enabled: true,

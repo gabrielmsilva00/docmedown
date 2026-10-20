@@ -4,38 +4,21 @@ import matter from "gray-matter";
 import packageJson from "../../../package.json";
 import { collectVariants, defaultLocale, localizedDocs, localizeTree } from "../../runtime/i18n";
 import { buildSidebarTree, formatTitleFromFilename } from "../../runtime/loader/auto-indexer";
-import { inlineHeadingToPlainText } from "../../runtime/markdown/inline-text";
+import { parseMarkdown } from "../../runtime/markdown/parser";
 import type { DocConfig, DocFileItem, DocHeading, DocManifest } from "../../runtime/types";
 import { candidateComponentsDirs } from "./docs-layout";
 
 export function extractHeadings(content: string): DocHeading[] {
-  const headings: DocHeading[] = [];
-  const lines = content.split("\n");
-
-  for (const line of lines) {
-    const match = line.match(/^(#{1,4})\s+(.+)$/);
-    if (match) {
-      const level = match[1].length;
-      const rawHeading = match[2].trim();
-      const text = inlineHeadingToPlainText(rawHeading);
-      const id = rawHeading
-        .replace(/[#*`_]/g, "")
-        .toLowerCase()
-        .replace(/[^\w\s-]/g, "")
-        .trim()
-        .replace(/[\s_-]+/g, "-");
-
-      headings.push({ level, text, id });
-    }
-  }
-
-  return headings;
+  // Rendering owns heading identity. Reuse it so manifests and validation never
+  // advertise anchors that differ from the generated HTML (including fences,
+  // Setext headings, inline formatting, and duplicate suffixes).
+  return parseMarkdown(content).headings.map(({ level, text, id }) => ({ level, text, id }));
 }
 
 export function scanDirectory(
   dir: string,
   baseDir: string = dir,
-  excludeList: string[] = ["node_modules", ".git", ".dmd", "dist", "bin", "SKILL.md"],
+  excludeList: string[] = ["node_modules", ".git", ".dmd", "dist", "bin", "SKILL.md", "AGENTS.md"],
   stopAtNestedDocsRoots: boolean = true,
   visitedDirs: Set<string> = new Set(),
 ): string[] {
@@ -98,7 +81,9 @@ export function generateManifest(docDir: string, config: DocConfig): DocManifest
     const relFile = variant.path;
     const fullPath = path.join(docDir, relFile);
     const raw = fs.readFileSync(fullPath, "utf-8");
-    const { data: fm, content } = matter(raw);
+    // gray-matter caches partially parsed files even when YAML parsing throws.
+    // Explicit options avoid reusing those failed results on a later build.
+    const { data: fm, content } = matter(raw, {});
 
     const slug = variant.slug;
     const title = fm.title || fm.sidebar_label || formatTitleFromFilename(path.basename(variant.docId));

@@ -211,9 +211,21 @@
 
     measure();
     if (typeof ResizeObserver === "undefined") return;
-    const observer = new ResizeObserver(measure);
+    // Measuring also updates stage height. Defer those writes beyond the current
+    // observer delivery to avoid WebKit's ResizeObserver feedback-loop error.
+    let measureFrame = 0;
+    const observer = new ResizeObserver(() => {
+      if (measureFrame) return;
+      measureFrame = requestAnimationFrame(() => {
+        measureFrame = 0;
+        measure();
+      });
+    });
     observer.observe(stageElement);
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      if (measureFrame) cancelAnimationFrame(measureFrame);
+    };
   });
 
   // Fullscreen expanded mode keyboard listener

@@ -32,7 +32,7 @@ import {
   resolveOfflineDir,
   resolveSiteDir,
 } from "../utils/docs-layout";
-import { linkRootMarkdownFiles } from "../utils/link-root";
+import { EXCLUDED_ROOT_FILES, linkRootMarkdownFiles } from "../utils/link-root";
 import { convertReactToSvelte } from "../utils/react-to-svelte";
 import { generateManifest, scanDirectory } from "../utils/scanner";
 
@@ -1088,7 +1088,7 @@ export function shouldWatchDocumentationSource(rootDir: string, changedPath: str
     path.dirname(path.resolve(changedPath)).toLowerCase() === parentDir.toLowerCase() &&
     /\.(md|mdx)$/i.test(changedPath);
 
-  if (isDirectParentMarkdown && !baseName.startsWith(".") && baseName !== "SKILL.md") {
+  if (isDirectParentMarkdown && !baseName.startsWith(".") && !EXCLUDED_ROOT_FILES.has(baseName)) {
     return true;
   }
 
@@ -1098,6 +1098,7 @@ export function shouldWatchDocumentationSource(rootDir: string, changedPath: str
     (!relativePath.startsWith(".") || isCustomComponentModule || isWorkspaceConfig) &&
     !isGeneratedOutput &&
     !GENERATED_DOC_OUTPUTS.includes(relativePath) &&
+    !EXCLUDED_ROOT_FILES.has(baseName) &&
     firstSegment !== "node_modules" &&
     firstSegment !== "dist"
   );

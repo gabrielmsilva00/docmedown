@@ -22,5 +22,10 @@ declare module "prismjs" {
 
 declare module "prismjs/components/*";
 
+declare module "js-yaml/lib/js-yaml/loader.js" {
+  const yaml: { safeLoad(source: string): unknown };
+  export default yaml;
+}
+
 /** Build flag: true only for the served runtime that externalizes heavy engines. */
 declare const __DMD_EXTERNAL_HEAVY__: boolean;

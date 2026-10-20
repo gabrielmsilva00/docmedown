@@ -82,6 +82,60 @@ test("createReactBridge produces custom element with lifecycle and prop handlers
   assert.equal(unmountCalled, true, "React root.unmount should be called on disconnect");
 });
 
+test("React bridge reuses its shadow root and replaces host containers on reconnect", async () => {
+  const originalHTMLElement = globalThis.HTMLElement;
+  const originalDocument = globalThis.document;
+  class FakeElement {
+    attributes: Array<{ name: string; value: string }> = [];
+    children: FakeElement[] = [];
+    parent: FakeElement | null = null;
+    shadowRoot: FakeElement | null = null;
+    className = "";
+    attachShadow() {
+      assert.equal(this.shadowRoot, null, "a shadow root cannot be attached twice");
+      this.shadowRoot = new FakeElement();
+      return this.shadowRoot;
+    }
+    appendChild(child: FakeElement) {
+      child.parent = this;
+      this.children.push(child);
+      return child;
+    }
+    remove() {
+      if (this.parent) this.parent.children = this.parent.children.filter((child) => child !== this);
+      this.parent = null;
+    }
+  }
+  try {
+    (globalThis as any).HTMLElement = FakeElement;
+    (globalThis as any).document = { createElement: () => new FakeElement() };
+    for (const shadowRoot of [false, true]) {
+      let mounts = 0;
+      let unmounts = 0;
+      const ElementClass = createReactBridge(() => null, {
+        shadowRoot,
+        createElement: () => null,
+        createRoot: () => {
+          mounts++;
+          return { render: () => {}, unmount: () => unmounts++ };
+        },
+      });
+      const element = new ElementClass() as any;
+      for (let cycle = 0; cycle < 3; cycle++) {
+        element.connectedCallback();
+        await element.mountPromise;
+        assert.equal((shadowRoot ? element.shadowRoot : element).children.length, 1);
+        element.disconnectedCallback();
+      }
+      assert.equal(mounts, 3);
+      assert.equal(unmounts, 3);
+    }
+  } finally {
+    globalThis.HTMLElement = originalHTMLElement;
+    globalThis.document = originalDocument;
+  }
+});
+
 test("createElementBridge wraps and synchronizes attributes to properties", () => {
   class FakeCustomElement {
     attributes: Array<{ name: string; value: string }> = [];

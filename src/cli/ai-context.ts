@@ -1,6 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
+import { getDocumentUrl as getDocUrl } from "../runtime/document-url";
 import { defaultLocale, localizedDocs, projectLocales } from "../runtime/i18n";
+import { isDocumentDiscoverable } from "../runtime/publication";
 import type { DocConfig, DocManifest } from "../runtime/types";
 
 /**
@@ -28,17 +30,6 @@ function markdownToPlainText(markdown: string): string {
     .trim();
 }
 
-function siteBaseUrl(config: DocConfig): string | null {
-  return config.url ? config.url.replace(/\/+$/, "") : null;
-}
-
-/** Public URL (absolute when a site origin is configured) for a document slug. */
-function getDocUrl(config: DocConfig, slug: string): string {
-  const path_ = slug === "README" ? "" : `${slug}/`;
-  const base = siteBaseUrl(config);
-  return base ? `${base}/${path_}` : `/${path_}`;
-}
-
 function docSummary(content: string | undefined): string {
   if (!content) return "";
   const withoutFrontmatter = content.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, "");
@@ -62,7 +53,7 @@ function generateLlmsTxt(manifest: DocManifest, config: DocConfig): string {
   }
   lines.push("", "## Docs", "");
   for (const doc of manifest.docs) {
-    if (doc.frontmatter?.hidden === true) continue;
+    if (!isDocumentDiscoverable(doc.frontmatter, "ai")) continue;
     const summary = doc.frontmatter?.description || docSummary(doc.content);
     lines.push(`- [${doc.title}](${getDocUrl(config, doc.slug)})${summary ? `: ${summary}` : ""}`);
   }
@@ -76,7 +67,7 @@ function generateLlmsFullTxt(manifest: DocManifest, config: DocConfig): string {
     chunks.push(`> ${config.description || config.tagline}`);
   }
   for (const doc of manifest.docs) {
-    if (doc.frontmatter?.hidden === true) continue;
+    if (!isDocumentDiscoverable(doc.frontmatter, "ai")) continue;
     const raw = (doc.content || "").replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, "").trim();
     chunks.push(`## ${doc.title}\n\nURL: ${getDocUrl(config, doc.slug)}\n\n${raw}`);
   }
@@ -113,7 +104,7 @@ function generateSkillMd(manifest: DocManifest, config: DocConfig): string {
     "",
   ];
   for (const doc of manifest.docs) {
-    if (doc.frontmatter?.hidden === true) continue;
+    if (!isDocumentDiscoverable(doc.frontmatter, "ai")) continue;
     const summary = doc.frontmatter?.description || docSummary(doc.content);
     lines.push(`- [${doc.title}](${getDocUrl(config, doc.slug)})${summary ? `: ${summary}` : ""}`);
   }
@@ -133,7 +124,7 @@ function generateOkfBundle(manifest: DocManifest, config: DocConfig): string {
       generator: "docmedown",
     },
     documents: manifest.docs
-      .filter((doc) => doc.frontmatter?.hidden !== true)
+      .filter((doc) => isDocumentDiscoverable(doc.frontmatter, "ai"))
       .map((doc) => ({
         slug: doc.slug,
         path: doc.path,

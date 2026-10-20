@@ -170,6 +170,8 @@ test("watcher ignores generated static artifacts at any depth", () => {
   assert.equal(shouldWatchDocumentationSource(root, path.join(root, "guides", "intro", "index.html")), false);
   assert.equal(shouldWatchDocumentationSource(root, path.join(root, "sitemap.xml")), false);
   assert.equal(shouldWatchDocumentationSource(root, path.join(root, "llms-full.txt")), false);
+  assert.equal(shouldWatchDocumentationSource(root, path.join(root, "SKILL.md")), false);
+  assert.equal(shouldWatchDocumentationSource(root, path.join(root, "AGENTS.md")), false);
   assert.equal(shouldWatchDocumentationSource(root, path.join(root, "guides", "intro.md")), true);
   assert.equal(shouldWatchDocumentationSource(root, path.join(root, "docs.json")), true);
 });
@@ -177,6 +179,7 @@ test("watcher ignores generated static artifacts at any depth", () => {
 test("scanner never ingests generated AI context files as source documents", () => {
   const root = createFixture().root;
   fs.writeFileSync(path.join(root, "SKILL.md"), "# Agent skill\n\nGenerated file, not a doc.", "utf-8");
+  fs.writeFileSync(path.join(root, "AGENTS.md"), "# Agent instructions\n\nDeveloper guide, not a doc.", "utf-8");
   fs.writeFileSync(path.join(root, "llms-full.txt"), "Generated plain text.", "utf-8");
 
   const files = generateManifest(root, normalizeConfig({ name: "T" }))
@@ -184,6 +187,7 @@ test("scanner never ingests generated AI context files as source documents", () 
     .sort();
   assert.deepEqual(files, ["README.md", "guides/intro.md"]);
   assert.ok(!files.includes("SKILL.md"));
+  assert.ok(!files.includes("AGENTS.md"));
 });
 
 test("build-time setup loads .dmd/setup.js and prerenders custom language tokens in static site", () => {

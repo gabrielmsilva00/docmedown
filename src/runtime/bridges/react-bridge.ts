@@ -134,11 +134,13 @@ export function createReactBridge(Component: any, options: ReactBridgeOptions = 
 
       // Prepare host container
       if (options.shadowRoot) {
-        const shadow = this.attachShadow({ mode: "open" });
+        const shadow = this.shadowRoot || this.attachShadow({ mode: "open" });
+        this._container?.remove();
         this._container = document.createElement("div");
         this._container.className = "dmd-react-host";
         shadow.appendChild(this._container);
       } else {
+        this._container?.remove();
         this._container = document.createElement("div");
         this._container.className = "dmd-react-host";
         this.appendChild(this._container);

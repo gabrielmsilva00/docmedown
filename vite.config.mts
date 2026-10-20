@@ -3,7 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vite";
 import cssInjectedByJsPlugin from "vite-plugin-css-injected-by-js";
-import { dmdSvelte, pruneLegacyKatexFonts } from "./vite.shared.mts";
+import { dmdSvelte, pruneLegacyKatexFonts, safeYamlOnly } from "./vite.shared.mts";
 
 const rootDirectory = path.dirname(fileURLToPath(import.meta.url));
 const legacyRuntimeFiles = ["dist/docmedown.cjs.js", "dist/docmedown.esm.js"];
@@ -19,7 +19,7 @@ for (const runtimeFile of legacyRuntimeFiles) {
  * instead — see that file for why heavy engines are externalized there.
  */
 export default defineConfig({
-  plugins: [pruneLegacyKatexFonts(), ...dmdSvelte(), cssInjectedByJsPlugin()],
+  plugins: [safeYamlOnly(), pruneLegacyKatexFonts(), ...dmdSvelte(), cssInjectedByJsPlugin()],
   define: {
     "process.env.NODE_ENV": JSON.stringify("production"),
     __DMD_EXTERNAL_HEAVY__: "false",
@@ -57,6 +57,7 @@ export default defineConfig({
             if (id.includes("/runtime/embedded-dmd-locales")) return "dmd-locales";
             if (id.includes("node_modules/pele")) return "mermaid";
             if (id.includes("node_modules/prismjs")) return "prism";
+            if (id.includes("node_modules/js-yaml")) return "yaml";
             return undefined;
           },
         },
@@ -68,6 +69,7 @@ export default defineConfig({
             if (id.includes("/runtime/embedded-dmd-locales")) return "dmd-locales";
             if (id.includes("node_modules/pele")) return "mermaid";
             if (id.includes("node_modules/prismjs")) return "prism";
+            if (id.includes("node_modules/js-yaml")) return "yaml";
             return undefined;
           },
         },

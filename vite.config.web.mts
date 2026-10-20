@@ -2,7 +2,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vite";
 import cssInjectedByJsPlugin from "vite-plugin-css-injected-by-js";
-import { dmdSvelte, pruneLegacyKatexFonts } from "./vite.shared.mts";
+import { dmdSvelte, pruneLegacyKatexFonts, safeYamlOnly } from "./vite.shared.mts";
 
 const rootDirectory = path.dirname(fileURLToPath(import.meta.url));
 
@@ -20,7 +20,7 @@ const rootDirectory = path.dirname(fileURLToPath(import.meta.url));
  *   the CDN, where everything must be inlined.
  */
 export default defineConfig({
-  plugins: [pruneLegacyKatexFonts(), ...dmdSvelte(), cssInjectedByJsPlugin()],
+  plugins: [safeYamlOnly(), pruneLegacyKatexFonts(), ...dmdSvelte(), cssInjectedByJsPlugin()],
   define: {
     "process.env.NODE_ENV": JSON.stringify("production"),
     __DMD_EXTERNAL_HEAVY__: "true",

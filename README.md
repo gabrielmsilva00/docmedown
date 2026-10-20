@@ -385,6 +385,14 @@ npm run deploy
 
 It validates the release, pushes `main` and `v<version>` to GitHub, publishes to npm, and verifies the npm registry. Run `npm run deploy:dry-run` to validate without changing GitHub or npm.
 
+The prepared **0.9.9-b** candidate is not published; **1.0.0-rc-a** remains the
+later milestone. Candidate metadata and release notes are synchronized, but
+publication remains blocked by the readiness matrix and npm authentication in
+`CONTRIBUTING.md`. Every prerelease requires explicit version and changelog preparation;
+automatic patch selection does not advance an existing prerelease. All prereleases
+use the existing npm `alpha` dist-tag, not `latest`. See the repository's
+`CONTRIBUTING.md` release procedure and evidence matrix before running deploy.
+
 ## 🧹 Quality checks & local MCP testing
 
 DocMeDown uses [Biome](https://biomejs.dev/) for formatting, import organization, and linting, and Zod for runtime configuration validation.
@@ -401,6 +409,11 @@ npm run test:mcp:client # test MCP queries interactively from CLI
 ```
 
 `npm run test:release` runs all of these checks plus production, documentation, and package smoke builds.
+
+For indexing performance, run `npm run benchmark:headings` (synthetic corpora) or
+`npm run benchmark:headings -- --corpus ./docs --rounds 5 --warmups 1` (read-only
+real-corpus profile). See repository file `scripts/benchmark-headings.md`
+and the [contributor documentation checklist](CONTRIBUTING.md#documentation-maintenance).
 
 ---
 

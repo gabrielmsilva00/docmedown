@@ -7,7 +7,9 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 import packageJson from "../../../package.json";
 import { normalizeConfig, parseDocConfigJson } from "../../runtime/config";
+import { getDocumentUrl, getSiteBaseUrl } from "../../runtime/document-url";
 import { canonicalLocale, defaultLocale, localizedDocs, localizedSlug } from "../../runtime/i18n";
+import { isDocumentDiscoverable } from "../../runtime/publication";
 import type { DocFileItem, DocManifest } from "../../runtime/types";
 import { candidateSiteDirs, resolveExistingConfigPath } from "../utils/docs-layout";
 import { generateManifest, scanDirectory } from "../utils/scanner";
@@ -155,7 +157,7 @@ export function searchDocs(
     locale ? canonicalLocale(locale) : defaultLocale(toolkit.manifest.config),
     toolkit.manifest.config,
   )
-    .filter((doc) => doc.frontmatter?.hidden !== true)
+    .filter((doc) => isDocumentDiscoverable(doc.frontmatter, "mcp-search"))
     .map((doc) => {
       const title = doc.title.toLowerCase();
       const headingText = doc.headings
@@ -326,13 +328,8 @@ const registerDocTools: RegisterTools = (server, toolkit) => {
           content: [{ type: "text", text: `Document not found: ${slug}. Use list_docs to see available slugs.` }],
         };
       }
-      const siteUrl = toolkit.manifest.config?.url;
-      const base = siteUrl ? siteUrl.replace(/\/+$/, "") : null;
-      const url = base
-        ? doc.slug === "README"
-          ? `${base}/`
-          : `${base}/${doc.slug}/`
-        : `/${doc.slug === "README" ? "" : `${doc.slug}/`}`;
+      const base = getSiteBaseUrl(toolkit.manifest.config);
+      const url = getDocumentUrl(toolkit.manifest.config, doc.slug);
       return {
         content: [
           {

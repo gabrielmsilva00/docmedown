@@ -4,6 +4,65 @@ All notable changes to DocMeDown are documented here.
 
 ## Unreleased
 
+Later milestone: **1.0.0-rc-a**. Add changes made after the prepared candidate here.
+
+---
+
+## 0.9.9-b - 2026-10-20
+
+**Prepared candidate, not published.** Publication remains blocked by the
+outstanding readiness matrix in `CONTRIBUTING.md` and npm authentication (E401).
+The date records candidate preparation, not a registry publication.
+
+- **0.9.9-b readiness review (deployment blocked)**:
+  - Fixed a WebKit diagram ResizeObserver feedback loop with deferred, teardown-safe measurements; added scheduling/cleanup regression assertions.
+  - Preserved authored docs widgets and nested OrbitCounter in Git with narrow ignore exceptions, fixing clean-checkout offline artifact failures without tracking generated bundles.
+  - Added a reusable three-engine browser CI job and `test:browser` command, including packaged Svelte/React/Web Component served/offline interactions. Local Chrome, Edge, Firefox and WebKit checks pass; WebKit blocks HTTP(S) instead of using its broken local-file offline emulation.
+  - Passed local Node 20.19.0 and 22.14.0 release gates with npm 11.16.0; pinned npm in CI and cleared the deployment dry-run after reviewing/staging intended sources. Added independent JSON-RPC stdio MCP regression coverage. Remote candidate CI, npm authentication and remaining manual gates are still required.
+  - Found and fixed React bridge reconnection: reuse an existing shadow root and replace stale host containers when reconnecting, with repeated light/shadow lifecycle regression coverage.
+  - Full release pipeline passed again on synchronized `0.9.9-b` metadata with 265/265 unit tests and all 48 specialized tests. All 18 rebuilt-candidate Chrome/Edge scenarios pass, including served/offline routing, SVG rendering and keyboard search; these targeted results do not clear the full production-readiness gate.
+  - Chrome 155 and Edge 155 passed local served-subpath and network-disabled single-file reader/search smoke checks, all six implemented theme families in light/dark mode, 390/768/1440-width overflow checks, and basic appearance-menu focus restoration. Browser probes also passed concurrent compiler-cache writes, persistence, source invalidation, and unavailable-IndexedDB fallback.
+  - These targeted checks are not complete accessibility or cross-browser certification. Package, lockfile and documentation metadata now identify the prepared `0.9.9-b` candidate; publication must wait for outstanding readiness checks. `1.0.0-rc-a` remains the later milestone.
+
+- **Release preparation evidence (2026-10-20)**:
+  - Passed the full non-publishing release pipeline on Windows with Node v26.3.0 and isolated npm 11.16.0: 264 unit, 32 MCP, 3 hosting, 6 offline-artifact, 4 bundle, and 3 package-smoke tests; typecheck, lint, production budgets, docs build, and package dry-run passed.
+  - Recorded pre-RC, during-RC, and pre-GA gates, manual evidence requirements, and explicit prerelease preparation instructions. This validates the development version `0.9.9-a`, not the final `1.0.0-rc-a` candidate; package metadata and Unreleased notes remain unpromoted.
+  - Corrected stale inclusive-attribution wording: sampled inclusive ownership exists; exact stage durations and representative enterprise profiling remain open. Browser/offline usability and six-language coverage are not certified by the automated gate.
+
+- **Documentation maintenance**:
+  - Added localized indexing-performance guides and contributor instructions for keeping roadmap, changelog, guides, and translations aligned with each implementation slice.
+  - Documented canonical URL behavior and synchronized YAML, heading, and discovery-policy guidance across English, Spanish, and Brazilian Portuguese.
+  - Corrected stale contributor references to theme count and the single-file output path; release and enterprise validation gates remain open.
+  - Repaired CLI reference links to match rendered heading IDs and exposed performance guidance in all three manual sidebars.
+
+- **Heading-extraction performance baseline**:
+  - Added versioned caller-stack sample attribution with leaf, exclusive nearest-module, and overlapping inclusive counts; retain GC/idle/unattributed buckets and reject inconsistent sampled trees. Documented reanalysis of the existing project capture and interpretation limits in all maintained performance-guide locales. Production parsing is unchanged.
+  - Added opt-in `--cpu-profile <external-directory>` capture of separate warm workload passes, raw CPU profiles, and leaf-frame summaries without changing production parsing or ordinary timed samples. Output is rejected inside repository/corpus trees, including symlinked ancestors; enterprise and stage-attribution gates remain open.
+  - Added `npm run benchmark:headings` with isolated prose/rich extraction and manifest cases, correctness assertions, configurable corpus sizes, and JSON timing/memory reports.
+  - Recorded local 100/1,000-document measurements and limitations in `scripts/benchmark-headings.md`; production heading behavior and release performance budgets are unchanged.
+  - Added read-only `--corpus` profiling using production config, locale selection, and nested-root isolation, with source fingerprints and separate per-document timing passes. Measured the project's own documentation without changing parser behavior; real large-enterprise validation remains open.
+
+- **YAML frontmatter parity**:
+  - Browser rendering now uses the same safe YAML schema as CLI indexing, fixing block descriptions, list-style tags, comments, quoted escapes, and aliases.
+  - Preserve incomplete frontmatter as source during editing; malformed complete blocks render their body without metadata and remain CLI validation errors.
+  - Bypass gray-matter's partial-result cache so repeated validation and builds continue rejecting malformed YAML after an earlier parse failure.
+  - Embed the safe YAML parser offline, exclude unused JavaScript-tag parsing from browser builds, and split YAML into a shared ESM/CJS chunk. The nested offline artifact is approximately 701 KB; its regression guard is now 720 KB, with runtime budgets unchanged.
+
+- **Canonical document URLs**:
+  - Shared URL generation across static canonical/social metadata, sitemap, AI context links, and MCP URL resolution.
+  - Preserve deployment subpaths and locale routes; encode reserved filename characters so they cannot become URL queries or fragments.
+- **Roadmap**: recorded completed publishing-foundation work, release-candidate gates, and staged competitive milestones for the 1.0.0-rc-a release target.
+
+- **Explicit document discovery policy**:
+  - Centralized existing sidebar, browser-search, sitemap, SEO, AI-export, and MCP-search rules without changing `hidden` or `noindex` semantics.
+  - Browser search now removes stale results when an indexed document becomes hidden or noindex.
+  - Documented that these flags do not prevent direct reads, offline distribution, or MCP listing, and that noindex does not exclude AI exports.
+
+- **Heading identity consistency**:
+  - Manifests and link validation now reuse the Markdown renderer's heading metadata, including Setext headings and levels 1–6, while excluding fenced and indented code examples.
+  - Duplicate heading anchors remain unique even when authored headings collide with generated suffixes. Existing non-colliding rendered anchors are unchanged.
+  - The reader's table of contents retains its three-level display. Validation no longer accepts `{#custom-id}` anchors that the renderer does not implement.
+
 ---
 
 ## 0.9.9-a - 2026-10-19

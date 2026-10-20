@@ -1,6 +1,18 @@
 import { svelte } from "@sveltejs/vite-plugin-svelte";
 import type { Plugin, PluginOption } from "vite";
 
+/** Frontmatter only calls safeLoad; do not ship the unused JS-tag schema/esprima. */
+export function safeYamlOnly(): Plugin {
+  return {
+    name: "dmd-safe-yaml-only",
+    enforce: "pre",
+    transform(code, id) {
+      if (!/js-yaml[\\/]lib[\\/]js-yaml[\\/]loader\.js$/.test(id)) return null;
+      return { code: code.replace("require('./schema/default_full')", "require('./schema/default_safe')"), map: null };
+    },
+  };
+}
+
 /**
  * KaTeX ships every math font as woff2 **and** legacy woff **and** TrueType.
  * Vite inlines all three variants as base64 into the injected stylesheet,

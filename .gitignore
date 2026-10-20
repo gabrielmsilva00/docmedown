@@ -6,6 +6,20 @@ node_modules/
 # the docs root keeps ONLY documentation plus the `index.html` symlink.
 dist/
 docs/**/.dmd/
+# Preserve authored docs widgets while ignoring every generated workspace asset.
+!docs/.dmd/
+docs/.dmd/*
+!docs/.dmd/.components/
+docs/.dmd/.components/*
+!docs/.dmd/.components/*.svelte
+!docs/.dmd/.components/*.tsx
+!docs/.dmd/.components/*.ts
+!docs/.dmd/.components/setup.js
+!docs/examples/local-docs/.dmd/
+docs/examples/local-docs/.dmd/*
+!docs/examples/local-docs/.dmd/.components/
+docs/examples/local-docs/.dmd/.components/*
+!docs/examples/local-docs/.dmd/.components/OrbitCounter.svelte
 docs/**/.dist/
 docs/**/.singlefile/
 docs/**/_manifest.json

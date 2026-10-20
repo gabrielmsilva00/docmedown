@@ -145,6 +145,9 @@ test("runtime mounting and diagram interactivity contracts", () => {
   assert.match(component, /addEventListener\("wheel",\s*handleWheel,\s*\{\s*passive:\s*false\s*\}\)/);
   assert.match(component, /removeEventListener\("wheel",\s*handleWheel\)/);
   assert.doesNotMatch(component, /onWheel=\{handleWheel\}/);
+  assert.doesNotMatch(component, /new ResizeObserver\(measure\)/);
+  assert.match(component, /measureFrame = requestAnimationFrame\(/);
+  assert.match(component, /cancelAnimationFrame\(measureFrame\)/);
 
   const entry = fs.readFileSync(path.resolve(__dirname, "../src/ui/index.ts"), "utf-8");
   const clearAt = entry.indexOf('container.innerHTML = ""');

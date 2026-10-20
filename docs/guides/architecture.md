@@ -219,6 +219,10 @@ Rather than treating AI assistants as an afterthought, DocMeDown treats AI model
 
 ## 🗺️ Next Steps
 
+React bridge elements support disconnect/reconnect cycles in both light DOM and
+optional Shadow DOM. Reconnection reuses the shadow root and replaces the old
+React host container; disconnect unmounts the previous React root.
+
 Continue along the linear documentation journey:
 
 <CardGrid cols={2}>

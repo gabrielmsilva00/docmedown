@@ -219,6 +219,10 @@ En lugar de tratar a los asistentes de IA como un elemento accesorio, DocMeDown 
 
 ## 🗺️ Próximos Pasos
 
+Los elementos del puente React admiten ciclos de desconexión y reconexión tanto
+en DOM ligero como en Shadow DOM opcional. La reconexión reutiliza la raíz de
+sombra y sustituye el contenedor anterior; la desconexión desmonta la raíz React.
+
 Continúa con el recorrido lineal de la documentación:
 
 <CardGrid cols={2}>

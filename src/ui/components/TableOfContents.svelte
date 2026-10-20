@@ -12,10 +12,11 @@
 
   let activeId = $state("");
   let isOpen = $state(false);
+  const visibleHeadings = $derived(headings.filter((heading) => heading.level <= 3));
 
   // Scroll-spy: highlight the heading currently in view.
   $effect(() => {
-    if (headings.length === 0) return;
+    if (visibleHeadings.length === 0) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -34,7 +35,7 @@
       },
     );
 
-    for (const h of headings) {
+    for (const h of visibleHeadings) {
       const el = document.getElementById(h.id);
       if (el) observer.observe(el);
     }
@@ -105,7 +106,7 @@
     </svg>
   </button>
   <ul class="dmd-toc-list" id="dmd-toc-list">
-    {#each headings as h (h.id)}
+    {#each visibleHeadings as h (h.id)}
       <li class="dmd-toc-item dmd-toc-level-{h.level}">
         <a
           href={`#/${currentSlug}#${h.id}`}

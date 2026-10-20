@@ -52,7 +52,7 @@ test("manifest headings carry clean plain text for search indexing", () => {
   );
 
   assert.equal(headings[0].text, "React · GitHub license and npm test");
-  assert.equal(headings[0].id, "react-middot-github-licensehttpsimgshieldsiobadgeasvg-and-npm-test");
+  assert.equal(headings[0].id, "react-middot-github-license-and-npm-test");
 });
 
 test("Scan templates directory and generate manifest", () => {

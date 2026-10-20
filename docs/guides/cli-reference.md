@@ -21,12 +21,12 @@ npm install -g docmedown
 
 | Command | Shorthand | Purpose | Key Flags |
 | :--- | :--- | :--- | :--- |
-| **[`docmedown`](#0-docmedown-quickstart-dev-server)** | `dmd` | Quickstart setup if empty, or starts local preview server | `-p, --port`, `-y, --yes`, `--no-open` |
+| **[`docmedown`](#0-docmedown-quickstart-amp-dev-server)** | `dmd` | Quickstart setup if empty, or starts local preview server | `-p, --port`, `-y, --yes`, `--no-open` |
 | **[`init`](#1-init-interactive-setup-wizard)** | — | Interactive setup wizard to configure and scaffold docs | `-y, --yes`, `-n, --name`, `-t, --theme`, `--no-start` |
 | **[`serve`](#2-serve-alias-dev-hot-live-reload)** | `dev` | High-speed local dev server with WebSocket hot reload | `-p, --port`, `-H, --host`, `--no-open`, `--no-qr` |
-| **[`build`](#3-build-static-compiler-bundler)** | — | Prerender static HTML, SEO, AI context, and offline bundle | `-w, --watch`, `--no-single-file`, `-o, --out-dir` |
-| **[`validate`](#4-validate-link-frontmatter-linter)** | — | Deep linter for broken links, missing anchors, and YAML errors | `--json` |
-| **[`doctor`](#5-doctor-system-component-diagnostics)** | — | Environmental health, missing assets, and .dmd component testing | `--json` |
+| **[`build`](#3-build-static-compiler-amp-bundler)** | — | Prerender static HTML, SEO, AI context, and offline bundle | `-w, --watch`, `--no-single-file`, `-o, --out-dir` |
+| **[`validate`](#4-validate-link-amp-frontmatter-linter)** | — | Deep linter for broken links, missing anchors, and YAML errors | `--json` |
+| **[`doctor`](#5-doctor-system-amp-component-diagnostics)** | — | Environmental health, missing assets, and .dmd component testing | `--json` |
 | **[`mcp`](#6-mcp-model-context-protocol-server)** | — | Expose docs to AI assistants (Cursor, Claude Desktop, Windsurf) | `-t, --transport`, `-p, --port`, `--allow-origins` |
 | **[`config`](#7-config-interactive-terminal-tui)** | — | Visual terminal wizard for theme, branding, and navigation | — |
 

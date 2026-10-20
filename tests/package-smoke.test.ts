@@ -9,6 +9,13 @@ const packageJson = JSON.parse(fs.readFileSync(path.join(packageRoot, "package.j
 test("package metadata exposes stable CommonJS, ESM, type, and browser entry points", () => {
   assert.equal(packageJson.name, "docmedown");
   assert.match(packageJson.version, /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/);
+  const lock = JSON.parse(fs.readFileSync(path.join(packageRoot, "package-lock.json"), "utf-8"));
+  const docs = JSON.parse(fs.readFileSync(path.join(packageRoot, "docs", "docs.json"), "utf-8"));
+  const changelog = fs.readFileSync(path.join(packageRoot, "CHANGELOG.md"), "utf-8");
+  assert.equal(lock.version, packageJson.version);
+  assert.equal(lock.packages[""].version, packageJson.version);
+  assert.equal(docs.version, packageJson.version);
+  assert.ok(changelog.includes(`\n## ${packageJson.version} - `), "candidate requires dated release notes");
   assert.equal(packageJson.main, "./dist/docmedown.cjs");
   assert.equal(packageJson.module, "./dist/docmedown.mjs");
   assert.equal(packageJson.types, "./dist/types/ui/index.d.ts");

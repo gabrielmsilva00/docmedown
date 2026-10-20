@@ -219,6 +219,10 @@ Em vez de tratar os assistentes de IA como um pensamento secundário, o DocMeDow
 
 ## 🗺️ Próximos Passos
 
+Os elementos da ponte React suportam ciclos de desconexão e reconexão tanto
+no DOM leve quanto no Shadow DOM opcional. A reconexão reutiliza a raiz de
+sombra e substitui o contêiner anterior; a desconexão desmonta a raiz React.
+
 Continue a jornada linear de documentação:
 
 <CardGrid cols={2}>

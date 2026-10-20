@@ -536,6 +536,99 @@ test("MCP resolve_url tool computes public URLs for base url and relative fallba
 // 6. Stdio Subprocess Transport (Real Process Integration)
 // ---------------------------------------------------------------------------
 
+test("MCP stdio interoperates with an independent newline-delimited JSON-RPC client", { timeout: 15000 }, async () => {
+  const child = spawn(process.execPath, [path.resolve(__dirname, "../bin/docmedown.js"), "mcp", createBuiltFixture()], {
+    stdio: ["pipe", "pipe", "pipe"],
+  });
+  const pending = new Map<number, { resolve: (value: any) => void; reject: (error: Error) => void }>();
+  let buffer = "";
+  let nextId = 0;
+  child.stdout.setEncoding("utf8");
+  child.stderr.resume();
+  const fail = (error: Error) => {
+    for (const request of pending.values()) request.reject(error);
+    pending.clear();
+  };
+  child.on("error", fail);
+  child.on("exit", () => fail(new Error("MCP subprocess exited before responding")));
+  child.stdout.on("data", (chunk: string) => {
+    buffer += chunk;
+    while (buffer.includes("\n")) {
+      const newline = buffer.indexOf("\n");
+      const line = buffer.slice(0, newline);
+      buffer = buffer.slice(newline + 1);
+      if (!line.trim()) continue;
+      try {
+        const message = JSON.parse(line);
+        const request = pending.get(message.id);
+        if (!request) continue;
+        pending.delete(message.id);
+        if (message.error) request.reject(new Error(JSON.stringify(message.error)));
+        else request.resolve(message.result);
+      } catch (error) {
+        fail(error as Error);
+      }
+    }
+  });
+  const notify = (method: string, params: object = {}) => {
+    child.stdin.write(`${JSON.stringify({ jsonrpc: "2.0", method, params })}\n`);
+  };
+  const request = (method: string, params: object = {}) => {
+    const id = ++nextId;
+    return new Promise<any>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        pending.delete(id);
+        reject(new Error(`MCP request timed out: ${method}`));
+      }, 10000);
+      pending.set(id, {
+        resolve: (value) => {
+          clearTimeout(timer);
+          resolve(value);
+        },
+        reject: (error) => {
+          clearTimeout(timer);
+          reject(error);
+        },
+      });
+      child.stdin.write(`${JSON.stringify({ jsonrpc: "2.0", id, method, params })}\n`);
+    });
+  };
+  try {
+    const initialized = await request("initialize", {
+      protocolVersion: "2024-11-05",
+      capabilities: {},
+      clientInfo: { name: "independent-jsonrpc-client", version: "1.0.0" },
+    });
+    assert.equal(initialized.protocolVersion, "2024-11-05");
+    notify("notifications/initialized");
+    const listing = await request("tools/list");
+    assert.deepEqual(listing.tools.map((tool: { name: string }) => tool.name).sort(), [
+      "list_docs",
+      "read_doc",
+      "resolve_url",
+      "search_docs",
+    ]);
+    for (const [name, args] of [
+      ["list_docs", {}],
+      ["read_doc", { slug: "README" }],
+      ["search_docs", { query: "deploy" }],
+      ["resolve_url", { slug: "README" }],
+    ] as const) {
+      const result = await request("tools/call", { name, arguments: args });
+      assert.ok(!result.isError, `${name} must succeed`);
+      assert.ok(JSON.parse(result.content[0].text));
+    }
+    const missing = await request("tools/call", { name: "read_doc", arguments: { slug: "missing" } });
+    assert.equal(missing.isError, true);
+  } finally {
+    const exited = new Promise<void>((resolve) => child.once("exit", () => resolve()));
+    if (child.exitCode === null) {
+      child.kill();
+      await exited;
+    }
+  }
+});
+
 test("MCP server connects and serves tools over StdioClientTransport subprocess", async () => {
   const root = createBuiltFixture();
   const binScript = path.resolve(__dirname, "../bin/docmedown.js");

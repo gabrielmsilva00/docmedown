@@ -9,6 +9,7 @@ import {
   restoreFencePlaceholders,
   unwrapBlockComponents,
 } from "./component-body";
+import { extractFrontmatter } from "./frontmatter";
 import { renderCodeBlock } from "./highlighter";
 import { inlineHeadingToPlainText } from "./inline-text";
 import { renderMath } from "./katex";
@@ -21,51 +22,7 @@ export interface ParsedMarkdown {
   readingTimeMinutes: number;
 }
 
-/**
- * Extracts YAML frontmatter without external runtime dependencies for browser friendliness
- */
-export function extractFrontmatter(rawMarkdown: string): { frontmatter: DocFrontmatter; content: string } {
-  const frontmatterRegex = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/;
-  const match = rawMarkdown.match(frontmatterRegex);
-
-  if (!match) {
-    return { frontmatter: {}, content: rawMarkdown };
-  }
-
-  const yamlBlock = match[1];
-  const content = rawMarkdown.substring(match[0].length);
-  const frontmatter: DocFrontmatter = {};
-
-  const lines = yamlBlock.split("\n");
-  for (const line of lines) {
-    const colonIdx = line.indexOf(":");
-    if (colonIdx === -1) continue;
-
-    const key = line.substring(0, colonIdx).trim();
-    let value: any = line.substring(colonIdx + 1).trim();
-
-    // Clean quotes
-    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
-      value = value.substring(1, value.length - 1);
-    } else if (value === "true") {
-      value = true;
-    } else if (value === "false") {
-      value = false;
-    } else if (!Number.isNaN(Number(value)) && value !== "") {
-      value = Number(value);
-    } else if (value.startsWith("[") && value.endsWith("]")) {
-      value = value
-        .substring(1, value.length - 1)
-        .split(",")
-        .map((s: string) => s.trim().replace(/^['"]|['"]$/g, ""))
-        .filter(Boolean);
-    }
-
-    frontmatter[key] = value;
-  }
-
-  return { frontmatter, content };
-}
+export { extractFrontmatter } from "./frontmatter";
 
 export function slugifyHeading(text: string): string {
   return text
@@ -104,7 +61,7 @@ export function parseMarkdown(rawContent: string, currentSlug: string = "", conf
   processed = componentBodies.html;
 
   const headings: DocHeading[] = [];
-  const headingCounts: Record<string, number> = {};
+  const headingIds = new Set<string>();
 
   const renderer = new marked.Renderer();
 
@@ -112,23 +69,18 @@ export function parseMarkdown(rawContent: string, currentSlug: string = "", conf
   renderer.heading = ({ tokens, depth }) => {
     const text = marked.parseInline(tokens.map((t) => t.raw).join("")) as string;
     const rawText = tokens.map((t) => (t as any).text || t.raw).join("");
-    let slug = slugifyHeading(rawText);
+    const baseSlug = slugifyHeading(rawText);
+    let slug = baseSlug;
+    let suffix = 2;
+    while (headingIds.has(slug)) slug = `${baseSlug}-${suffix++}`;
+    headingIds.add(slug);
 
-    if (headingCounts[slug]) {
-      headingCounts[slug]++;
-      slug = `${slug}-${headingCounts[slug]}`;
-    } else {
-      headingCounts[slug] = 1;
-    }
-
-    if (depth <= 3) {
-      headings.push({
-        level: depth,
-        text: inlineHeadingToPlainText(rawText),
-        html: text,
-        id: slug,
-      });
-    }
+    headings.push({
+      level: depth,
+      text: inlineHeadingToPlainText(rawText),
+      html: text,
+      id: slug,
+    });
 
     return `
 <h${depth} id="${slug}" class="dmd-heading dmd-h${depth}">

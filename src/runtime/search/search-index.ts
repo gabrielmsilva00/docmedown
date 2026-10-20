@@ -1,4 +1,5 @@
 import MiniSearch from "minisearch";
+import { isDocumentDiscoverable } from "../publication";
 import type { DocFileItem, SearchResultItem } from "../types";
 
 export class DocSearchIndex {
@@ -18,8 +19,9 @@ export class DocSearchIndex {
   }
 
   public addDoc(doc: DocFileItem) {
-    if (doc.frontmatter?.hidden || doc.frontmatter?.noindex) return;
     if (this.indexedDocs.has(doc.slug)) this.miniSearch.discard(doc.slug);
+    this.indexedDocs.delete(doc.slug);
+    if (!isDocumentDiscoverable(doc.frontmatter, "search")) return;
     this.indexedDocs.set(doc.slug, doc);
 
     const headingsText = (doc.headings || []).map((h) => h.text).join(" ");

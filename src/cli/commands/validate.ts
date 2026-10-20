@@ -119,12 +119,6 @@ function extractAllAnchors(content: string): Set<string> {
     anchors.add(h.id.toLowerCase());
   }
 
-  // Also check for explicit custom IDs in headings: # Heading {#custom-id}
-  const customIdRegex = /^(?:#{1,6})\s+.*?\{#([\w-]+)\}\s*$/gm;
-  for (const match of content.matchAll(customIdRegex)) {
-    anchors.add(match[1].toLowerCase());
-  }
-
   // Also check for explicit HTML anchors <a id="..." or name="...">
   const htmlAnchorRegex = /<a\s+[^>]*(?:id|name)=["']([^"']+)["']/gi;
   for (const match of content.matchAll(htmlAnchorRegex)) {
@@ -257,7 +251,7 @@ export async function validateCommand(
 
     let parsedMatter: matter.GrayMatterFile<string>;
     try {
-      parsedMatter = matter(rawContent);
+      parsedMatter = matter(rawContent, {});
     } catch (err) {
       errors.push({
         file: relFile,
@@ -455,7 +449,7 @@ export async function validateCommand(
             // Read target file on the fly if not in manifest
             try {
               const targetRaw = fs.readFileSync(resolvedFile, "utf-8");
-              const parsed = matter(targetRaw);
+              const parsed = matter(targetRaw, {});
               targetDoc = {
                 fullPath: resolvedFile,
                 content: parsed.content,

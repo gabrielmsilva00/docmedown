@@ -83,9 +83,49 @@ Add your site's canonical domain to `docs.json`:
 ```
 
 DocMeDown automatically generates:
-- `sitemap.xml` with priority and change frequencies for all indexed documents.
+- `sitemap.xml` with document URLs and available last-modified timestamps.
 - `robots.txt` pointing to your `sitemap.xml`.
 - Excludes any document with `noindex: true` in its frontmatter.
+
+### Canonical URL parity
+
+Set `url` to the deployed site root, including any project subpath, such as
+`https://docs.example.com/project`. Static canonical/social metadata, sitemap
+entries, AI context links, and MCP `resolve_url` share document URL generation.
+
+| Logical slug | Public URL with this deployment root |
+| :--- | :--- |
+| `README` | `https://docs.example.com/project/` |
+| `guides/start` | `https://docs.example.com/project/guides/start/` |
+| `README.fr` | `https://docs.example.com/project/README.fr/` |
+| `guides/café` | `https://docs.example.com/project/guides/caf%C3%A9/` |
+
+Trailing slashes on the configured root are normalized; document URLs end in `/`.
+Slugs are logical names, not pre-encoded URLs: each path segment is encoded once,
+so spaces, `%`, `#`, and `?` cannot become URL syntax. Localized slugs retain their
+own routes; only the exact `README` slug maps to the site root.
+
+Without `url`, AI links and MCP resolution use root-relative paths such as
+`/guides/start/`. Absolute canonical metadata, sitemap, and robots output are
+omitted. This does not change the interactive reader's hash-based navigation.
+
+### Discovery flags are not access controls
+
+The following table describes automatic discovery for boolean frontmatter flags:
+
+| Output | Ordinary page | `hidden: true` | `noindex: true` |
+| :--- | :--- | :--- | :--- |
+| Automatic sidebar | Included | Excluded | Included |
+| Browser search and sitemap | Included | Excluded | Excluded |
+| Static robots metadata | Indexable | `noindex, nofollow` | `noindex, nofollow` |
+| AI exports (`llms.txt`, full context, skill, JSON bundle) | Included | Excluded | Included |
+| MCP search | Included | Excluded | Included |
+
+An explicitly configured manual sidebar is preserved as authored. Neither flag removes
+the page from generated HTML, the embedded/offline corpus, MCP `list_docs`, or direct
+MCP `read_doc` access. `noindex` does **not** opt a page out of AI exports. These are
+discovery preferences, not authentication or confidentiality controls: do not place
+private material in a publicly distributed documentation corpus.
 
 ---
 

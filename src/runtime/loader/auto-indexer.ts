@@ -1,3 +1,4 @@
+import { isDocumentDiscoverable } from "../publication";
 import type { DocFrontmatter, SidebarItemConfig, SidebarTreeNode } from "../types";
 
 export function formatTitleFromFilename(name: string): string {
@@ -35,7 +36,7 @@ export function buildSidebarTree(
     const parts = cleanPath.split("/");
     const fm = frontmatters[cleanPath] || {};
 
-    if (fm.hidden) continue;
+    if (!isDocumentDiscoverable(fm, "sidebar")) continue;
 
     if (parts.length === 1) {
       // Root level document

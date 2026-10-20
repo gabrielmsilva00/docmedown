@@ -192,7 +192,7 @@ export async function doctorCommand(
     let content = "";
     try {
       const raw = fs.readFileSync(fullPath, "utf-8");
-      content = matter(raw).content;
+      content = matter(raw, {}).content;
     } catch {
       continue;
     }

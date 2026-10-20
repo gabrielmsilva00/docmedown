@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-const EXCLUDED_ROOT_FILES = new Set(["SKILL.md"]);
+export const EXCLUDED_ROOT_FILES = new Set(["SKILL.md", "AGENTS.md"]);
 
 /**
  * Discovers markdown files directly at the root directory (excluding hidden files,
@@ -88,7 +88,7 @@ export function linkRootMarkdownFiles(
           const resolvedTarget = path.resolve(resolvedDocs, target);
           if (
             path.dirname(resolvedTarget).toLowerCase() === resolvedRoot.toLowerCase() &&
-            (!fs.existsSync(resolvedTarget) || !/\.(md|mdx)$/i.test(entry.name))
+            (!fs.existsSync(resolvedTarget) || !/\.(md|mdx)$/i.test(entry.name) || EXCLUDED_ROOT_FILES.has(entry.name))
           ) {
             fs.unlinkSync(destPath);
             result.cleaned.push(entry.name);

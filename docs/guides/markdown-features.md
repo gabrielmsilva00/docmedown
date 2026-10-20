@@ -356,6 +356,43 @@ noindex: false
 | `hidden` | `boolean` | If `true`, hides the document from navigation and search indexing. |
 | `noindex` | `boolean` | If `true`, adds `noindex` robots meta tag and omits from `sitemap.xml`. |
 
+### YAML behavior across build and browser modes
+
+The browser renderer and CLI indexer use the same safe YAML schema for metadata.
+Block descriptions, block-style tag lists, inline comments, quoted escapes, and
+YAML aliases are supported in both modes:
+
+```yaml
+---
+title: "Architecture: core engine"
+description: >-
+  A folded description that stays consistent
+  in the reader and generated metadata.
+tags:
+  - architecture
+  - "core: engine"
+hidden: false # keep discoverable
+---
+```
+
+Use a complete `---` delimiter line at the start and end of the metadata block.
+Quote values that must remain strings, such as `"true"` or `"2026-10-20"`.
+JavaScript-specific YAML tags are not supported.
+
+During live editing, an incomplete block remains visible as Markdown. A complete
+block with invalid YAML is omitted from the rendered body and contributes no
+metadata until corrected; `docmedown validate` reports the syntax error and CLI
+indexing rejects it. Run validation before publishing rather than relying on
+the editor's tolerant rendering.
+
+### Heading identity and link validation
+
+Manifest headings and `docmedown validate` reuse the renderer's heading IDs,
+including Setext headings, levels 1–6, and collision-safe duplicate suffixes.
+Fenced/indented code examples are not indexed as headings. The visible table of
+contents still displays only three heading levels. `{#custom-id}` is not a
+supported heading-anchor syntax; link to the generated rendered ID instead.
+
 ---
 
 ## 🗺️ Next Steps

@@ -83,9 +83,41 @@ Basta incluir o domínio canônico do seu site no `docs.json`:
 ```
 
 O DocMeDown gera automaticamente:
-- `sitemap.xml` com prioridade e frequências de alteração para todos os documentos indexados.
+- `sitemap.xml` com as URLs dos documentos e as datas de última modificação disponíveis.
 - `robots.txt` apontando para o seu `sitemap.xml`.
 - Exclui qualquer documento contendo `noindex: true` em seu frontmatter.
+
+---
+
+### Paridade de URLs canônicas
+
+Configure `url` com a raiz do site publicado, incluindo o subdiretório do projeto,
+por exemplo `https://docs.example.com/project`. Metadados canônicos e sociais,
+sitemap, links de IA e MCP `resolve_url` compartilham a geração de URLs.
+`README` corresponde a `/project/`; `guides/start` a `/project/guides/start/`;
+`README.fr` mantém `/project/README.fr/`. Apenas o slug exato `README` é a raiz.
+
+As URLs terminam em `/`. Cada segmento do slug lógico é codificado uma vez:
+`guides/café` produz `/project/guides/caf%C3%A9/`. Não codifique os slugs previamente;
+espaços, `%`, `#` e `?` são caracteres do nome, não sintaxe de URL.
+Sem `url`, IA e MCP usam caminhos relativos à raiz, como `/guides/start/`; os
+metadados canônicos absolutos, sitemap e robots são omitidos. A navegação
+interativa baseada em hash não muda.
+
+### Preferências de descoberta não controlam o acesso
+
+| Saída | `hidden: true` | `noindex: true` |
+| :--- | :--- | :--- |
+| Sidebar automática | Excluído | Incluído |
+| Busca do navegador e sitemap | Excluído | Excluído |
+| Metadados robots estáticos | `noindex, nofollow` | `noindex, nofollow` |
+| Exportações de IA e busca MCP | Excluído | Incluído |
+
+A sidebar manual é preservada conforme configurada. Nenhuma opção remove a
+página do HTML gerado, do conteúdo integrado/offline, do MCP `list_docs` ou do
+acesso direto por `read_doc`. `noindex` não exclui exportações de IA. Essas
+preferências não oferecem autenticação nem privacidade: não distribua material
+confidencial no corpus público.
 
 ---
 

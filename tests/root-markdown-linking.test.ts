@@ -16,6 +16,7 @@ test("detectRootMarkdownFiles discovers root markdown files and ignores excluded
     fs.writeFileSync(path.join(tempDir, "ROADMAP.md"), "# Roadmap", "utf-8");
     fs.writeFileSync(path.join(tempDir, ".hidden.md"), "# Hidden", "utf-8");
     fs.writeFileSync(path.join(tempDir, "SKILL.md"), "# Skill", "utf-8");
+    fs.writeFileSync(path.join(tempDir, "AGENTS.md"), "# Agents", "utf-8");
     fs.writeFileSync(path.join(tempDir, "package.json"), "{}", "utf-8");
 
     const detected = detectRootMarkdownFiles(tempDir);
@@ -24,6 +25,7 @@ test("detectRootMarkdownFiles discovers root markdown files and ignores excluded
     assert.ok(detected.includes("ROADMAP.md"));
     assert.ok(!detected.includes(".hidden.md"));
     assert.ok(!detected.includes("SKILL.md"));
+    assert.ok(!detected.includes("AGENTS.md"));
     assert.ok(!detected.includes("package.json"));
   } finally {
     fs.rmSync(tempDir, { recursive: true, force: true });

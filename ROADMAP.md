@@ -1,4 +1,157 @@
-# DocMeDown Roadmap: Universal Svelte Architecture & Multi-Framework Compatibility
+# DocMeDown Roadmap: Reliable Publishing & Universal Svelte Architecture
+
+## Next release: 0.9.9-b (prepared, not published)
+
+Publication is blocked pending completion of the requested production-readiness
+checks; the user did not accept shipping with unverified areas. The subsequent
+request authorizes preparing documentation and metadata for `0.9.9-b`, not
+publishing an unverified release. Package, lockfile, documentation version and
+candidate notes are synchronized. The later `1.0.0-rc-a` milestone is unchanged.
+
+- [x] Recheck the full existing release gate before preparation: 264 unit tests
+  plus 48 MCP/hosting/offline/bundle/package tests passed under npm 11.16.0.
+- [x] Run targeted Chrome 155 / Edge 155 served-subpath and network-disabled
+  single-file reader/search checks, six actual theme families in both modes,
+  390/768/1440 widths, basic appearance focus restoration, and compiler-cache
+  concurrency/persistence/invalidation/unavailable-storage probes.
+- [x] Find and fix React bridge shadow-root reconnection; add repeated light/shadow
+  lifecycle regression coverage. Targeted browser probe and unit tests pass.
+  Post-fix full release pipeline passed: 265/265 unit tests plus all 48 specialized
+  tests; typecheck, lint, builds, budgets and package dry-run passed.
+- [ ] Complete the remaining evidence matrix, including non-Chromium browsers,
+  accessibility review, broader offline interactions, framework edge cases and
+  independent MCP clients, before deployment.
+- [x] Resolve the extended probe: use `dmd-mermaid`, focus the search input before
+  Enter and assert the selected result title, not unrelated destination text.
+  Chrome/Edge served-subpath and offline routing, SVG and keyboard search pass.
+- [x] Prepare synchronized `0.9.9-b` metadata and candidate notes on 2026-10-20.
+- [x] Pass the full release gate on `0.9.9-b`: 265 unit plus 48 specialized tests,
+  typecheck, lint, production budgets, builds and package dry-run. All 18 rebuilt
+  Chrome/Edge browser scenarios pass; documentation source validation passes.
+- [ ] Authenticate npm publishing: `npm whoami` currently returns E401.
+- [x] Review and stage the 24 intended source/instruction/test additions; pass
+  deploy dry-run without bypassing the working-tree safety guard. Exact plan:
+  `0.9.9-b`, `v0.9.9-b`, prerelease true, npm `alpha`. No commit/tag/push/publication.
+- [x] Pass local full release pipelines on Node 20.19.0 and 22.14.0 with npm 11.16.0.
+- [x] Fix WebKit diagram ResizeObserver feedback; test all four browser engines
+  with packaged framework interactions. Add a reusable browser probe and CI job.
+- [x] Add independent JSON-RPC stdio MCP tool/error regression coverage.
+- [x] Preserve seven authored docs widget/setup sources previously hidden by
+  `.dmd/` ignore rules; retain generated-artifact exclusions. Pass the full release
+  gate on a clean temporary source snapshot with fresh dependency installation.
+- [ ] Obtain passing Node 20/22 CI for the final candidate. Latest remote CI runs
+  failed on older revisions due to deploy-script formatting, corrected locally;
+  Windows Node 20/22 validation does not substitute for remote Linux CI.
+
+## Later milestone: 1.0.0-rc-a
+
+The milestone after **0.9.9-b** is **1.0.0-rc-a**. This is a release target, not a claim that
+the release has shipped; package versioning and changelog promotion happen during
+release preparation. The milestones below distinguish implemented work from
+remaining release gates and longer-term competitive features.
+
+### Canonical publishing foundation
+
+- [x] Reuse rendered heading identity in manifests and anchor validation, including
+  duplicate collisions, Setext headings, and levels 1–6; retain a three-level TOC.
+- [x] Centralize existing discovery policy across navigation, search, sitemap,
+  SEO, AI exports, and MCP search. Document that hidden/noindex are not privacy controls.
+- [x] Remove stale browser-search entries when discovery flags change.
+- [x] Share canonical document URL generation across SEO, sitemap, AI exports,
+  and MCP, with subpath, locale, and reserved-character regression coverage.
+- [x] Establish YAML frontmatter conformance between CLI manifests and the browser
+  renderer, including block scalars, lists, comments, and quoted escapes.
+- [x] Benchmark large-corpus heading extraction before further parser expansion.
+  Reproducible prose/rich baselines cover 100 and 1,000 documents; see
+  `scripts/benchmark-headings.md` for methodology, local results, and limitations.
+- [ ] Profile a real large corpus before optimizing extraction; preserve rendered
+  anchor parity and validate the release environment separately from local timings.
+  Read-only profiling of the project's own corpus is available via
+  `benchmark:headings -- --corpus ./docs`; representative external-enterprise
+  profiling remains outstanding. Corpus sizes below are historical snapshots.
+- [x] Add opt-in scoped CPU capture for extraction and manifest workloads, with
+  raw profiles, leaf-frame summaries, correctness checks, and source-tree output
+  protection. Local 64-document capture identifies investigation candidates only;
+  Sampled inclusive ownership is implemented below; exact stage-duration
+  attribution and real enterprise validation remain open.
+  CPU-capture slice: 261/261 unit tests, typecheck, lint, docs build, and source
+  validation passed (64 documents, 62 links, 1,007 headings; no warnings).
+
+### Pre-RC validation gates
+
+- [x] Add versioned caller-stack sample ownership summaries with exclusive and
+  overlapping inclusive counts, explicit unattributed/GC/idle buckets, and tree
+  integrity checks. Reanalyze the existing project capture without parser changes;
+  real enterprise profiling and exact stage-duration attribution remain open.
+  Attribution slice: 264/264 unit tests, typecheck, lint, docs build, and source
+  validation passed (64 documents, 62 links, 1,010 headings; no warnings).
+
+- [x] Document canonical URL behavior, YAML/heading parity, and discovery policy
+  in maintained English, Spanish, and Brazilian Portuguese guides; add localized
+  indexing-performance guidance and a contributor documentation checklist.
+  Documentation-slice validation: 258/258 unit tests, typecheck, lint, and docs
+  build passed; source validation passed for 64 documents, 62 links, and 1,004
+  headings without warnings. These checks do not replace the final release gate.
+
+- [x] Establish an isolated npm 11.16.0 environment and pass the full release
+  pipeline on the current `0.9.9-a` development tree (2026-10-20, Windows,
+  Node v26.3.0). Unit tests: 264/264; MCP: 32/32; hosting: 3/3;
+  offline artifacts: 6/6; bundle checks: 4/4; package smoke: 3/3.
+  Typecheck, lint, production size budgets, docs build and package dry-run passed.
+  This supersedes the earlier npm-12 environment blocker, not final RC approval.
+- [ ] Rerun the full release pipeline on synchronized `1.0.0-rc-a` metadata and
+  the final candidate tree, including the Node 20/22 CI matrix with npm 11.
+- [ ] Complete keyboard, mobile, cross-browser, and network-disabled offline checks.
+- [ ] Finish outstanding translation/UI-catalog work tracked below, or explicitly
+  document accepted release-candidate limitations.
+- [ ] Prepare synchronized package metadata and promote Unreleased notes to
+  `1.0.0-rc-a` only when preparing the release; do not mark unpublished work released.
+  The deploy script does not select this target automatically: its automatic
+  bump accepts stable versions only. Explicit preparation is documented in
+  `CONTRIBUTING.md`; prereleases retain the existing npm `alpha` dist-tag.
+- [ ] Review and track intended source additions (including `AGENTS.md`) before
+  deploy dry-run. Untracked files currently trigger the release safety stop;
+  do not bypass it or auto-stage the accumulated working tree.
+
+See `CONTRIBUTING.md` for dated release evidence and the manual-check matrix.
+Historical slice counts above are not current-tree totals. Automated artifact
+checks do not demonstrate a browser running from `file:///` without networking.
+
+### During-RC validation
+
+- [ ] Record browser versions, keyboard/accessibility/mobile/theme results,
+  network-disabled served and `file:///` behavior, and deployed subpath results.
+- [ ] Complete external MCP-host interoperability, framework edge cases, and
+  concurrent IndexedDB compiler-cache checks; local SDK transports alone do not
+  establish compatibility with independent clients.
+- [ ] Obtain a revision-recorded representative external corpus before any
+  parser optimization. Exact stage-duration attribution is not a reason to
+  delay correctness stabilization or add more profiler features by default.
+
+### Pre-GA validation
+
+- [ ] Close RC regressions and rerun the final release gate on GA metadata.
+- [ ] Complete six-language documentation/UI coverage, or obtain an explicit
+  scope decision. Three maintained guide locales do not satisfy six-language
+  coverage; no RC translation exception has been accepted yet.
+
+### Competitive roadmap after the foundation
+
+These are staged follow-ups, not promises that every feature ships in 1.0.0-rc-a.
+
+1. **Small extension lifecycle and Git provenance:** deterministic ordering,
+   diagnostics, target declarations, cached history, and timestamp provenance.
+2. **Shared retrieval:** section identities and serialized build-time indexes,
+   match-centered snippets, aligned browser/MCP scope, and dynamic-mode fallback.
+3. **Static OpenAPI references:** bounded specification support, operation anchors,
+   searchable records, safe reference resolution, and offline output.
+4. **Versioned documentation, then workspaces:** logical identity, locale-preserving
+   switching, explicit missing-page behavior, route isolation, and shared assets.
+5. **Optional advanced experiences:** citation-first chat, validated knowledge-format
+   interoperability, PWA, privacy-first analytics, and review discussions. Keep
+   cloud dependencies optional and standalone offline output self-contained.
+
+---
 
 > **A Unified Svelte Engine with Universal Component Interoperability.** DocMeDown is powered end-to-end by an application shell and built-in components built exclusively with Svelte 5.
 > Building on this foundation, DocMeDown introduces a **Universal Component Compatibility Layer**: documentation authors can write custom `.dmd` widgets in **native Svelte 5**, **React with TypeScript (TSX)**, or standard **Web Elements (Lit)**.
@@ -133,7 +286,7 @@ DocMeDown maintains strict 100% visual and functional parity across all output m
 ## Milestones & Release Path
 
 ```
-v0.3.0a ──► v0.3.1-v0.3.x ──► v0.4.0 ──► v0.5.0 ──► v0.6.0 ──► v0.7.0 ──► v0.8.0 ──► v0.9.0 ──► v1.0.0-rc01 ──► v1.0.0
+v0.3.0a ──► v0.3.1-v0.3.x ──► v0.4.0 ──► v0.5.0 ──► v0.6.0 ──► v0.7.0 ──► v0.8.0 ──► v0.9.0 ──► v1.0.0-rc-a ──► v1.0.0
  (Alpha       (Svelte Builtins  (Runtime    (Custom      (Static AOT  (CLI &      (UX, A11y &  (Next-Gen    (Release        (Production
  Checkpoint)   & Lit Eviction)  Compiler)    .dmd)       Parity)      MCP)        Perf)        DX & HMR)    Candidate 1)    Release)
 ```
@@ -305,7 +458,7 @@ v0.3.0a ──► v0.3.1-v0.3.x ──► v0.4.0 ──► v0.5.0 ──► v0.6
 
 ---
 
-### v1.0.0-rc01 — Release Candidate 1 (Next Step: Stabilization & Dogfooding)
+### v1.0.0-rc-a — Release Candidate 1 (Next Step: Stabilization & Dogfooding)
 **Goal:** Rigorous real-world validation, ecosystem stabilization, bug hardening, and zero-defect triage to guarantee v1.0.0 GA is truly bug-free.
 
 - [ ] **Ecosystem Dogfooding & Cross-Platform Validation**:
@@ -334,6 +487,6 @@ v0.3.0a ──► v0.3.1-v0.3.x ──► v0.4.0 ──► v0.5.0 ──► v0.6
   - [x] Single-file offline bundle: < 1.2 MB gzip total (self-contained offline `index.html` at ~647 KB gzip).
 - [x] **Full Test Coverage**: ≥ 180 tests covering CLI, static compiler, Svelte runtime, offline envelopes, and MCP server (213 unit + 32 MCP integration tests passing 100%).
 - [x] **Complete Documentation**: Comprehensive API references, migration guides from Docusaurus/VitePress, architecture blueprints, and deployment tutorials.
-- [ ] **Release Candidate Promotion**: Successful completion and bug-free sign-off of v1.0.0-rc01.
+- [ ] **Release Candidate Promotion**: Successful completion and bug-free sign-off of v1.0.0-rc-a.
 - [ ] **Community Verification**: Validated in production across diverse open-source and enterprise documentation sites.
 

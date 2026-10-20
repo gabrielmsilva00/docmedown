@@ -70,10 +70,11 @@ test("nested offline artifacts embed their own bundled custom components", () =>
   assert.ok(embeddedDocs.includes("OrbitCounter"));
   assert.ok(offlineEnvelope.data.componentsSource.includes("OrbitCounter"));
   assert.ok(!offlineHtml.includes("fonts.googleapis.com"));
-  // Offline copies without diagrams omit Mermaid, shrinking from 1.8 MB to ~570 KB.
+  // Offline copies without diagrams omit Mermaid. The embedded safe YAML parser
+  // adds metadata parity; keep a narrow guard above the current ~701 KB output.
   assert.ok(
-    offlineHtml.length < 700 * 1024,
-    `offline html size ${(offlineHtml.length / 1024) | 0} KB should be under 700 KB`,
+    offlineHtml.length < 720 * 1024,
+    `offline html size ${(offlineHtml.length / 1024) | 0} KB should be under 720 KB`,
   );
   assert.ok(
     !offlineEnvelope.runtime.includes("sequenceDiagram"),

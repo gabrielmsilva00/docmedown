@@ -1,10 +1,12 @@
 import fs from "node:fs";
 import path from "node:path";
 import chalk from "chalk";
+import { getCanonicalDocumentUrl as getPageUrl, getSiteBaseUrl } from "../runtime/document-url";
 import { embeddedDmdDocs, embeddedDmdVariant } from "../runtime/embedded-dmd";
 import { resolveFavicon } from "../runtime/favicons";
 import { defaultLocale, localeConfig, localizedDocs, projectLocales } from "../runtime/i18n";
 import { parseMarkdown } from "../runtime/markdown/parser";
+import { isDocumentDiscoverable } from "../runtime/publication";
 import { renderSplashHead, renderSplashMarkup, type SplashOptions } from "../runtime/splash";
 import type { DocConfig, DocFileItem, DocManifest } from "../runtime/types";
 import { loadBuildTimeCustomSetup } from "./utils/custom-setup";
@@ -84,13 +86,6 @@ function getPageDescription(config: DocConfig, doc: DocFileItem): string {
   );
 }
 
-/** Canonical absolute URL for a document slug, or null when no site origin is configured. */
-function getPageUrl(config: DocConfig, slug: string): string | null {
-  if (!config.url) return null;
-  const base = config.url.replace(/\/+$/, "");
-  return slug === "README" ? `${base}/` : `${base}/${slug}/`;
-}
-
 /** Relative asset prefix from a static page directory back to the site root ("../.."). */
 export function getAssetPrefix(slug: string): string {
   if (slug === "README") return "";
@@ -122,7 +117,7 @@ export function renderStaticPage({ config, doc, contentHtml, alternatives = [] }
   const title = slug === "README" ? siteName : `${doc.title} | ${siteName}`;
   const description = getPageDescription(config, doc);
   const pageUrl = getPageUrl(config, slug);
-  const noindex = doc.frontmatter?.noindex === true || doc.frontmatter?.hidden === true;
+  const noindex = !isDocumentDiscoverable(doc.frontmatter, "seo");
   const ogImage = typeof doc.frontmatter?.ogImage === "string" ? doc.frontmatter.ogImage : undefined;
   const ogImageUrl = ogImage
     ? /^https?:\/\//i.test(ogImage)
@@ -248,7 +243,7 @@ export function generateSitemap(manifest: DocManifest, config: DocConfig): strin
   if (!config.url) return null;
   const rows: string[] = [];
   for (const doc of manifest.docs) {
-    if (doc.frontmatter?.hidden || doc.frontmatter?.noindex) continue;
+    if (!isDocumentDiscoverable(doc.frontmatter, "sitemap")) continue;
     const url = getPageUrl(config, doc.slug);
     if (!url) continue;
     rows.push(
@@ -265,7 +260,7 @@ export function generateSitemap(manifest: DocManifest, config: DocConfig): strin
 
 export function generateRobotsTxt(config: DocConfig): string | null {
   if (!config.url) return null;
-  const base = config.url.replace(/\/+$/, "");
+  const base = getSiteBaseUrl(config);
   return `User-agent: *\nAllow: /\n\nSitemap: ${base}/sitemap.xml\n`;
 }
 

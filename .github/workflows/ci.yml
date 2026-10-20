@@ -17,5 +17,37 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
           cache: npm
+      - name: Use the repository npm version
+        run: npm install --global npm@11.16.0
       - run: npm ci
       - run: npm run test:release
+
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm install --global npm@11.16.0
+      - run: npm ci
+      - name: Install isolated browser tools
+        run: |
+          npm install --prefix "$RUNNER_TEMP/dmd-browser-tools" --no-audit --no-fund playwright@1.59.1
+          node "$RUNNER_TEMP/dmd-browser-tools/node_modules/playwright/cli.js" install --with-deps chromium firefox webkit
+      - run: npm run build
+      - run: npm run build:docs
+      - name: Validate browser engines and offline artifacts
+        run: |
+          export DMD_PLAYWRIGHT_MODULE="$RUNNER_TEMP/dmd-browser-tools/node_modules/playwright"
+          export DMD_BROWSER_REPORT="$RUNNER_TEMP/dmd-browser-results.json"
+          npm run test:browser
+      - name: Preserve browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-readiness
+          path: ${{ runner.temp }}/dmd-browser-results.json
+          if-no-files-found: warn

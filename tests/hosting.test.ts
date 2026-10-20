@@ -20,6 +20,20 @@ test("GitHub Pages workflow builds and publishes the complete generated docs dir
   assert.match(workflow, /actions\/deploy-pages@v4/);
 });
 
+test("authored documentation widgets are available to clean checkouts", () => {
+  const componentsDir = path.join(packageRoot, "docs", ".dmd", ".components");
+  for (const name of [
+    "CounterWidget.svelte",
+    "ReactMetricCard.tsx",
+    "LitStatusBadge.ts",
+    "InteractiveThemeDemo.svelte",
+    "setup.js",
+  ]) {
+    assert.ok(fs.existsSync(path.join(componentsDir, name)), `Missing authored docs component: ${name}`);
+  }
+  assert.ok(fs.existsSync(path.join(packageRoot, "docs/examples/local-docs/.dmd/.components/OrbitCounter.svelte")));
+});
+
 test("serveable docs entrypoint uses same-directory relative generated assets", () => {
   const siteDir = path.join(packageRoot, "docs", ".dmd");
   const indexHtml = fs.readFileSync(path.join(siteDir, "index.html"), "utf-8");

@@ -83,9 +83,41 @@ Agregue el dominio canónico de su sitio a `docs.json`:
 ```
 
 DocMeDown genera de forma automática:
-- `sitemap.xml` con prioridad y frecuencias de actualización para todos los documentos indexados.
+- `sitemap.xml` con las URL de los documentos y las fechas de última modificación disponibles.
 - `robots.txt` apuntando a su archivo `sitemap.xml`.
 - Excluye cualquier página que contenga `noindex: true` en su frontmatter.
+
+---
+
+### Paridad de URL canónicas
+
+Configure `url` con la raíz del sitio publicado, incluido el subdirectorio del
+proyecto, por ejemplo `https://docs.example.com/project`. Los metadatos canónicos
+y sociales, sitemap, enlaces de IA y MCP `resolve_url` comparten la generación de URL.
+`README` corresponde a `/project/`; `guides/start` a `/project/guides/start/`;
+`README.fr` conserva `/project/README.fr/`. Solo el slug exacto `README` es la raíz.
+
+Las URL terminan en `/`. Cada segmento del slug lógico se codifica una vez:
+`guides/café` produce `/project/guides/caf%C3%A9/`. No codifique previamente los
+slugs; espacios, `%`, `#` y `?` se tratan como caracteres del nombre, no como sintaxis de URL.
+Sin `url`, IA y MCP usan rutas relativas a la raíz como `/guides/start/`; se omiten
+los metadatos canónicos absolutos, sitemap y robots. La navegación interactiva
+basada en hash no cambia.
+
+### Las preferencias de descubrimiento no controlan el acceso
+
+| Salida | `hidden: true` | `noindex: true` |
+| :--- | :--- | :--- |
+| Barra lateral automática | Excluido | Incluido |
+| Búsqueda del navegador y sitemap | Excluido | Excluido |
+| Metadatos robots estáticos | `noindex, nofollow` | `noindex, nofollow` |
+| Exportaciones de IA y búsqueda MCP | Excluido | Incluido |
+
+La barra lateral manual se conserva tal como se configuró. Ninguna opción elimina
+la página del HTML generado, del contenido integrado/sin conexión, de MCP
+`list_docs` o del acceso directo mediante `read_doc`. `noindex` no excluye las
+exportaciones de IA. Estas preferencias no proporcionan autenticación ni privacidad:
+no distribuya material confidencial en el corpus público.
 
 ---
 

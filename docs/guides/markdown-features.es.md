@@ -358,6 +358,42 @@ noindex: false
 
 ---
 
+### Identidad de encabezados y validación de enlaces
+
+El manifiesto y `docmedown validate` reutilizan los ID del renderizador, incluidos
+Setext, niveles 1–6 y sufijos únicos para duplicados. Los ejemplos de código no
+se indexan como encabezados. La tabla de contenido visible conserva tres niveles.
+`{#custom-id}` no es una sintaxis admitida; enlace al ID generado en el HTML.
+
+### Comportamiento YAML en CLI y navegador
+
+El navegador y el indexador CLI usan el mismo esquema YAML seguro. Se admiten
+descripciones multilínea, listas de etiquetas, comentarios, escapes entre
+comillas y alias YAML:
+
+```yaml
+---
+title: "Arquitectura: motor principal"
+description: >-
+  Una descripción plegada coherente
+  en el lector y los metadatos generados.
+tags:
+  - architecture
+  - "core: engine"
+hidden: false # mantener visible
+---
+```
+
+Use líneas completas `---` al inicio y al final del bloque. Escriba entre
+comillas los valores que deban seguir siendo cadenas, como `"true"` o
+`"2026-10-20"`. No se admiten etiquetas YAML específicas de JavaScript.
+Durante la edición, un bloque incompleto permanece como Markdown. Si un bloque
+completo contiene YAML inválido, se muestra el cuerpo sin sus metadatos hasta
+corregirlo. `docmedown validate` informa del error y la indexación CLI lo rechaza;
+valide antes de publicar.
+
+---
+
 ## 🗺️ Próximos Pasos
 
 Continúa con el recorrido lineal de la documentación:

@@ -306,6 +306,7 @@ export async function runProjectDoctor(options = {}) {
   // Generated AI-context/SEO artifacts are build output, not link sources.
   const GENERATED_SCAN_DENY = new Set([
     "SKILL.md",
+    "AGENTS.md",
     "llms.txt",
     "llms-full.txt",
     "okf.json",
